@@ -74,10 +74,10 @@ export function RepresentativeCard({
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="bg-white shadow-sm hover:shadow-lg active:shadow-md transition-all duration-200 active:scale-[0.98] touch-manipulation border border-gray-100 rounded-2xl overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-start space-x-4">
-          <Avatar className="w-16 h-16 border-2 border-neutral-200">
+          <Avatar className="w-18 h-18 border-3 border-white shadow-lg ring-2 ring-gray-100">
             <AvatarImage 
               src={representative.photo || undefined} 
               alt={`${representative.name} photo`} 
@@ -86,7 +86,7 @@ export function RepresentativeCard({
                 console.log('Avatar image failed to load:', representative.photo);
               }}
             />
-            <AvatarFallback className="bg-blue-500 text-white font-semibold">
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-lg">
               {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </AvatarFallback>
           </Avatar>
@@ -135,37 +135,31 @@ export function RepresentativeCard({
         </div>
         
         {/* Contact Actions */}
-        <div className="mt-4 pt-4 border-t border-neutral-100">
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex flex-col items-center justify-center p-3 h-auto text-blue-600 border-blue-200 hover:bg-blue-50"
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
               onClick={handleCall}
             >
-              <Phone className="h-4 w-4 text-blue-600 mb-1" />
-              <span className="text-xs font-medium">Call</span>
-            </Button>
+              <Phone className="h-5 w-5 mb-2" />
+              <span className="text-xs font-semibold">Call</span>
+            </button>
             
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex flex-col items-center justify-center p-3 h-auto text-blue-600 border-blue-200 hover:bg-blue-50"
+            <button
+              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-green-50 text-green-600 border border-green-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
               onClick={handleEmail}
             >
-              <Mail className="h-4 w-4 text-blue-600 mb-1" />
-              <span className="text-xs font-medium">Email</span>
-            </Button>
+              <Mail className="h-5 w-5 mb-2" />
+              <span className="text-xs font-semibold">Email</span>
+            </button>
             
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex flex-col items-center justify-center p-3 h-auto"
+            <button
+              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gray-50 text-gray-600 border border-gray-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
               onClick={onViewProfile}
             >
-              <User className="h-4 w-4 text-primary mb-1" />
-              <span className="text-xs font-medium">Profile</span>
-            </Button>
+              <User className="h-5 w-5 mb-2" />
+              <span className="text-xs font-semibold">Profile</span>
+            </button>
           </div>
         </div>
       </CardContent>

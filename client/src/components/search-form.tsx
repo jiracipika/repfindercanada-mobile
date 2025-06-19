@@ -95,46 +95,44 @@ export function SearchForm({ onSearchStart, onSearchComplete }: SearchFormProps)
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="relative">
         <Input
           type="text"
-          placeholder="Enter postal code (e.g., K1A 0A6)"
+          placeholder="Enter your postal code or address to discover your MP"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-12 h-12 text-base"
+          className="pl-14 pr-4 h-14 text-base rounded-2xl border-2 border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 bg-gray-50 focus:bg-white placeholder:text-gray-400"
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         />
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+        <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Button
+      <div className="flex gap-3">
+        <button
           onClick={handleSearch}
           disabled={isSearching || !query.trim()}
-          className="h-12"
+          className="flex-1 h-14 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all duration-200 touch-manipulation shadow-lg active:shadow-md flex items-center justify-center"
         >
           {isSearching ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
           ) : (
-            <Search className="h-4 w-4 mr-2" />
+            <Search className="h-5 w-5 mr-2" />
           )}
           Search
-        </Button>
+        </button>
         
-        <Button
-          variant="outline"
+        <button
           onClick={handleLocationSearch}
           disabled={isLocating}
-          className="h-12"
+          className="h-14 px-6 bg-white border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none flex items-center justify-center"
         >
           {isLocating ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <MapPin className="h-4 w-4 mr-2" />
+            <MapPin className="h-5 w-5" />
           )}
-          Use My Location
-        </Button>
+        </button>
       </div>
     </div>
   );

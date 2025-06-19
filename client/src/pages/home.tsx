@@ -5,7 +5,7 @@ import { RepresentativeModal } from "@/components/representative-modal";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
+import { Clock, Building } from "lucide-react";
 import type { Representative, Search } from "@shared/schema";
 
 export default function Home() {
@@ -49,11 +49,13 @@ export default function Home() {
   return (
     <div className="space-y-6">
       {/* Search Section */}
-      <section className="bg-white shadow-sm border-b border-neutral-200">
-        <div className="p-4 space-y-4">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-neutral-800 mb-2">Find Your Representatives</h2>
-            <p className="text-neutral-600 text-sm">Enter your postal code or address to discover your MP</p>
+      <section className="bg-gradient-to-br from-blue-50 to-white px-4 py-8">
+        <div className="space-y-6">
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl font-bold text-gray-900 leading-tight">Find Your Representative</h2>
+            <p className="text-gray-600 text-base max-w-sm mx-auto leading-relaxed">
+              Connect with your Member of Parliament and stay engaged with Canadian democracy
+            </p>
           </div>
           
           <SearchForm 
@@ -89,11 +91,13 @@ export default function Home() {
 
       {/* Empty State */}
       {searchResults.length === 0 && !isSearching && !loadingSearches && (
-        <div className="p-4">
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="text-4xl text-neutral-300 mb-4">🏛️</div>
-            <h3 className="text-lg font-semibold text-neutral-800 mb-2">Welcome to Find My Rep</h3>
-            <p className="text-neutral-600 mb-4">Search above to find your Canadian Parliament representatives.</p>
+        <div className="px-4">
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center border border-gray-100">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Building className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Connect</h3>
+            <p className="text-gray-600 text-sm">Enter your postal code above to find your MP and get their contact information</p>
           </div>
         </div>
       )}

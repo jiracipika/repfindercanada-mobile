@@ -14,24 +14,29 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-2 z-40 safe-area-bottom">
-      <div className="flex justify-around items-center">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-2 py-1 z-40 safe-area-bottom">
+      <div className="flex justify-around items-center max-w-sm mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location === path;
           return (
             <Link key={path} href={path}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors touch-manipulation ${
+              <div
+                className={`flex flex-col items-center py-2 px-4 rounded-2xl transition-all duration-200 touch-manipulation min-w-0 relative ${
                   isActive 
-                    ? "text-primary bg-primary/10" 
-                    : "text-neutral-500 hover:text-primary hover:bg-primary/5"
+                    ? "text-blue-600" 
+                    : "text-gray-500 active:text-blue-600 active:scale-95"
                 }`}
               >
-                <Icon className="h-5 w-5 mb-1" />
-                <span className="text-xs font-medium">{label}</span>
-              </Button>
+                {isActive && (
+                  <div className="absolute inset-0 bg-blue-50 rounded-2xl scale-110" />
+                )}
+                <div className="relative z-10 flex flex-col items-center">
+                  <Icon className={`h-6 w-6 mb-1 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                  <span className={`text-xs font-medium transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+                    {label}
+                  </span>
+                </div>
+              </div>
             </Link>
           );
         })}
