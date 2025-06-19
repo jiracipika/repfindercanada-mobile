@@ -58,8 +58,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
         <div className="space-y-6">
           {/* Representative Header */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">{representative.name}</h2>
-            <p className="text-gray-400">MP</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{representative.name}</h2>
+            <p className="text-gray-600 dark:text-gray-400">MP</p>
           </div>
 
           {/* Profile Section */}
