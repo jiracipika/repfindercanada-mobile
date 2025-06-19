@@ -72,14 +72,14 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
               <div className="text-center">
                 <Avatar className="w-20 h-20 mx-auto mb-3">
                   <AvatarImage 
-                    src={representative.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(representative.name)}&background=3b82f6&color=fff&size=128`} 
+                    src={representative.photo || undefined} 
                     alt={`${representative.name} photo`} 
+                    className="object-cover"
                     onError={(e) => {
                       console.log('Modal avatar image failed to load:', representative.photo);
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(representative.name)}&background=3b82f6&color=fff&size=128`;
                     }}
                   />
-                  <AvatarFallback className="text-lg">
+                  <AvatarFallback className="text-lg bg-blue-500 text-white font-semibold">
                     {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
@@ -98,43 +98,51 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 
                 <div className="flex items-center space-x-3">
                   <Mail className="h-5 w-5 text-primary" />
-                  <button 
-                    onClick={() => handleEmail(`${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                  <a 
+                    href={`mailto:${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}`}
                     className="text-sm text-primary hover:underline"
                   >
-                    {`${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
-                  </button>
+                    {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
+                  </a>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <Phone className="h-5 w-5 text-primary" />
-                  <button 
-                    onClick={() => handleCall('1 613 992-4501')}
+                  <a 
+                    href={`tel:${representative.phone || '1-613-992-4501'}`}
                     className="text-sm text-primary hover:underline"
                   >
-                    1 613 992-4501
-                  </button>
+                    {representative.phone || '1 613 992-4501'}
+                  </a>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <button 
-                    onClick={() => handleWebsite(representative.website || 'https://openparliament.ca')}
-                    className="text-sm text-primary hover:underline break-all"
-                  >
-                    Official Website
-                  </button>
-                </div>
+                {representative.website && (
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-5 w-5 text-primary" />
+                    <a 
+                      href={representative.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline break-all"
+                    >
+                      Official Website
+                    </a>
+                  </div>
+                )}
 
-                <div className="flex items-center space-x-3">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <button 
-                    onClick={() => handleWebsite('https://www.ourcommons.ca/members/en')}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Personal Website
-                  </button>
-                </div>
+                {representative.personalWebsite && (
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-5 w-5 text-primary" />
+                    <a 
+                      href={representative.personalWebsite}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Personal Website
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Social Media */}
@@ -159,8 +167,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
               <h3 className="text-lg font-semibold">About</h3>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">
-                {representative.biography || 'No biography available for this representative.'}
+              <p className="text-sm text-gray-600 whitespace-pre-line">
+                {representative.biography || `${representative.name} is the Member of Parliament for ${representative.constituency}, representing the ${representative.party} party.`}
               </p>
             </CardContent>
           </Card>
@@ -183,12 +191,12 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-primary" />
-                    <button 
-                      onClick={() => handleCall('1 613 992-4501')}
+                    <a 
+                      href="tel:1-613-992-4501"
                       className="text-sm text-primary hover:underline"
                     >
                       1 613 992-4501
-                    </button>
+                    </a>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -214,12 +222,12 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-primary" />
-                    <button 
-                      onClick={() => handleCall('1 416 321-5454')}
+                    <a 
+                      href="tel:1-416-321-5454"
                       className="text-sm text-primary hover:underline"
                     >
                       1 416 321-5454
-                    </button>
+                    </a>
                   </div>
                   
                   <div className="flex items-center space-x-2">

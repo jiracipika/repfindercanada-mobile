@@ -56,8 +56,16 @@ export class MemStorage implements IStorage {
 
   async createRepresentative(insertRepresentative: InsertRepresentative): Promise<Representative> {
     const id = this.currentRepId++;
+    
+    // Fix URL duplication issues in storage
+    const cleanedRepresentative = {
+      ...insertRepresentative,
+      photo: insertRepresentative.photo?.replace('openparliament.cahttps://', 'https://') || null,
+      website: insertRepresentative.website?.replace('openparliament.cahttps://', 'https://') || null
+    };
+    
     const representative: Representative = { 
-      ...insertRepresentative, 
+      ...cleanedRepresentative, 
       id,
       createdAt: new Date()
     };

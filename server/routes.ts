@@ -435,18 +435,18 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
         photoUrl = detailedInfo.image.startsWith('http') ? 
           detailedInfo.image : 
           `https://openparliament.ca${detailedInfo.image}`;
+        console.log(`Using detailed info photo for ${rep.name}:`, photoUrl);
       } else if (rep.photo_url) {
-        // Fix duplicate domain issue
-        if (rep.photo_url.includes('openparliament.cahttps://openparliament.ca')) {
-          photoUrl = rep.photo_url.replace('openparliament.cahttps://openparliament.ca', 'openparliament.ca');
+        // Fix duplicate domain issue in cached data
+        if (rep.photo_url.includes('openparliament.cahttps://')) {
+          photoUrl = rep.photo_url.replace('openparliament.cahttps://', 'https://');
         } else if (rep.photo_url.startsWith('http')) {
           photoUrl = rep.photo_url;
         } else {
           photoUrl = `https://openparliament.ca${rep.photo_url}`;
         }
+        console.log(`Using fallback photo for ${rep.name}:`, photoUrl);
       }
-      
-      console.log(`Photo URL for ${rep.name}:`, photoUrl);
       
       let profileUrl = rep.url || null;
       if (detailedInfo?.url) {
@@ -455,9 +455,27 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
           `https://openparliament.ca${detailedInfo.url}`;
       }
 
-      // Enhanced biography information
-      const biography = detailedInfo?.other_info?.biography || 
-        `${rep.name} is the Member of Parliament for ${rep.district_name}, representing the ${rep.party_name} party.`;
+      // Enhanced biography information from API
+      let biography = null;
+      if (detailedInfo) {
+        const party = detailedInfo.memberships?.[0]?.party?.name?.en || rep.party_name;
+        const riding = detailedInfo.memberships?.[0]?.riding?.name?.en || rep.district_name;
+        const startDate = detailedInfo.memberships?.[0]?.start_date;
+        
+        biography = `${rep.name} is the Member of Parliament for ${riding}, representing the ${party}`;
+        if (startDate) {
+          const year = new Date(startDate).getFullYear();
+          biography += ` since ${year}`;
+        }
+        biography += '.';
+        
+        // Add any additional bio info if available
+        if (detailedInfo.other_info?.biography) {
+          biography += `\n\n${detailedInfo.other_info.biography}`;
+        }
+      } else {
+        biography = `${rep.name} is the Member of Parliament for ${rep.district_name}, representing the ${rep.party_name} party.`;
+      }
 
       return {
         name: rep.name,
@@ -472,8 +490,8 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
           }, 
           province: data.province || 'Unknown'
         },
-        image: photoUrl,
-        url: profileUrl,
+        image: photoUrl?.replace('openparliament.cahttps://', 'https://') || null,
+        url: profileUrl?.replace('openparliament.cahttps://', 'https://') || null,
         email: detailedInfo?.email || rep.email || `${rep.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`,
         phone: detailedInfo?.voice || rep.offices?.[0]?.tel || '1 613 992-4501',
         personalWebsite: rep.personal_url,
@@ -534,6 +552,13 @@ async function searchOpenParliament(query: string, type: 'postal_code' | 'name' 
 
 function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any {
   const baseUrl = 'https://openparliament.ca';
+  
+  // Ensure clean URL construction
+  const cleanImageUrl = apiRep.image ? 
+    (apiRep.image.startsWith('http') ? apiRep.image : `${baseUrl}${apiRep.image}`) : null;
+  const cleanProfileUrl = apiRep.url ? 
+    (apiRep.url.startsWith('http') ? apiRep.url : `${baseUrl}${apiRep.url}`) : null;
+  
   return {
     name: apiRep.name,
     party: apiRep.current_party?.short_name?.en || 'Unknown',
@@ -541,8 +566,8 @@ function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any 
     province: apiRep.current_riding?.province || 'Unknown',
     email: null,
     phone: null,
-    photo: apiRep.image ? `${baseUrl}${apiRep.image}` : null,
-    website: apiRep.url ? `${baseUrl}${apiRep.url}` : null,
+    photo: cleanImageUrl,
+    website: cleanProfileUrl,
     personalWebsite: null,
     socialMedia: {},
     biography: null,
