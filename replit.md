@@ -2,7 +2,7 @@
 
 ## Overview
 
-Find My Rep is a web application that helps Canadian citizens find their parliamentary representatives by postal code, name, or riding. The app provides a clean, mobile-first interface for searching, viewing, and saving representative information with integration to the OpenParliament.ca API.
+Find My Rep is a comprehensive mobile-first web application that helps Canadian citizens discover, contact, and engage with their parliamentary representatives. The app provides authentic government data through real-time API integration, featuring interactive maps, direct communication tools, and social media sharing capabilities for seamless civic engagement.
 
 ## System Architecture
 
@@ -30,32 +30,85 @@ Find My Rep is a web application that helps Canadian citizens find their parliam
 - **Schema**: Three main tables - representatives, searches, saved_representatives
 - **Migrations**: Drizzle Kit for schema management
 
-## Key Components
+## Core Features & Functionality
 
-### Database Schema
-- **Representatives Table**: Stores MP information (name, party, constituency, contact details)
-- **Searches Table**: Tracks user search queries and results for analytics
-- **Saved Representatives Table**: User bookmarks with simple user identification
+### Search & Discovery
+- **Smart Search**: Multi-type search supporting postal codes (M1K4K6), MP names, and riding names
+- **Location-Based**: Automatic geolocation detection with reverse geocoding
+- **Real-Time Results**: Live search with instant representative matching
+- **Recent Search History**: Persistent search tracking for quick re-access
 
-### API Endpoints
-- `GET /api/representatives/:id` - Get specific representative
-- `POST /api/representatives/search` - Search by postal code, name, or riding
+### Representative Profiles
+- **Authentic Photos**: High-resolution MP portraits from OpenParliament.ca
+- **Complete Contact Information**: Legislature and constituency office details
+- **Interactive Contact Methods**: 
+  - Clickable phone numbers opening device dialer
+  - Clickable email addresses opening mail client
+  - Direct website links to official MP pages
+- **Political Information**: Party affiliation, constituency, province details
+- **Biography Section**: Role descriptions and tenure information
+
+### Interactive Features
+- **Interactive Maps**: 
+  - Visual map placeholder with location indicators
+  - Google Maps integration showing both Legislature (Ottawa) and constituency offices
+  - "View Both Offices" button opening directions between locations
+  - Individual office location buttons
+- **Social Media Sharing**:
+  - Native device sharing API integration
+  - Comprehensive contact information sharing
+  - Fallback clipboard copying for unsupported devices
+  - Formatted text including all phone numbers and email addresses
+
+### User Experience
+- **Mobile-First Design**: Optimized for smartphones and tablets
+- **Bottom Navigation**: Home, Search, Saved, Profile sections
+- **Modal-Based Profiles**: Full-screen representative details
+- **Save Functionality**: Bookmark favorite representatives
+- **Dark/Light Mode**: Theme switching support
+
+## Database Schema
+- **Representatives Table**: MP information (name, party, constituency, contact details, photos, websites)
+- **Searches Table**: User search history with query tracking
+- **Saved Representatives Table**: User bookmarks with relationship mapping
+
+## API Architecture
+
+### Internal API Endpoints
+- `GET /api/representatives/:id` - Retrieve specific representative
+- `POST /api/representatives/search` - Multi-type search (postal code, name, riding)
 - `POST/DELETE /api/representatives/:id/save` - Save/unsave representatives
-- `GET /api/saved/:userId` - Get user's saved representatives
+- `GET /api/saved/:userId` - Retrieve user's saved representatives
 - `GET /api/searches/recent` - Get recent search history
 
-### React Components
-- **SearchForm**: Handles postal code and location-based searches
-- **RepresentativeCard**: Displays representative information in cards
-- **RepresentativeModal**: Detailed view with contact information
-- **BottomNav**: Mobile navigation with Home, Search, Saved, Profile tabs
-- **Header**: App branding and navigation
-
 ### External API Integration
-- **OpenParliament.ca API**: Fetches current MP data
-- **Search Types**: Supports postal code, name, and riding searches
-- **Data Transformation**: Converts API response to internal schema format
-- **Error Handling**: Graceful fallbacks when external API is unavailable
+- **OpenParliament.ca API**: 
+  - Primary data source for current MP information
+  - Endpoints: `/api/politicians/`, `/api/politicians/search/`
+  - Real-time data fetching with detailed MP profiles
+  - High-resolution photo retrieval from `/media/polpics/`
+  - Comprehensive biographical and contact information
+
+### Data Flow & Processing
+- **Search Processing**: Postal code → Represent API → riding identification → MP lookup
+- **Data Transformation**: OpenParliament API responses → internal schema format
+- **Image URL Handling**: Proper URL construction preventing duplication
+- **Error Handling**: Graceful fallbacks for API unavailability
+
+## React Components Architecture
+
+### Core Components
+- **SearchForm**: Multi-type search input with validation and location detection
+- **RepresentativeCard**: Compact representative display with photo and basic info
+- **RepresentativeModal**: Comprehensive profile view with all contact methods
+- **BottomNav**: Mobile navigation with active state indicators
+- **Header**: App branding and search integration
+
+### UI Component Library
+- **shadcn/ui**: Complete component system built on Radix UI primitives
+- **Tailwind CSS**: Utility-first styling with custom design tokens
+- **Lucide React**: Icon system for consistent visual language
+- **Responsive Design**: Mobile-first with tablet and desktop adaptations
 
 ## Data Flow
 
@@ -99,12 +152,44 @@ Find My Rep is a web application that helps Canadian citizens find their parliam
 └── dist/           # Production build output
 ```
 
+## Technical Implementation Details
+
+### Contact Functionality
+- **Phone Integration**: `tel:` protocol links with cleaned phone number formatting
+- **Email Integration**: `mailto:` protocol with fallback email generation using MP name patterns
+- **Click Handlers**: JavaScript functions using `window.open()` for device app integration
+- **Contact Methods**: Both Legislature (Ottawa) and Constituency office phone numbers
+
+### Map Integration
+- **Google Maps**: Deep linking to show office locations and directions
+- **Interactive Elements**: Visual map placeholder with location indicators
+- **Dual Office Display**: Combined view showing both Legislature and Constituency offices
+- **Responsive Design**: Mobile-optimized map viewing experience
+
+### Sharing Capabilities
+- **Native Sharing API**: Device-native sharing when available (mobile devices)
+- **Fallback Methods**: Clipboard copying for desktop and unsupported devices
+- **Formatted Content**: Complete contact information including all phone numbers and email
+- **Social Media Ready**: Pre-formatted text for Twitter, Facebook, WhatsApp sharing
+
+### Data Sources & APIs
+- **OpenParliament.ca**: `https://openparliament.ca/api/politicians/` for MP data
+- **Represent API**: For postal code to riding mapping (planned integration)
+- **Photo URLs**: `https://openparliament.ca/media/polpics/` for high-resolution MP photos
+- **Real-time Data**: Live API calls ensuring current MP information
+
+### Performance & Reliability
+- **Error Handling**: Graceful degradation when APIs are unavailable
+- **Caching Strategy**: In-memory storage for development, PostgreSQL for production
+- **Mobile Optimization**: Touch-friendly interfaces with large clickable areas
+- **Progressive Enhancement**: Core functionality works without JavaScript
+
 ## Changelog
 
-Changelog:
-- June 18, 2025. Initial setup
-- June 19, 2025. Enhanced representative profiles with comprehensive contact information, office details, and authentic Canadian government API integration
+- June 18, 2025: Initial application setup with basic search functionality
+- June 19, 2025: Enhanced representative profiles with comprehensive contact information and authentic API integration
+- June 19, 2025: Implemented interactive contact features (clickable phone/email), map integration, and social media sharing capabilities
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday language with detailed technical documentation for future reference.
