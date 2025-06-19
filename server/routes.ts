@@ -260,31 +260,48 @@ async function getAllPoliticians(): Promise<OpenParliamentRepresentative[]> {
   }
   
   try {
-    console.log('Attempting to fetch from OpenParliament.ca API...');
-    const response = await fetch('https://openparliament.ca/politicians/?format=json&limit=338', {
+    console.log('Attempting to fetch from Represent API...');
+    const response = await fetch('https://represent.opennorth.ca/representatives/house-of-commons/', {
       headers: {
         'User-Agent': 'FindMyRep/1.0',
         'Accept': 'application/json'
-      },
-      timeout: 5000
+      }
     });
     
     if (!response.ok) {
-      throw new Error(`OpenParliament API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Represent API error: ${response.status} ${response.statusText}`);
     }
 
-    const text = await response.text();
-    const data = JSON.parse(text);
-    const newCache = data.objects || data.results || [];
+    const data = await response.json();
+    const representatives = data.objects || [];
     
-    if (Array.isArray(newCache) && newCache.length > 0) {
-      politiciansCache = newCache;
+    if (Array.isArray(representatives) && representatives.length > 0) {
+      // Transform Represent API data to our format
+      politiciansCache = representatives.map(rep => ({
+        name: rep.name,
+        current_party: { 
+          short_name: { 
+            en: rep.party_name || 'Independent' 
+          } 
+        },
+        current_riding: { 
+          name: { 
+            en: rep.district_name || 'Unknown' 
+          }, 
+          province: rep.offices?.[0]?.postal_code?.substring(0, 2) || 'Unknown'
+        },
+        image: rep.photo_url || null,
+        url: `/politicians/${rep.name.toLowerCase().replace(/\s+/g, '-')}/`,
+        email: rep.email || null,
+        phone: rep.offices?.[0]?.tel || null
+      }));
+      
       cacheTimestamp = now;
-      console.log(`Successfully fetched ${politiciansCache.length} politicians from OpenParliament.ca`);
+      console.log(`Successfully fetched ${politiciansCache.length} politicians from Represent API`);
       return politiciansCache;
     }
-  } catch (error) {
-    console.log('OpenParliament.ca API unavailable, using sample data:', error.message);
+  } catch (error: any) {
+    console.log('Represent API unavailable, using sample data:', error?.message || String(error));
   }
   
   // Use sample data when API is unavailable
@@ -297,8 +314,76 @@ async function getAllPoliticians(): Promise<OpenParliamentRepresentative[]> {
   return politiciansCache;
 }
 
+async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRepresentative[]> {
+  try {
+    const cleanPostalCode = postalCode.replace(/\s+/g, '').toUpperCase();
+    console.log(`Searching for postal code: ${cleanPostalCode}`);
+    
+    const response = await fetch(`https://represent.opennorth.ca/postcodes/${cleanPostalCode}/`, {
+      headers: {
+        'User-Agent': 'FindMyRep/1.0',
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Postal code lookup failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const representatives = data.representatives_centroid || data.representatives_concordance || [];
+    
+    // Filter for current MPs (incumbents) only - exclude candidates
+    const currentMPs = representatives.filter((rep: any) => 
+      rep.elected_office === 'MP' && rep.incumbent === true
+    );
+    
+    console.log(`Found ${currentMPs.length} current MPs for postal code ${cleanPostalCode}`);
+    
+    if (currentMPs.length === 0) {
+      console.log('No current MPs found, checking all representatives...');
+      // Fallback: look for any representative with MP office
+      const allMPs = representatives.filter((rep: any) => 
+        rep.elected_office === 'MP' || rep.district_name
+      );
+      console.log(`Found ${allMPs.length} total MPs/representatives`);
+    }
+    
+    const repsToTransform = currentMPs.length > 0 ? currentMPs : representatives.filter((rep: any) => rep.elected_office === 'MP');
+    
+    return repsToTransform.map((rep: any) => ({
+      name: rep.name,
+      current_party: { 
+        short_name: { 
+          en: rep.party_name || 'Independent' 
+        } 
+      },
+      current_riding: { 
+        name: { 
+          en: rep.district_name || 'Unknown' 
+        }, 
+        province: data.province || 'Unknown'
+      },
+      image: rep.photo_url || null,
+      url: `/politicians/${rep.name.toLowerCase().replace(/\s+/g, '-')}/`,
+      email: rep.email || null,
+      phone: rep.offices?.[0]?.tel || null
+    }));
+    
+  } catch (error: any) {
+    console.error('Postal code search error:', error?.message || String(error));
+    return [];
+  }
+}
+
 async function searchOpenParliament(query: string, type: 'postal_code' | 'name' | 'riding' = 'postal_code'): Promise<OpenParliamentRepresentative[]> {
   try {
+    if (type === 'postal_code') {
+      // Use direct postal code API lookup
+      return await searchByPostalCode(query);
+    }
+    
+    // For name and riding searches, use cached politician data
     const allPoliticians = await getAllPoliticians();
     
     if (allPoliticians.length === 0) {
@@ -306,33 +391,7 @@ async function searchOpenParliament(query: string, type: 'postal_code' | 'name' 
       return [];
     }
     
-    // Filter based on search type
-    if (type === 'postal_code') {
-      const postalPrefix = query.replace(/\s+/g, '').toUpperCase().substring(0, 3);
-      const possibleRidings = POSTAL_CODE_TO_RIDING[postalPrefix] || [];
-      
-      console.log(`Searching for postal code ${query} (prefix: ${postalPrefix}), mapped to ridings:`, possibleRidings);
-      
-      if (possibleRidings.length === 0) {
-        console.log('No riding mapping found for postal code prefix:', postalPrefix);
-        return [];
-      }
-      
-      const results = allPoliticians.filter((politician: OpenParliamentRepresentative) => {
-        const ridingName = politician.current_riding?.name?.en || '';
-        return possibleRidings.some(riding => {
-          const match = ridingName.toLowerCase().includes(riding.toLowerCase()) ||
-                       riding.toLowerCase().includes(ridingName.toLowerCase());
-          if (match) {
-            console.log(`Found match: ${politician.name} in ${ridingName}`);
-          }
-          return match;
-        });
-      });
-      
-      console.log(`Found ${results.length} politicians for postal code ${query}`);
-      return results;
-    } else if (type === 'name') {
+    if (type === 'name') {
       const searchName = query.toLowerCase();
       return allPoliticians.filter((politician: OpenParliamentRepresentative) => {
         return politician.name.toLowerCase().includes(searchName);
