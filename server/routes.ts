@@ -314,6 +314,26 @@ async function getAllPoliticians(): Promise<OpenParliamentRepresentative[]> {
   return politiciansCache;
 }
 
+async function fetchDetailedMPInfo(mpName: string): Promise<any> {
+  try {
+    const nameSlug = mpName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+    const response = await fetch(`https://openparliament.ca/politicians/${nameSlug}/?format=json`, {
+      headers: {
+        'User-Agent': 'FindMyRep/1.0',
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const detailedData = await response.json();
+      return detailedData;
+    }
+  } catch (error) {
+    console.log(`Could not fetch detailed info for ${mpName}`);
+  }
+  return null;
+}
+
 async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRepresentative[]> {
   try {
     const cleanPostalCode = postalCode.replace(/\s+/g, '').toUpperCase();
@@ -351,24 +371,67 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
     
     const repsToTransform = currentMPs.length > 0 ? currentMPs : representatives.filter((rep: any) => rep.elected_office === 'MP');
     
-    return repsToTransform.map((rep: any) => ({
-      name: rep.name,
-      current_party: { 
-        short_name: { 
-          en: rep.party_name || 'Independent' 
-        } 
-      },
-      current_riding: { 
-        name: { 
-          en: rep.district_name || 'Unknown' 
-        }, 
-        province: data.province || 'Unknown'
-      },
-      image: rep.photo_url || null,
-      url: `/politicians/${rep.name.toLowerCase().replace(/\s+/g, '-')}/`,
-      email: rep.email || null,
-      phone: rep.offices?.[0]?.tel || null
+    // Enhance data with detailed MP information
+    const enhancedReps = await Promise.all(repsToTransform.map(async (rep: any) => {
+      const detailedInfo = await fetchDetailedMPInfo(rep.name);
+      
+      // Extract office information
+      const offices = [];
+      
+      // Legislature office from detailed info
+      if (detailedInfo?.voice || detailedInfo?.email) {
+        offices.push({
+          type: 'Legislature Office',
+          address: 'House of Commons Ottawa ON K1A 0A6',
+          phone: detailedInfo.voice || '1 613 992-4501',
+          fax: detailedInfo.other_info?.fax || '1 613 992-4501',
+          email: detailedInfo.email
+        });
+      }
+      
+      // Constituency office from Represent API
+      if (rep.offices && rep.offices.length > 0) {
+        rep.offices.forEach((office: any) => {
+          offices.push({
+            type: 'Constituency Office',
+            address: office.postal_address || `Main office - ${rep.district_name}`,
+            phone: office.tel,
+            fax: office.fax
+          });
+        });
+      }
+      
+      return {
+        name: rep.name,
+        current_party: { 
+          short_name: { 
+            en: rep.party_name || 'Independent' 
+          } 
+        },
+        current_riding: { 
+          name: { 
+            en: rep.district_name || 'Unknown' 
+          }, 
+          province: data.province || 'Unknown'
+        },
+        image: detailedInfo?.image ? `https://openparliament.ca${detailedInfo.image}` : rep.photo_url,
+        url: detailedInfo?.url ? `https://openparliament.ca${detailedInfo.url}` : rep.url,
+        email: detailedInfo?.email || rep.email,
+        phone: detailedInfo?.voice || rep.offices?.[0]?.tel,
+        personalWebsite: rep.personal_url,
+        website: detailedInfo?.links?.[0]?.url || rep.url,
+        socialMedia: {
+          twitter: detailedInfo?.other_info?.twitter?.[0] || rep.extra?.twitter,
+          ...rep.extra
+        },
+        biography: detailedInfo?.other_info?.biography || null,
+        offices: offices,
+        fax: detailedInfo?.other_info?.fax,
+        parliamentId: detailedInfo?.other_info?.parl_mp_id?.[0]
+      };
     }));
+    
+    return enhancedReps;
     
   } catch (error: any) {
     console.error('Postal code search error:', error?.message || String(error));
@@ -418,10 +481,15 @@ function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any 
     party: apiRep.current_party?.short_name?.en || 'Unknown',
     constituency: apiRep.current_riding?.name?.en || 'Unknown',
     province: apiRep.current_riding?.province || 'Unknown',
-    email: null, // Not provided by this API endpoint
-    phone: null, // Not provided by this API endpoint
+    email: null,
+    phone: null,
     photo: apiRep.image ? `${baseUrl}${apiRep.image}` : null,
     website: apiRep.url ? `${baseUrl}${apiRep.url}` : null,
+    personalWebsite: null,
+    socialMedia: {},
+    biography: null,
+    offices: [],
+    fax: null,
     parliamentId: apiRep.url ? apiRep.url.split('/').slice(-2, -1)[0] : null,
   };
 }

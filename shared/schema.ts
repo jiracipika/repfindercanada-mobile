@@ -12,6 +12,11 @@ export const representatives = pgTable("representatives", {
   phone: text("phone"),
   photo: text("photo"),
   website: text("website"),
+  personalWebsite: text("personal_website"),
+  socialMedia: jsonb("social_media"), // Twitter, Facebook, Instagram, etc.
+  biography: text("biography"),
+  offices: jsonb("offices"), // Legislature and constituency office details
+  fax: text("fax"),
   parliamentId: text("parliament_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });

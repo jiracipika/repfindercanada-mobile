@@ -2,8 +2,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Phone, Mail, MapPin, ExternalLink, Globe } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart } from "lucide-react";
 import type { Representative } from "@shared/schema";
 
 interface RepresentativeModalProps {
@@ -13,22 +14,16 @@ interface RepresentativeModalProps {
 }
 
 export function RepresentativeModal({ representative, isOpen, onClose }: RepresentativeModalProps) {
-  const handleCall = () => {
-    if (representative.phone) {
-      window.location.href = `tel:${representative.phone}`;
-    }
+  const handleCall = (phone: string) => {
+    window.location.href = `tel:${phone}`;
   };
 
-  const handleEmail = () => {
-    if (representative.email) {
-      window.location.href = `mailto:${representative.email}`;
-    }
+  const handleEmail = (email: string) => {
+    window.location.href = `mailto:${email}`;
   };
 
-  const handleWebsite = () => {
-    if (representative.website) {
-      window.open(representative.website, '_blank');
-    }
+  const handleWebsite = (url: string) => {
+    window.open(url, '_blank');
   };
 
   const getPartyColor = (party: string) => {
@@ -40,108 +35,207 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     return 'bg-neutral-100 text-neutral-800';
   };
 
+  // Parse offices from the representative data
+  const offices = representative.offices as any[] || [];
+  const socialMedia = representative.socialMedia as any || {};
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Representative Details</DialogTitle>
+      <DialogContent className="max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogTitle>Find Representatives</DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => {/* TODO: Implement save functionality */}}
+          >
+            <Heart className="h-4 w-4" />
+            Follow
+          </Button>
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Representative Info */}
-          <div className="text-center">
-            <Avatar className="w-24 h-24 mx-auto mb-3 border-4 border-neutral-200">
-              <AvatarImage 
-                src={representative.photo || undefined} 
-                alt={`${representative.name} photo`} 
-              />
-              <AvatarFallback className="text-lg">
-                {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            
-            <h3 className="text-xl font-semibold text-neutral-800 mb-2">
-              {representative.name}
-            </h3>
-            
-            <Badge variant="secondary" className={getPartyColor(representative.party)}>
-              {representative.party}
-            </Badge>
+          {/* Representative Header */}
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-1">{representative.name}</h2>
+            <p className="text-gray-400">MP</p>
           </div>
-          
-          {/* Contact Information */}
+
+          {/* Profile Section */}
           <Card>
-            <CardContent className="pt-6">
-              <h4 className="font-semibold text-neutral-800 mb-3">Contact Information</h4>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Profile</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Avatar and Basic Info */}
+              <div className="text-center">
+                <Avatar className="w-20 h-20 mx-auto mb-3">
+                  <AvatarImage 
+                    src={representative.photo || undefined} 
+                    alt={`${representative.name} photo`} 
+                  />
+                  <AvatarFallback className="text-lg">
+                    {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <Badge variant="secondary" className={getPartyColor(representative.party)}>
+                  {representative.party}
+                </Badge>
+              </div>
+
+              {/* Contact Information */}
               <div className="space-y-3">
-                {representative.phone && (
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-primary" />
-                    <span className="text-sm">{representative.phone}</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <span className="text-sm">{representative.constituency}</span>
+                </div>
                 
                 {representative.email && (
                   <div className="flex items-center space-x-3">
                     <Mail className="h-5 w-5 text-primary" />
-                    <span className="text-sm break-all">{representative.email}</span>
+                    <button 
+                      onClick={() => handleEmail(representative.email!)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {representative.email}
+                    </button>
                   </div>
                 )}
                 
+                {representative.phone && (
+                  <div className="flex items-center space-x-3">
+                    <Phone className="h-5 w-5 text-primary" />
+                    <button 
+                      onClick={() => handleCall(representative.phone!)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {representative.phone}
+                    </button>
+                  </div>
+                )}
+
                 {representative.website && (
                   <div className="flex items-center space-x-3">
                     <Globe className="h-5 w-5 text-primary" />
-                    <span className="text-sm break-all">{representative.website}</span>
+                    <button 
+                      onClick={() => handleWebsite(representative.website!)}
+                      className="text-sm text-primary hover:underline break-all"
+                    >
+                      Official Website
+                    </button>
+                  </div>
+                )}
+
+                {representative.personalWebsite && (
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-5 w-5 text-primary" />
+                    <button 
+                      onClick={() => handleWebsite(representative.personalWebsite!)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Personal Website
+                    </button>
                   </div>
                 )}
               </div>
+
+              {/* Social Media */}
+              {Object.keys(socialMedia).length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="font-semibold mb-2">Social Media</h4>
+                    <div className="flex items-center space-x-3">
+                      <Globe className="h-5 w-5 text-primary" />
+                      {/* Social media links would go here */}
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
-          
-          {/* Constituency Info */}
+
+          {/* About Section */}
           <Card>
-            <CardContent className="pt-6">
-              <h4 className="font-semibold text-neutral-800 mb-3">Constituency</h4>
-              <div className="flex items-center space-x-3">
-                <MapPin className="h-5 w-5 text-primary" />
-                <span className="text-sm">{representative.constituency}</span>
-              </div>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">About</h3>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                {representative.biography || 'No biography available for this representative.'}
+              </p>
             </CardContent>
           </Card>
-        </div>
-        
-        {/* Actions */}
-        <div className="grid grid-cols-2 gap-3 mt-6">
-          <Button 
-            className="w-full"
-            onClick={handleCall}
-            disabled={!representative.phone}
-          >
-            <Phone className="h-4 w-4 mr-2" />
-            Call Now
-          </Button>
-          
+
+          {/* Offices Section */}
+          {offices.length > 0 && (
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Offices</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {offices.map((office, index) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {office.type}
+                    </h4>
+                    
+                    {office.address && (
+                      <p className="text-sm text-gray-600 mb-2">{office.address}</p>
+                    )}
+                    
+                    <div className="space-y-1">
+                      {office.phone && (
+                        <div className="flex items-center space-x-2">
+                          <Phone className="h-4 w-4 text-primary" />
+                          <button 
+                            onClick={() => handleCall(office.phone)}
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {office.phone}
+                          </button>
+                        </div>
+                      )}
+                      
+                      {office.fax && (
+                        <div className="flex items-center space-x-2">
+                          <Printer className="h-4 w-4 text-primary" />
+                          <span className="text-sm">Fax: {office.fax}</span>
+                        </div>
+                      )}
+                      
+                      {office.email && (
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-primary" />
+                          <button 
+                            onClick={() => handleEmail(office.email)}
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {office.email}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Official Profile Button */}
           <Button 
             variant="outline" 
             className="w-full"
-            onClick={handleEmail}
-            disabled={!representative.email}
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Send Email
-          </Button>
-        </div>
-        
-        {representative.website && (
-          <Button 
-            variant="outline" 
-            className="w-full mt-2"
-            onClick={handleWebsite}
+            onClick={() => representative.website && handleWebsite(representative.website)}
+            disabled={!representative.website}
           >
             <ExternalLink className="h-4 w-4 mr-2" />
-            Visit Website
+            Official Profile
           </Button>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );
