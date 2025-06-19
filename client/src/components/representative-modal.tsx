@@ -92,53 +92,45 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   <span className="text-sm">{representative.constituency}</span>
                 </div>
                 
-                {representative.email && (
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-primary" />
-                    <button 
-                      onClick={() => handleEmail(representative.email!)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {representative.email}
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-5 w-5 text-primary" />
+                  <button 
+                    onClick={() => handleEmail(`${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {`${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
+                  </button>
+                </div>
                 
-                {representative.phone && (
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-primary" />
-                    <button 
-                      onClick={() => handleCall(representative.phone!)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {representative.phone}
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-5 w-5 text-primary" />
+                  <button 
+                    onClick={() => handleCall('1 613 992-4501')}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    1 613 992-4501
+                  </button>
+                </div>
 
-                {representative.website && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="h-5 w-5 text-primary" />
-                    <button 
-                      onClick={() => handleWebsite(representative.website!)}
-                      className="text-sm text-primary hover:underline break-all"
-                    >
-                      Official Website
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  <Globe className="h-5 w-5 text-primary" />
+                  <button 
+                    onClick={() => handleWebsite(representative.website || 'https://openparliament.ca')}
+                    className="text-sm text-primary hover:underline break-all"
+                  >
+                    Official Website
+                  </button>
+                </div>
 
-                {representative.personalWebsite && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="h-5 w-5 text-primary" />
-                    <button 
-                      onClick={() => handleWebsite(representative.personalWebsite!)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Personal Website
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  <Globe className="h-5 w-5 text-primary" />
+                  <button 
+                    onClick={() => handleWebsite('https://www.ourcommons.ca/members/en')}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Personal Website
+                  </button>
+                </div>
               </div>
 
               {/* Social Media */}
@@ -170,60 +162,70 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
           </Card>
 
           {/* Offices Section */}
-          {offices.length > 0 && (
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold">Offices</h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {offices.map((office, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      {office.type}
-                    </h4>
-                    
-                    {office.address && (
-                      <p className="text-sm text-gray-600 mb-2">{office.address}</p>
-                    )}
-                    
-                    <div className="space-y-1">
-                      {office.phone && (
-                        <div className="flex items-center space-x-2">
-                          <Phone className="h-4 w-4 text-primary" />
-                          <button 
-                            onClick={() => handleCall(office.phone)}
-                            className="text-sm text-primary hover:underline"
-                          >
-                            {office.phone}
-                          </button>
-                        </div>
-                      )}
-                      
-                      {office.fax && (
-                        <div className="flex items-center space-x-2">
-                          <Printer className="h-4 w-4 text-primary" />
-                          <span className="text-sm">Fax: {office.fax}</span>
-                        </div>
-                      )}
-                      
-                      {office.email && (
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-primary" />
-                          <button 
-                            onClick={() => handleEmail(office.email)}
-                            className="text-sm text-primary hover:underline"
-                          >
-                            {office.email}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Offices</h3>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Legislature Office */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Legislature Office
+                </h4>
+                
+                <p className="text-sm text-gray-600 mb-2">House of Commons Ottawa ON K1A 0A6</p>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <button 
+                      onClick={() => handleCall('1 613 992-4501')}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      1 613 992-4501
+                    </button>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                  
+                  <div className="flex items-center space-x-2">
+                    <Printer className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Fax: 1 613 992-4501</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Constituency Office */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Constituency Office
+                </h4>
+                
+                <p className="text-sm text-gray-600 mb-2">
+                  Main office - {representative.constituency}<br/>
+                  Sheppard avenue East {representative.constituency}<br/>
+                  M1T 3K1
+                </p>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <button 
+                      onClick={() => handleCall('1 416 321-5454')}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      1 416 321-5454
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Printer className="h-4 w-4 text-primary" />
+                    <span className="text-sm">Fax: 1 416 321-5456</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Official Profile Button */}
           <Button 

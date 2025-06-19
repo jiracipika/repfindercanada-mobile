@@ -103,6 +103,7 @@ Find My Rep is a web application that helps Canadian citizens find their parliam
 
 Changelog:
 - June 18, 2025. Initial setup
+- June 19, 2025. Enhanced representative profiles with comprehensive contact information, office details, and authentic Canadian government API integration
 
 ## User Preferences
 
