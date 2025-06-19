@@ -92,8 +92,12 @@ export function RepresentativeCard({
         <div className="flex items-start space-x-4">
           <Avatar className="w-16 h-16 border-2 border-neutral-200">
             <AvatarImage 
-              src={representative.photo || undefined} 
+              src={representative.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(representative.name)}&background=3b82f6&color=fff&size=128`} 
               alt={`${representative.name} photo`} 
+              onError={(e) => {
+                console.log('Avatar image failed to load:', representative.photo);
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(representative.name)}&background=3b82f6&color=fff&size=128`;
+              }}
             />
             <AvatarFallback>
               {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}

@@ -317,6 +317,8 @@ async function getAllPoliticians(): Promise<OpenParliamentRepresentative[]> {
 async function fetchDetailedMPInfo(mpName: string): Promise<any> {
   try {
     const nameSlug = mpName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+    console.log(`Fetching detailed info for: ${mpName} (slug: ${nameSlug})`);
+    
     const response = await fetch(`https://openparliament.ca/politicians/${nameSlug}/?format=json`, {
       headers: {
         'User-Agent': 'FindMyRep/1.0',
@@ -326,10 +328,17 @@ async function fetchDetailedMPInfo(mpName: string): Promise<any> {
     
     if (response.ok) {
       const detailedData = await response.json();
+      console.log(`Successfully fetched detailed info for ${mpName}:`, {
+        hasImage: !!detailedData.image,
+        hasEmail: !!detailedData.email,
+        imageUrl: detailedData.image
+      });
       return detailedData;
+    } else {
+      console.log(`Failed to fetch detailed info for ${mpName}: ${response.status}`);
     }
   } catch (error) {
-    console.log(`Could not fetch detailed info for ${mpName}`);
+    console.log(`Error fetching detailed info for ${mpName}:`, error);
   }
   return null;
 }
@@ -420,13 +429,24 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
         });
       }
       
-      // Clean up URLs to prevent duplication
-      let photoUrl = rep.photo_url || null;
+      // Clean up URLs to prevent duplication and ensure proper photo display
+      let photoUrl = null;
       if (detailedInfo?.image) {
         photoUrl = detailedInfo.image.startsWith('http') ? 
           detailedInfo.image : 
           `https://openparliament.ca${detailedInfo.image}`;
+      } else if (rep.photo_url) {
+        // Fix duplicate domain issue
+        if (rep.photo_url.includes('openparliament.cahttps://openparliament.ca')) {
+          photoUrl = rep.photo_url.replace('openparliament.cahttps://openparliament.ca', 'openparliament.ca');
+        } else if (rep.photo_url.startsWith('http')) {
+          photoUrl = rep.photo_url;
+        } else {
+          photoUrl = `https://openparliament.ca${rep.photo_url}`;
+        }
       }
+      
+      console.log(`Photo URL for ${rep.name}:`, photoUrl);
       
       let profileUrl = rep.url || null;
       if (detailedInfo?.url) {

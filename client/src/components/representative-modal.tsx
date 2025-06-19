@@ -72,8 +72,12 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
               <div className="text-center">
                 <Avatar className="w-20 h-20 mx-auto mb-3">
                   <AvatarImage 
-                    src={representative.photo || undefined} 
+                    src={representative.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(representative.name)}&background=3b82f6&color=fff&size=128`} 
                     alt={`${representative.name} photo`} 
+                    onError={(e) => {
+                      console.log('Modal avatar image failed to load:', representative.photo);
+                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(representative.name)}&background=3b82f6&color=fff&size=128`;
+                    }}
                   />
                   <AvatarFallback className="text-lg">
                     {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}

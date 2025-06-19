@@ -35,6 +35,15 @@ export class MemStorage implements IStorage {
     this.currentSavedId = 1;
   }
 
+  clearCache() {
+    this.representatives.clear();
+    this.searches.clear();
+    this.savedRepresentatives.clear();
+    this.currentRepId = 1;
+    this.currentSearchId = 1;
+    this.currentSavedId = 1;
+  }
+
   async getRepresentative(id: number): Promise<Representative | undefined> {
     return this.representatives.get(id);
   }
