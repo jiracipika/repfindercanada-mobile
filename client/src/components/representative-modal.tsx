@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart } from "lucide-react";
+import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart, Share2, Map } from "lucide-react";
 import type { Representative } from "@shared/schema";
 
 interface RepresentativeModalProps {
@@ -15,15 +15,71 @@ interface RepresentativeModalProps {
 
 export function RepresentativeModal({ representative, isOpen, onClose }: RepresentativeModalProps) {
   const handleCall = (phone: string) => {
-    window.location.href = `tel:${phone}`;
+    const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '');
+    window.open(`tel:${cleanPhone}`, '_self');
   };
 
   const handleEmail = (email: string) => {
-    window.location.href = `mailto:${email}`;
+    window.open(`mailto:${email}`, '_self');
   };
 
   const handleWebsite = (url: string) => {
     window.open(url, '_blank');
+  };
+
+  const handleMap = () => {
+    const ottawaAddress = `House of Commons, Ottawa, ON, Canada`;
+    const constituencyAddress = `${representative.constituency}, ${representative.province}, Canada`;
+    
+    // Open multiple maps showing both office locations
+    const ottawaUrl = `https://maps.google.com/maps?q=${encodeURIComponent(ottawaAddress)}`;
+    const constituencyUrl = `https://maps.google.com/maps?q=${encodeURIComponent(constituencyAddress)}`;
+    
+    // Create a combined view showing both locations
+    const combinedUrl = `https://maps.google.com/maps/dir/${encodeURIComponent(ottawaAddress)}/${encodeURIComponent(constituencyAddress)}`;
+    
+    window.open(combinedUrl, '_blank');
+  };
+
+  const handleShare = () => {
+    const shareText = `Contact ${representative.name} - ${representative.party} MP for ${representative.constituency}, ${representative.province}
+
+Legislature Office: 1-613-992-4501
+Constituency Office: 1-416-321-5454
+Email: ${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
+
+Find your MP at: ${window.location.href}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: `Contact ${representative.name}`,
+        text: shareText,
+        url: window.location.href
+      }).catch(() => {
+        // Fallback if native sharing fails
+        navigator.clipboard.writeText(shareText).then(() => {
+          alert('Contact information copied to clipboard!');
+        });
+      });
+    } else {
+      // Social media sharing options
+      const encodedText = encodeURIComponent(shareText);
+      const encodedUrl = encodeURIComponent(window.location.href);
+      
+      // Create sharing menu
+      const shareOptions = [
+        { name: 'Twitter', url: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
+        { name: 'Facebook', url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}` },
+        { name: 'WhatsApp', url: `https://api.whatsapp.com/send?text=${encodedText} ${encodedUrl}` },
+        { name: 'Email', url: `mailto:?subject=Contact ${representative.name}&body=${encodedText}` },
+        { name: 'Copy Link', action: () => navigator.clipboard.writeText(shareText).then(() => alert('Copied to clipboard!')) }
+      ];
+
+      // Show sharing options (simplified - just copy to clipboard for now)
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert('Contact information copied to clipboard! You can now paste it anywhere to share.');
+      });
+    }
   };
 
   const getPartyColor = (party: string) => {
@@ -44,15 +100,26 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
       <DialogContent className="max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Find Representatives</DialogTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={() => {/* TODO: Implement save functionality */}}
-          >
-            <Heart className="h-4 w-4" />
-            Follow
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={handleShare}
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={handleMap}
+            >
+              <Map className="h-4 w-4" />
+              Map
+            </Button>
+          </div>
         </DialogHeader>
         
         <div className="space-y-6">
@@ -98,22 +165,22 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 
                 <div className="flex items-center space-x-3">
                   <Mail className="h-5 w-5 text-primary" />
-                  <a 
-                    href={`mailto:${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}`}
-                    className="text-sm text-primary hover:underline"
+                  <button 
+                    onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                    className="text-sm text-primary hover:underline cursor-pointer"
                   >
                     {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
-                  </a>
+                  </button>
                 </div>
                 
                 <div className="flex items-center space-x-3">
                   <Phone className="h-5 w-5 text-primary" />
-                  <a 
-                    href={`tel:${representative.phone || '1-613-992-4501'}`}
-                    className="text-sm text-primary hover:underline"
+                  <button 
+                    onClick={() => handleCall(representative.phone || '1 613 992-4501')}
+                    className="text-sm text-primary hover:underline cursor-pointer"
                   >
                     {representative.phone || '1 613 992-4501'}
-                  </a>
+                  </button>
                 </div>
 
                 {representative.website && (
@@ -173,10 +240,49 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
             </CardContent>
           </Card>
 
+          {/* Interactive Map Section */}
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Map className="h-5 w-5" />
+                Office Locations
+              </h3>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center mb-4">
+                <div className="text-center">
+                  <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">Interactive Map</p>
+                  <p className="text-xs text-gray-500">Click buttons below to view locations</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMap}
+                  className="flex-1"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  View Both Offices
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
+                  className="flex-1"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Constituency Office
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Offices Section */}
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-semibold">Offices</h3>
+              <h3 className="text-lg font-semibold">Contact Information</h3>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Legislature Office */}
@@ -191,12 +297,12 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-primary" />
-                    <a 
-                      href="tel:1-613-992-4501"
-                      className="text-sm text-primary hover:underline"
+                    <button 
+                      onClick={() => handleCall('1 613 992-4501')}
+                      className="text-sm text-primary hover:underline cursor-pointer"
                     >
                       1 613 992-4501
-                    </a>
+                    </button>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -222,12 +328,12 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-primary" />
-                    <a 
-                      href="tel:1-416-321-5454"
-                      className="text-sm text-primary hover:underline"
+                    <button 
+                      onClick={() => handleCall('1 416 321-5454')}
+                      className="text-sm text-primary hover:underline cursor-pointer"
                     >
                       1 416 321-5454
-                    </a>
+                    </button>
                   </div>
                   
                   <div className="flex items-center space-x-2">
