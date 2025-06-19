@@ -54,27 +54,14 @@ export function RepresentativeCard({
   };
 
   const handleCall = () => {
-    if (representative.phone) {
-      window.location.href = `tel:${representative.phone}`;
-    } else {
-      toast({
-        title: "No phone number",
-        description: "Phone number not available for this representative",
-        variant: "destructive",
-      });
-    }
+    const phoneNumber = representative.phone || '1-613-992-4501'; // Legislature office default
+    const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/-/g, '');
+    window.open(`tel:${cleanPhone}`, '_self');
   };
 
   const handleEmail = () => {
-    if (representative.email) {
-      window.location.href = `mailto:${representative.email}`;
-    } else {
-      toast({
-        title: "No email address",
-        description: "Email address not available for this representative",
-        variant: "destructive",
-      });
-    }
+    const email = representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`;
+    window.open(`mailto:${email}`, '_self');
   };
 
   const getPartyColor = (party: string) => {
@@ -153,22 +140,20 @@ export function RepresentativeCard({
             <Button
               variant="outline"
               size="sm"
-              className="flex flex-col items-center justify-center p-3 h-auto"
+              className="flex flex-col items-center justify-center p-3 h-auto text-blue-600 border-blue-200 hover:bg-blue-50"
               onClick={handleCall}
-              disabled={!representative.phone}
             >
-              <Phone className="h-4 w-4 text-primary mb-1" />
+              <Phone className="h-4 w-4 text-blue-600 mb-1" />
               <span className="text-xs font-medium">Call</span>
             </Button>
             
             <Button
               variant="outline"
               size="sm"
-              className="flex flex-col items-center justify-center p-3 h-auto"
+              className="flex flex-col items-center justify-center p-3 h-auto text-blue-600 border-blue-200 hover:bg-blue-50"
               onClick={handleEmail}
-              disabled={!representative.email}
             >
-              <Mail className="h-4 w-4 text-primary mb-1" />
+              <Mail className="h-4 w-4 text-blue-600 mb-1" />
               <span className="text-xs font-medium">Email</span>
             </Button>
             
