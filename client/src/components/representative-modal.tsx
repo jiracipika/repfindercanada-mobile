@@ -164,20 +164,20 @@ Find your MP at: ${window.location.href}`;
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-primary" />
+                  <Mail className="h-5 w-5 text-blue-600" />
                   <button 
                     onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
-                    className="text-sm text-primary hover:underline cursor-pointer"
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
                   >
                     {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
                   </button>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-primary" />
+                  <Phone className="h-5 w-5 text-blue-600" />
                   <button 
                     onClick={() => handleCall(representative.phone || '1 613 992-4501')}
-                    className="text-sm text-primary hover:underline cursor-pointer"
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
                   >
                     {representative.phone || '1 613 992-4501'}
                   </button>
@@ -296,10 +296,10 @@ Find your MP at: ${window.location.href}`;
                 
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-primary" />
+                    <Phone className="h-4 w-4 text-blue-600" />
                     <button 
                       onClick={() => handleCall('1 613 992-4501')}
-                      className="text-sm text-primary hover:underline cursor-pointer"
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 px-2 py-1 rounded"
                     >
                       1 613 992-4501
                     </button>
@@ -327,10 +327,10 @@ Find your MP at: ${window.location.href}`;
                 
                 <div className="space-y-1">
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-primary" />
+                    <Phone className="h-4 w-4 text-blue-600" />
                     <button 
                       onClick={() => handleCall('1 416 321-5454')}
-                      className="text-sm text-primary hover:underline cursor-pointer"
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 px-2 py-1 rounded"
                     >
                       1 416 321-5454
                     </button>
