@@ -1,0 +1,13 @@
+/* 
+  Localizable.strings
+  CanadianRepFinder
+
+  Created by Gemini on 2025-09-17.
+*/
+
+"app_disclaimer" = "Important Disclaimer: This app is not affiliated with the Government of Canada, the House of Commons, the Senate of Canada, Elections Canada, or any government entity. Information in this app is provided for general guidance only and is sourced exclusively from Represent by Open North (https://represent.opennorth.ca/). For official and up-to-date information, please refer to government websites directly.";
+"data_source_single" = "Single Data Source: Represent by Open North — https://represent.opennorth.ca/";
+"privacy_note" = "Privacy Note: We only use your postal code or approximate location to find your representatives. Location is processed ephemerally and not stored. Recent searches may be cached locally on your device for convenience.";
+"official_links_house" = "House of Commons – Members (MPs): https://www.ourcommons.ca/members/en/search";
+"official_links_senate" = "Senate of Canada – Senators: https://sencanada.ca/en/senators/";
+"official_links_elections" = "Elections Canada – Find your electoral district: https://www.elections.ca/content.aspx";

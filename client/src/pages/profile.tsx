@@ -1,16 +1,36 @@
+import { useUserData } from "@/hooks/use-user-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, MapPin, Clock, Heart, Info } from "lucide-react";
+import { Browser } from '@capacitor/browser';
+import { isPlatform } from '@ionic/react';
+import {
+  APP_DISCLAIMER,
+  DATA_SOURCE_SINGLE,
+  OFFICIAL_LINKS,
+  PRIVACY_NOTE,
+  ABOUT_PARAGRAPH_1,
+} from '../lib/constants/appCopy';
+
+const openExternal = async (url: string) => {
+  if (isPlatform('capacitor')) {
+    await Browser.open({ url });
+  } else {
+    window.open(url, '_blank');
+  }
+};
 
 export default function Profile() {
-  // Simple user data - in a real app, this would come from authentication
-  const userData = {
-    location: "Ottawa, ON",
-    searchCount: 12,
-    savedCount: 3,
-    joinDate: "2024-01-15"
-  };
+  const { userData, isLoading } = useUserData();
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Or a proper loading spinner
+  }
+
+  if (!userData) {
+    return <div>No user data found.</div>; // Or some other fallback UI
+  }
 
   return (
     <div className="space-y-6 p-4">
@@ -34,14 +54,14 @@ export default function Profile() {
               <div className="text-sm text-neutral-600">Searches</div>
             </div>
             <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{userData.savedCount}</div>
+              <div className="text-2xl font-bold text-primary">{userData.savedReps.length}</div>
               <div className="text-sm text-neutral-600">Saved</div>
             </div>
           </div>
           
           <div className="flex items-center gap-2 text-sm text-neutral-600">
             <MapPin className="h-4 w-4" />
-            <span>Last search: {userData.location}</span>
+            <span>Last search: {userData.lastSearch}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm text-neutral-600">
@@ -61,9 +81,44 @@ export default function Profile() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-neutral-600">
-            Find My Rep helps Canadians discover and connect with their Parliamentary representatives 
-            using official data from OpenParliament.ca.
+            {ABOUT_PARAGRAPH_1}
           </p>
+
+          <h3 className="font-semibold text-neutral-800">Disclaimer:</h3>
+          <p className="text-sm text-neutral-600">{APP_DISCLAIMER}</p>
+
+          <h3 className="font-semibold text-neutral-800">Data Source:</h3>
+          <p className="text-sm text-neutral-600">
+            {DATA_SOURCE_SINGLE.split('—')[0]}—{' '}
+            <a href="#" onClick={() => openExternal('https://represent.opennorth.ca/')} className="text-blue-600 hover:underline">
+              https://represent.opennorth.ca/
+            </a>
+          </p>
+
+          <h3 className="font-semibold text-neutral-800">Official Source Links (verification only):</h3>
+          <ul className="list-disc list-inside text-sm text-neutral-600 space-y-1">
+            <li>
+              House of Commons – Members (MPs):{' '}
+              <a href="#" onClick={() => openExternal(OFFICIAL_LINKS.HOUSE_OF_COMMONS)} className="text-blue-600 hover:underline">
+                {OFFICIAL_LINKS.HOUSE_OF_COMMONS}
+              </a>
+            </li>
+            <li>
+              Senate of Canada – Senators:{' '}
+              <a href="#" onClick={() => openExternal(OFFICIAL_LINKS.SENATE_OF_CANADA)} className="text-blue-600 hover:underline">
+                {OFFICIAL_LINKS.SENATE_OF_CANADA}
+              </a>
+            </li>
+            <li>
+              Elections Canada – Find your electoral district:{' '}
+              <a href="#" onClick={() => openExternal(OFFICIAL_LINKS.ELECTIONS_CANADA)} className="text-blue-600 hover:underline">
+                {OFFICIAL_LINKS.ELECTIONS_CANADA}
+              </a>
+            </li>
+          </ul>
+
+          <h3 className="font-semibold text-neutral-800">Privacy Note:</h3>
+          <p className="text-sm text-neutral-600">{PRIVACY_NOTE}</p>
           
           <div className="space-y-2">
             <Badge variant="secondary" className="mr-2">Version 1.0.0</Badge>
@@ -71,11 +126,15 @@ export default function Profile() {
           </div>
           
           <div className="pt-4 space-y-2">
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/privacy-policy.html')}>
               <Heart className="h-4 w-4 mr-2" />
               Privacy Policy
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/sources-disclaimer')}>
+              <Info className="h-4 w-4 mr-2" />
+              Sources & Disclaimers
+            </Button>
+            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/terms')}>
               <Info className="h-4 w-4 mr-2" />
               Terms of Service
             </Button>

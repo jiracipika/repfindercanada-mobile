@@ -1,0 +1,24 @@
+Canada Rep Finder helps you discover your federal and provincial representatives in Canada.
+
+Important Disclaimer: This app is not affiliated with the Government of Canada, the House of Commons, the Senate of Canada, Elections Canada, or any government entity. Information in this app is provided for general guidance only and is sourced exclusively from Represent by Open North (https://represent.opennorth.ca/). For official and up-to-date information, please refer to government websites directly.
+
+Official source links (verification only)
+• House of Commons – Members (MPs): https://www.ourcommons.ca/members/en/search
+• Senate of Canada – Senators: https://sencanada.ca/en/senators/
+• Elections Canada – Find your electoral district: https://www.elections.ca/content.aspx
+
+Features
+• Search by Canadian postal code or use your current location
+• View details for representatives, including names, titles, and contact information
+• Tap to call, email, or copy representative details
+• Save recent lookups for quick access
+• Share representative information
+• Works anywhere in Canada
+
+Why use Canada Rep Finder?
+• Simple, fast, and accurate
+• No account required
+• Location access is optional (you can always search by postal code)
+• Clean, accessible interface
+
+Privacy Note: We only use your postal code or approximate location to find your representatives. Location is processed ephemerally and not stored. Recent searches may be cached locally on your device for convenience.

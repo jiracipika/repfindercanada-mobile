@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, Search, Heart, User } from "lucide-react";
+import { Home, Search, Heart, User, Info } from "lucide-react"; // Import Info icon
 import { Link } from "wouter";
 
 export function BottomNav() {
@@ -14,14 +14,14 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-2 py-1 z-40 safe-area-bottom">
-      <div className="flex justify-around items-center max-w-sm mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 z-40 safe-area-bottom">
+      <div className="grid grid-cols-4 w-full">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location === path;
           return (
             <Link key={path} href={path}>
               <div
-                className={`flex flex-col items-center py-2 px-4 rounded-2xl transition-all duration-200 touch-manipulation min-w-0 relative ${
+                className={`flex flex-col items-center py-2 px-1 transition-all duration-200 touch-manipulation relative ${
                   isActive 
                     ? "text-blue-600" 
                     : "text-gray-500 active:text-blue-600 active:scale-95"

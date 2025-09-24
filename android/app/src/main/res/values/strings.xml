@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rep Finder for Canada</string>
+    <string name="title_activity_main">Rep Finder for Canada</string>
+    <string name="package_name">com.marcelsabas.canadarepfinder</string>
+    <string name="custom_url_scheme">com.marcelsabas.canadarepfinder</string>
+
+    <!-- App Copy for Google Play Compliance -->
+    <string name="app_disclaimer">Important Disclaimer: This app is not affiliated with the Government of Canada, the House of Commons, the Senate of Canada, Elections Canada, or any government entity. Information in this app is provided for general guidance only and is sourced exclusively from Represent by Open North (https://represent.opennorth.ca/). For official and up-to-date information, please refer to government websites directly.</string>
+    <string name="data_source_single">Single Data Source: Represent by Open North — https://represent.opennorth.ca/</string>
+    <string name="privacy_note">Privacy Note: We only use your postal code or approximate location to find your representatives. Location is processed ephemerally and not stored. Recent searches may be cached locally on your device for convenience.</string>
+    <string name="official_links_house">House of Commons – Members (MPs): https://www.ourcommons.ca/members/en/search</string>
+    <string name="official_links_senate">Senate of Canada – Senators: https://sencanada.ca/en/senators/</string>
+    <string name="official_links_elections">Elections Canada – Find your electoral district: https://www.elections.ca/content.aspx</string>
+</resources>

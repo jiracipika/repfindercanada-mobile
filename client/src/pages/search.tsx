@@ -55,6 +55,12 @@ export default function Search() {
             onSearchStart={handleSearchStart}
             onSearchComplete={handleSearchComplete}
           />
+
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center text-xs text-blue-800">
+            <p>
+              <strong>Privacy Note:</strong> Your postal code or location is used only once to find your representatives and is never stored or shared.
+            </p>
+          </div>
         </div>
       </section>
 

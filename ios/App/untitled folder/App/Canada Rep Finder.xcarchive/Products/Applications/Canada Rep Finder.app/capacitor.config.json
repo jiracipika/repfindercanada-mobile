@@ -1,0 +1,6 @@
+{
+	"appId": "com.yourcompany.canadianrepfinder",
+	"appName": "CanadianRepFinder",
+	"webDir": "dist/public",
+	"packageClassList": []
+}

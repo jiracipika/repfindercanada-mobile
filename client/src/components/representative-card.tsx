@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, User, MapPin, Flag, Heart, HeartOff } from "lucide-react";
+import { Phone, Mail, User, MapPin, Flag, Heart, HeartOff, ExternalLink } from "lucide-react";
 import type { Representative } from "@shared/schema";
 
 interface RepresentativeCardProps {
@@ -50,6 +50,12 @@ export function RepresentativeCard({
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleOpenSource = () => {
+    if (representative.sourceUrl) {
+      window.open(representative.sourceUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -136,7 +142,7 @@ export function RepresentativeCard({
         
         {/* Contact Actions */}
         <div className="mt-5 pt-4 border-t border-gray-100">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               className="flex flex-col items-center justify-center p-4 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
               onClick={handleCall}
@@ -152,15 +158,17 @@ export function RepresentativeCard({
               <Mail className="h-5 w-5 mb-2" />
               <span className="text-xs font-semibold">Email</span>
             </button>
-            
-            <button
-              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-gray-50 text-gray-600 border border-gray-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
-              onClick={onViewProfile}
-            >
-              <User className="h-5 w-5 mb-2" />
-              <span className="text-xs font-semibold">Profile</span>
-            </button>
           </div>
+        </div>
+
+        <div className="mt-3">
+            <button
+              className="flex w-full items-center justify-center p-4 rounded-2xl bg-gray-50 text-gray-600 border border-gray-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
+              onClick={handleOpenSource}
+            >
+              <ExternalLink className="h-5 w-5 mr-2" />
+              <span className="text-xs font-semibold">Open Official Source</span>
+            </button>
         </div>
       </CardContent>
     </Card>

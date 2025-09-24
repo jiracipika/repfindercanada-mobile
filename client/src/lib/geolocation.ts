@@ -1,44 +1,34 @@
-export interface GeolocationPosition {
-  coords: {
-    latitude: number;
-    longitude: number;
-    accuracy: number;
-  };
-  timestamp: number;
-}
+import { Geolocation, PositionOptions } from '@capacitor/geolocation';
 
-export function getCurrentLocation(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation not supported'));
-      return;
+export async function getCurrentLocation(): Promise<GeolocationPosition> {
+  try {
+    // Check permissions
+    let permissionStatus = await Geolocation.checkPermissions();
+
+    // Request permissions if not granted
+    if (permissionStatus.location !== 'granted') {
+      permissionStatus = await Geolocation.requestPermissions();
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => resolve(position),
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            reject(new Error('Location access denied by user'));
-            break;
-          case error.POSITION_UNAVAILABLE:
-            reject(new Error('Location information unavailable'));
-            break;
-          case error.TIMEOUT:
-            reject(new Error('Location request timed out'));
-            break;
-          default:
-            reject(new Error('Unknown location error'));
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
-    );
-  });
+    // If permission is not granted after request, throw an error
+    if (permissionStatus.location !== 'granted') {
+      throw new Error('Location permission was not granted.');
+    }
+
+    // If we have permission, get the location
+    const options: PositionOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000 // 5 minutes
+    };
+    const position = await Geolocation.getCurrentPosition(options);
+    return position;
+
+  } catch (error) {
+    console.error("Geolocation error:", error);
+    // Re-throw the error to be handled by the calling function
+    throw error;
+  }
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
