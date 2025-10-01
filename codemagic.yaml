@@ -14,6 +14,10 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm install
+      - name: Build web app and sync with Capacitor
+        script: |
+          npm run build
+          npx cap sync ios
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App && pod install
@@ -43,6 +47,10 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm install
+      - name: Build web app and sync with Capacitor
+        script: |
+          npm run build
+          npx cap sync android
       - name: Build Android
         script: |
           cd android && ./gradlew assembleRelease
