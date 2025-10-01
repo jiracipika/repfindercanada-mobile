@@ -7,7 +7,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: 18.17.0
+      node: 20
       xcode: latest
       cocoapods: default
     scripts:
@@ -42,7 +42,7 @@ workflows:
     environment:
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
-      node: 18.17.0
+      node: 20
     scripts:
       - name: Install npm dependencies
         script: |
