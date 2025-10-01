@@ -2,7 +2,7 @@ workflows:
   react-native-capacitor:
     name: React Native Capacitor Build
     max_build_duration: 120
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     environment:
       groups:
         - app_store_connect
@@ -50,7 +50,7 @@ workflows:
   android-build:
     name: Android Build
     max_build_duration: 120
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     environment:
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
