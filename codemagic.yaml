@@ -9,7 +9,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        BUNDLE_ID: "com.canadarepfinder.app"
+        BUNDLE_ID: "com.marcelsabas.repfinderforcanada"
       node: 20
       xcode: latest
       cocoapods: default
@@ -30,7 +30,9 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -sdk iphoneos \
             -configuration AppStoreDistribution \
-            archive -archivePath build/ios/App.xcarchive
+            -archivePath build/ios/App.xcarchive \
+            -allowProvisioningUpdates \
+            archive
       - name: Export IPA
         script: |
           xcodebuild -exportArchive \
