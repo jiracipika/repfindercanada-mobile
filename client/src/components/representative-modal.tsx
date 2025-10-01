@@ -131,8 +131,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg mx-4 max-h-[90vh] overflow-y-auto rounded-2xl safe-pb">
-        <DialogHeader className="flex flex-row items-center justify-between">
+      <DialogContent className="max-w-lg mx-4 max-h-[90vh] flex flex-col rounded-2xl safe-pb p-0">
+        <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <DialogTitle>Representative Details</DialogTitle>
           <div className="flex gap-2">
             <Button
@@ -168,8 +168,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
             </Button>
           </div>
         </DialogHeader>
-        
-        <div className="space-y-6">
+
+        <div className="space-y-6 overflow-y-auto px-6 flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Representative Header */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{representative.name}</h2>
@@ -406,9 +406,9 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
           </Button>
         </div>
 
-        <DialogFooter className="bg-background border-t p-4 sticky bottom-0">
+        <DialogFooter className="bg-background border-t px-6 py-4 shrink-0">
           <SafeArea bottom className="w-full">
-            <Button 
+            <Button
               className="w-full h-12 text-base"
               onClick={handleSave}
               disabled={isSaving}

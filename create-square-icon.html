@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Square Icon</title>
+</head>
+<body>
+    <canvas id="canvas" width="1024" height="1024"></canvas>
+    <br>
+    <button onclick="downloadIcon()">Download Square Icon</button>
+    <script>
+        const canvas = document.canvas('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Fill with blue background
+        ctx.fillStyle = '#2C5F8D';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // Load and draw the original icon
+        const img = new Image();
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0, 1024, 1024);
+        };
+        // You'll need to manually load the icon here
+
+        function downloadIcon() {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'AppIcon-square.png';
+                a.click();
+            });
+        }
+    </script>
+</body>
+</html>
