@@ -1,10 +1,41 @@
-import { Header } from "@/components/header";
+import { Browser } from '@capacitor/browser';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { useEffect, useRef } from 'react';
+
+const openUrl = async (url: string) => {
+  await Browser.open({ url });
+};
 
 export function SourcesDisclaimer() {
+  const [, setLocation] = useLocation();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to top when component mounts
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  }, []);
+
   return (
-    <div className="pb-20">
-      <Header title="Sources & Disclaimers" />
-      <main className="container mx-auto p-4 text-sm">
+    <div ref={containerRef} className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="space-y-6 px-4 pt-8 pb-32">
+        {/* Back Button */}
+        <div className="sticky top-0 bg-background/95 backdrop-blur-lg border-b z-10 px-4 py-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation('/profile')}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Profile
+          </Button>
+        </div>
+
+        <main className="text-sm">
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 space-y-4">
           <h2 className="text-lg font-semibold">
             Not Affiliated with the Government of Canada
@@ -30,17 +61,17 @@ export function SourcesDisclaimer() {
           <h3 className="font-semibold pt-2">Federal Government</h3>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              <a href="https://www.parl.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              <a href="#" onClick={() => openUrl('https://www.parl.ca')} className="text-blue-500 hover:underline">
                 Parliament of Canada (parl.ca)
               </a> - Official source for Member of Parliament (MP) profiles, contact information, and roles.
             </li>
             <li>
-              <a href="https://www.ourcommons.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              <a href="#" onClick={() => openUrl('https://www.ourcommons.ca')} className="text-blue-500 hover:underline">
                 House of Commons (ourcommons.ca)
               </a> - Information on MP activities, parliamentary business, and committees.
             </li>
             <li>
-              <a href="https://www.elections.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              <a href="#" onClick={() => openUrl('https://www.elections.ca')} className="text-blue-500 hover:underline">
                 Elections Canada (elections.ca)
               </a> - Definitive source for federal electoral districts and election information.
             </li>
@@ -48,19 +79,19 @@ export function SourcesDisclaimer() {
 
           <h3 className="font-semibold pt-2">Provincial & Territorial Legislatures</h3>
           <ul className="list-disc pl-5 space-y-2">
-            <li><a href="https://www.assembly.ab.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of Alberta</a></li>
-            <li><a href="https://www.leg.bc.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of British Columbia</a></li>
-            <li><a href="https://www.leg.gov.mb.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of Manitoba</a></li>
-            <li><a href="https://www.legnb.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of New Brunswick</a></li>
-            <li><a href="https://www.assembly.nl.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">House of Assembly of Newfoundland and Labrador</a></li>
-            <li><a href="https://www.ntassembly.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of the Northwest Territories</a></li>
-            <li><a href="https://nslegislature.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Nova Scotia Legislature</a></li>
-            <li><a href="https://www.assembly.nu.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of Nunavut</a></li>
-            <li><a href="https://www.ola.org" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of Ontario</a></li>
-            <li><a href="https://www.assembly.pe.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of Prince Edward Island</a></li>
-            <li><a href="https://www.assnat.qc.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">National Assembly of Québec</a></li>
-            <li><a href="https://www.legassembly.sk.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Legislative Assembly of Saskatchewan</a></li>
-            <li><a href="https://yukonassembly.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Yukon Legislative Assembly</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.assembly.ab.ca')} className="text-blue-500 hover:underline">Legislative Assembly of Alberta</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.leg.bc.ca')} className="text-blue-500 hover:underline">Legislative Assembly of British Columbia</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.leg.gov.mb.ca')} className="text-blue-500 hover:underline">Legislative Assembly of Manitoba</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.legnb.ca')} className="text-blue-500 hover:underline">Legislative Assembly of New Brunswick</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.assembly.nl.ca')} className="text-blue-500 hover:underline">House of Assembly of Newfoundland and Labrador</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.ntassembly.ca')} className="text-blue-500 hover:underline">Legislative Assembly of the Northwest Territories</a></li>
+            <li><a href="#" onClick={() => openUrl('https://nslegislature.ca')} className="text-blue-500 hover:underline">Nova Scotia Legislature</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.assembly.nu.ca')} className="text-blue-500 hover:underline">Legislative Assembly of Nunavut</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.ola.org')} className="text-blue-500 hover:underline">Legislative Assembly of Ontario</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.assembly.pe.ca')} className="text-blue-500 hover:underline">Legislative Assembly of Prince Edward Island</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.assnat.qc.ca')} className="text-blue-500 hover:underline">National Assembly of Québec</a></li>
+            <li><a href="#" onClick={() => openUrl('https://www.legassembly.sk.ca')} className="text-blue-500 hover:underline">Legislative Assembly of Saskatchewan</a></li>
+            <li><a href="#" onClick={() => openUrl('https://yukonassembly.ca')} className="text-blue-500 hover:underline">Yukon Legislative Assembly</a></li>
           </ul>
 
           <h3 className="font-semibold pt-2">Municipal Governments</h3>
@@ -69,13 +100,15 @@ export function SourcesDisclaimer() {
           <h3 className="font-semibold pt-2">Lookup Service</h3>
            <ul className="list-disc pl-5 space-y-2">
             <li>
-              <a href="https://represent.opennorth.ca" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              <a href="#" onClick={() => openUrl('https://represent.opennorth.ca')} className="text-blue-500 hover:underline">
                 Represent API (by Open North)
               </a> - This non-government service is used to match postal codes to their respective electoral districts. The official sources listed above are the canonical records for representative data.
             </li>
           </ul>
         </div>
       </main>
+      </div>
     </div>
   );
 }
+

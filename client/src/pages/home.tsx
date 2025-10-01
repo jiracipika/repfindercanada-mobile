@@ -5,41 +5,68 @@ import { RepresentativeModal } from "@/components/representative-modal";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Clock, Building } from "lucide-react";
+import { Clock, Building, Loader2, Terminal } from "lucide-react";
 import type { Representative, Search } from "@shared/schema";
+import { Section } from "@/components/ui/section";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { logActivity } from "@/lib/storage/activityRepository";
 
 export default function Home() {
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Get recent searches
-  const { data: recentSearches, isLoading: loadingSearches } = useQuery({
+  const { data: recentSearches, isLoading: loadingSearches } = useQuery<Search[]>({
     queryKey: ['/api/searches/recent'],
   });
 
   const handleSearchComplete = (results: Representative[]) => {
     setSearchResults(results);
     setIsSearching(false);
+    setSearchError(null);
   };
 
   const handleSearchStart = () => {
+    setSearchResults([]);
     setIsSearching(true);
+    setSearchError(null);
+  };
+
+  const handleSearchError = (error: string) => {
+    setSearchError(error);
+    setIsSearching(false);
+    setSearchResults([]);
   };
 
   const handleRecentSearchClick = async (search: Search) => {
     if (search.query) {
       setIsSearching(true);
+      setSearchError(null);
       try {
         const response = await fetch('/api/representatives/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: search.query, type: search.postalCode ? 'postal_code' : 'name' }),
         });
+        if (!response.ok) {
+          throw new Error("Failed to fetch recent search results.");
+        }
         const data = await response.json();
         setSearchResults(data.representatives || []);
+
+        // Log the search activity
+        await logActivity({
+          type: "search",
+          query: search.query,
+          searchType: search.postalCode ? "postalCode" : "name",
+          ts: Date.now(),
+        });
       } catch (error) {
         console.error('Search error:', error);
+        handleSearchError("Failed to load recent search results.");
       } finally {
         setIsSearching(false);
       }
@@ -47,38 +74,43 @@ export default function Home() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-white px-4 py-8">
-        <div className="space-y-6">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl font-bold text-gray-900 leading-tight">Find Your Representative</h2>
-            <p className="text-gray-600 text-base max-w-sm mx-auto leading-relaxed">
-              Connect with your Member of Parliament and stay engaged with Canadian democracy
-            </p>
-          </div>
-          
-          <SearchForm 
-            onSearchStart={handleSearchStart}
-            onSearchComplete={handleSearchComplete}
-          />
-        </div>
-      </section>
+    <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="space-y-6 px-4 pt-8 pb-32">
+        <Section className="pt-8 pb-4">
+          <h2 className="text-3xl font-bold text-center mb-6">Find Your Representative</h2>
+        <SearchForm 
+          onSearchStart={handleSearchStart}
+          onSearchComplete={handleSearchComplete}
+          onSearchError={handleSearchError}
+        />
+      </Section>
+
+      {searchError && (
+        <Section>
+          <Alert variant="destructive">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{searchError}</AlertDescription>
+          </Alert>
+        </Section>
+      )}
 
       {/* Loading State */}
       {isSearching && (
-        <div className="p-4">
-          <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
-            <p className="text-neutral-600">Finding your representatives...</p>
-          </div>
-        </div>
+        <Section>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+              <p className="text-muted-foreground">Finding your representatives...</p>
+            </CardContent>
+          </Card>
+        </Section>
       )}
 
       {/* Search Results */}
       {searchResults.length > 0 && !isSearching && (
-        <section className="p-4 space-y-4">
-          <h3 className="text-lg font-semibold text-neutral-800">Your Representatives</h3>
+        <Section className="space-y-4">
+          <h3 className="text-lg font-semibold">Your Representatives</h3>
           {searchResults.map((representative) => (
             <RepresentativeCard
               key={representative.id}
@@ -86,51 +118,51 @@ export default function Home() {
               onViewProfile={() => setSelectedRepresentative(representative)}
             />
           ))}
-        </section>
+        </Section>
       )}
 
       {/* Empty State */}
-      {searchResults.length === 0 && !isSearching && !loadingSearches && (
-        <div className="px-4">
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center border border-gray-100">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Building className="h-8 w-8 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Connect</h3>
-            <p className="text-gray-600 text-sm">Enter your postal code above to find your MP and get their contact information</p>
-          </div>
-        </div>
+      {searchResults.length === 0 && !isSearching && !loadingSearches && !searchError && (
+        <Section>
+          <Card className="text-center py-8">
+            <CardContent className="flex flex-col items-center justify-center">
+              <Building className="h-12 w-12 text-muted-foreground mb-4" />
+              <CardTitle className="text-xl font-semibold mb-2">Ready to Connect</CardTitle>
+              <p className="text-muted-foreground text-sm">Enter your postal code or name above to find your representatives.</p>
+            </CardContent>
+          </Card>
+        </Section>
       )}
 
       {/* Recent Searches */}
       {recentSearches && recentSearches.length > 0 && (
-        <section className="p-4 mt-6">
-          <h3 className="text-lg font-semibold text-neutral-800 mb-3">Recent Searches</h3>
+        <Section className="mt-6">
+          <h3 className="text-lg font-semibold mb-3">Recent Searches</h3>
           <div className="space-y-2">
             {loadingSearches ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
               ))
             ) : (
               recentSearches.map((search: Search) => (
                 <Button
                   key={search.id}
                   variant="outline"
-                  className="w-full justify-between p-3 h-auto"
+                  className="w-full justify-between p-3 h-auto rounded-lg"
                   onClick={() => handleRecentSearchClick(search)}
                 >
                   <div className="flex items-center space-x-3">
-                    <Clock className="h-4 w-4 text-neutral-400" />
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{search.query}</span>
                   </div>
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-muted-foreground">
                     {search.createdAt ? new Date(search.createdAt).toLocaleDateString() : ''}
                   </span>
                 </Button>
               ))
             )}
           </div>
-        </section>
+        </Section>
       )}
 
       {/* Representative Modal */}
@@ -141,6 +173,7 @@ export default function Home() {
           onClose={() => setSelectedRepresentative(null)}
         />
       )}
+      </div>
     </div>
   );
 }

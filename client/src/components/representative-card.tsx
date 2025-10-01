@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Mail, User, MapPin, Flag, Heart, HeartOff, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink } from "lucide-react";
 import type { Representative } from "@shared/schema";
+import { repRepository } from "@/lib/storage/repRepository";
+import { useState, useEffect } from "react";
 
 interface RepresentativeCardProps {
   representative: Representative;
@@ -13,49 +14,59 @@ interface RepresentativeCardProps {
   showSaveButton?: boolean;
 }
 
-export function RepresentativeCard({ 
-  representative, 
-  onViewProfile, 
-  showSaveButton = true 
+export function RepresentativeCard({
+  representative,
+  onViewProfile,
+  showSaveButton = true
 }: RepresentativeCardProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const userId = "user-1"; // Simple user ID
-      const method = isSaved ? 'DELETE' : 'POST';
-      const response = await fetch(`/api/representatives/${representative.id}/save`, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      const saved = await repRepository.isSaved(String(representative.id));
+      setIsSaved(saved);
+    };
+    checkSavedStatus();
 
-      if (response.ok) {
-        setIsSaved(!isSaved);
+    // Subscribe to saved changes to update heart in real-time
+    const unsubscribe = repRepository.subscribeSavedChanges(() => {
+      checkSavedStatus();
+    });
+
+    return () => unsubscribe();
+  }, [representative.id]);
+
+  const handleSave = async () => {
+    try {
+      if (isSaved) {
+        await repRepository.removeRep(String(representative.id));
+        setIsSaved(false);
         toast({
-          title: isSaved ? "Removed from saved" : "Saved successfully",
-          description: isSaved 
-            ? "Representative removed from your saved list" 
-            : "Representative added to your saved list",
+          title: "Removed from saved",
+          description: "Representative removed from your saved list",
+        });
+      } else {
+        await repRepository.saveRep(representative);
+        setIsSaved(true);
+        toast({
+          title: "Saved successfully",
+          description: "Representative added to your saved list",
         });
       }
     } catch (error) {
+      console.error("Failed to update saved status:", error);
       toast({
         title: "Error",
         description: "Failed to update saved status",
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleOpenSource = () => {
-    if (representative.sourceUrl) {
-      window.open(representative.sourceUrl, '_blank', 'noopener,noreferrer');
+    if (representative.website) { // Assuming 'website' holds the source URL
+      window.open(representative.website, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -71,35 +82,35 @@ export function RepresentativeCard({
   };
 
   const getPartyColor = (party: string) => {
-    if (party.toLowerCase().includes('liberal')) return 'bg-red-100 text-red-800';
-    if (party.toLowerCase().includes('conservative')) return 'bg-blue-100 text-blue-800';
-    if (party.toLowerCase().includes('ndp') || party.toLowerCase().includes('new democratic')) return 'bg-orange-100 text-orange-800';
-    if (party.toLowerCase().includes('bloc')) return 'bg-cyan-100 text-cyan-800';
-    if (party.toLowerCase().includes('green')) return 'bg-green-100 text-green-800';
-    return 'bg-neutral-100 text-neutral-800';
+    if (party.toLowerCase().includes('liberal')) return 'bg-red-500/10 text-red-600 dark:text-red-400';
+    if (party.toLowerCase().includes('conservative')) return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
+    if (party.toLowerCase().includes('ndp') || party.toLowerCase().includes('new democratic')) return 'bg-orange-500/10 text-orange-600 dark:text-orange-400';
+    if (party.toLowerCase().includes('bloc')) return 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400';
+    if (party.toLowerCase().includes('green')) return 'bg-green-500/10 text-green-600 dark:text-green-400';
+    return 'bg-muted text-muted-foreground';
   };
 
   return (
-    <Card className="bg-white shadow-sm hover:shadow-lg active:shadow-md transition-all duration-200 active:scale-[0.98] touch-manipulation border border-gray-100 rounded-2xl overflow-hidden">
-      <CardContent className="p-5">
+    <Card className="rounded-xl border bg-card shadow-sm p-4 mb-3 transition-all hover:shadow-md">
+      <CardContent className="p-0">
         <div className="flex items-start space-x-4">
-          <Avatar className="w-18 h-18 border-3 border-white shadow-lg ring-2 ring-gray-100">
-            <AvatarImage 
-              src={representative.photo || undefined} 
-              alt={`${representative.name} photo`} 
+          <Avatar className="!w-16 !h-16 border-2 border-border shadow-sm">
+            <AvatarImage
+              src={representative.photo || undefined}
+              alt={`${representative.name} photo`}
               className="object-cover"
               onError={(e) => {
                 console.log('Avatar image failed to load:', representative.photo);
               }}
             />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-lg">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-semibold text-lg">
               {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </AvatarFallback>
           </Avatar>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-lg text-neutral-800 leading-tight">
+              <h3 className="font-semibold text-lg text-foreground leading-tight">
                 {representative.name}
               </h3>
               {showSaveButton && (
@@ -107,13 +118,12 @@ export function RepresentativeCard({
                   variant="ghost"
                   size="sm"
                   onClick={handleSave}
-                  disabled={isSaving}
                   className="p-1 h-auto"
                 >
                   {isSaved ? (
                     <Heart className="h-5 w-5 text-red-500 fill-current" />
                   ) : (
-                    <HeartOff className="h-5 w-5 text-neutral-400" />
+                    <Heart className="h-5 w-5 text-neutral-400" />
                   )}
                 </Button>
               )}
@@ -121,54 +131,57 @@ export function RepresentativeCard({
             
             <div className="space-y-2 text-sm">
               <div className="flex items-center">
-                <Flag className="h-4 w-4 mr-2 text-neutral-400" />
+                <Flag className="h-4 w-4 mr-2 text-muted-foreground" />
                 <Badge variant="secondary" className={getPartyColor(representative.party)}>
                   {representative.party}
                 </Badge>
               </div>
-              
-              <div className="flex items-center text-neutral-600">
+
+              <div className="flex items-center text-muted-foreground">
                 <MapPin className="h-4 w-4 mr-2" />
                 <span>{representative.constituency}</span>
               </div>
-              
-              <div className="flex items-center text-neutral-600">
+
+              <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2" />
                 <span>Member of Parliament</span>
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Contact Actions */}
-        <div className="mt-5 pt-4 border-t border-gray-100">
+        <div className="mt-5 pt-4 border-t border-border">
           <div className="grid grid-cols-2 gap-3">
-            <button
-              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
+            <Button
+              variant="outline"
+              className="flex flex-col items-center justify-center p-4 h-auto rounded-xl"
               onClick={handleCall}
             >
-              <Phone className="h-5 w-5 mb-2" />
-              <span className="text-xs font-semibold">Call</span>
-            </button>
-            
-            <button
-              className="flex flex-col items-center justify-center p-4 rounded-2xl bg-green-50 text-green-600 border border-green-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
+              <Phone className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Call</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="flex flex-col items-center justify-center p-4 h-auto rounded-xl"
               onClick={handleEmail}
             >
-              <Mail className="h-5 w-5 mb-2" />
-              <span className="text-xs font-semibold">Email</span>
-            </button>
+              <Mail className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Email</span>
+            </Button>
           </div>
         </div>
 
         <div className="mt-3">
-            <button
-              className="flex w-full items-center justify-center p-4 rounded-2xl bg-gray-50 text-gray-600 border border-gray-100 active:scale-95 transition-all duration-200 touch-manipulation shadow-sm active:shadow-none"
-              onClick={handleOpenSource}
+            <Button
+              variant="outline"
+              className="flex w-full items-center justify-center p-3 h-auto rounded-xl"
+              onClick={onViewProfile}
             >
-              <ExternalLink className="h-5 w-5 mr-2" />
-              <span className="text-xs font-semibold">Open Official Source</span>
-            </button>
+              <User className="h-4 w-4 mr-2" />
+              <span className="text-sm font-medium">View Full Profile</span>
+            </Button>
         </div>
       </CardContent>
     </Card>

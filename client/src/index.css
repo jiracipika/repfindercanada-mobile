@@ -2,56 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Mobile-first native app styles */
-@supports (padding: env(safe-area-inset-top)) {
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .safe-area-left {
-    padding-left: env(safe-area-inset-left);
-  }
-  
-  .safe-area-right {
-    padding-right: env(safe-area-inset-right);
-  }
-}
-
-/* Touch optimization */
-.touch-manipulation {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Smooth scrolling for mobile */
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
-
-/* Mobile viewport fix */
-body {
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Native app feel */
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Custom scrollbar for mobile webkit */
-::-webkit-scrollbar {
-  width: 0px;
-  background: transparent;
-}
-
 :root {
+  --s-top: env(safe-area-inset-top);
+  --s-bottom: env(safe-area-inset-bottom);
+  --s-left: env(safe-area-inset-left);
+  --s-right: env(safe-area-inset-right);
+
   --background: hsl(0, 0%, 98%);
   --foreground: hsl(240, 10%, 3.9%);
   --muted: hsl(210, 40%, 96%);
@@ -88,25 +44,25 @@ body {
 }
 
 .dark {
-  --background: hsl(240, 10%, 3.9%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
+  --background: hsl(222, 47%, 11%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 47%, 11%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(217, 33%, 17%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 33%, 22%);
+  --input: hsl(217, 33%, 17%);
   --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(240, 4.9%, 83.9%);
+  --primary-foreground: hsl(222, 47%, 11%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(207, 90%, 54%);
 }
 
 @layer base {
@@ -116,7 +72,7 @@ body {
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
   }
 
   /* Mobile-first responsive design */
@@ -125,17 +81,23 @@ body {
       @apply text-sm;
     }
   }
+
+  /* Respect reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer utilities {
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  
+  .safe-pt { padding-top: max(1rem, var(--s-top)); }
+  .safe-pb { padding-bottom: max(1rem, var(--s-bottom)); }
+  .safe-pl { padding-left: max(1rem, var(--s-left)); }
+  .safe-pr { padding-right: max(1rem, var(--s-right)); }
+
   .touch-manipulation {
     touch-action: manipulation;
   }
@@ -144,7 +106,7 @@ body {
 /* PWA specific styles */
 @media (display-mode: standalone) {
   body {
-    @apply safe-area-top safe-area-bottom;
+    @apply safe-pt safe-pb;
   }
 }
 

@@ -1,6 +1,8 @@
 PODS:
   - Capacitor (7.4.3):
     - CapacitorCordova
+  - CapacitorApp (7.1.0):
+    - Capacitor
   - CapacitorBrowser (7.0.2):
     - Capacitor
   - CapacitorCordova (7.4.3)
@@ -9,14 +11,18 @@ PODS:
     - IONGeolocationLib (= 1.0.1)
   - CapacitorPreferences (7.0.2):
     - Capacitor
+  - CapacitorStatusBar (7.0.3):
+    - Capacitor
   - IONGeolocationLib (1.0.1)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorGeolocation (from `../../node_modules/@capacitor/geolocation`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
+  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
 
 SPEC REPOS:
   trunk:
@@ -25,6 +31,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
     :path: "../../node_modules/@capacitor/browser"
   CapacitorCordova:
@@ -33,15 +41,19 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/geolocation"
   CapacitorPreferences:
     :path: "../../node_modules/@capacitor/preferences"
+  CapacitorStatusBar:
+    :path: "../../node_modules/@capacitor/status-bar"
 
 SPEC CHECKSUMS:
   Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
+  CapacitorApp: 26587c2ce485d88ddb39adb21cac64f8e481afe3
   CapacitorBrowser: 22541e48442de44dc629c214388290d6eecc6ae9
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
   CapacitorGeolocation: 84f868bea4c2499aebc3bb3a88fd0a508f87ab87
   CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
+  CapacitorStatusBar: 0659ddc7b1713764a05831463d215b177a15d054
   IONGeolocationLib: 20f9d0248a0b5264511fb57a37e25dd2badf797a
 
-PODFILE CHECKSUM: 3c6562053e1325965a4a105159f5d07719ceb094
+PODFILE CHECKSUM: dfa27f4cb4cccf288e1c6cbf1e3bd1e471e8272b
 
 COCOAPODS: 1.16.2

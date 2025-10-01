@@ -1,4 +1,5 @@
 import type { Representative } from "@shared/schema";
+import { searchByName } from "./api/represent";
 
 interface OpenNorthRepresentative {
   name: string;
@@ -26,7 +27,7 @@ interface OpenNorthRepresentative {
 function toRepresentative(raw: OpenNorthRepresentative, idx: number = 0): Representative {
   return {
     // The mobile-only build doesn't use DB ids – just generate a stable pseudo-id.
-    id: raw.district_id ?? idx,
+    id: (raw.district_id ?? `postal-search-${idx}`) as any, // Cast to any as schema expects number, but we might get string
     name: raw.name,
     party: raw.party_name ?? "Independent",
     constituency: raw.district_name,
@@ -57,14 +58,4 @@ export async function fetchRepsByPostal(postal: string): Promise<Representative[
   return reps.map(toRepresentative);
 }
 
-export async function fetchRepsByName(name: string): Promise<Representative[]> {
-  const q = encodeURIComponent(name);
-  const url = `https://represent.opennorth.ca/representatives/house-of-commons/?name__icontains=${q}&limit=50`;
-  const resp = await fetch(url);
-  if (!resp.ok) {
-    throw new Error(`Represent API error ${resp.status}`);
-  }
-  const json = await resp.json();
-  const reps: OpenNorthRepresentative[] = json.objects ?? [];
-  return reps.map(toRepresentative);
-} 
+export { searchByName as fetchRepsByName }; 

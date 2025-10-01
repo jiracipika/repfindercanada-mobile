@@ -1,11 +1,15 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart, Share2, Map } from "lucide-react";
+import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart, Share2, Map, Loader2 } from "lucide-react";
 import type { Representative } from "@shared/schema";
+import { repRepository } from "@/lib/storage/repRepository";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { SafeArea } from "@/components/ui/safe-area";
 
 interface RepresentativeModalProps {
   representative: Representative;
@@ -14,6 +18,50 @@ interface RepresentativeModalProps {
 }
 
 export function RepresentativeModal({ representative, isOpen, onClose }: RepresentativeModalProps) {
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      const saved = await repRepository.isSaved(String(representative.id));
+      setIsSaved(saved);
+    };
+    if (isOpen) {
+      checkSavedStatus();
+    }
+  }, [representative.id, isOpen]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      if (isSaved) {
+        await repRepository.removeRep(String(representative.id));
+        setIsSaved(false);
+        toast({
+          title: "Removed from saved",
+          description: "Representative removed from your saved list",
+        });
+      } else {
+        await repRepository.saveRep(representative);
+        setIsSaved(true);
+        toast({
+          title: "Saved successfully",
+          description: "Representative added to your saved list",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update saved status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update saved status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleCall = (phone: string) => {
     const cleanPhone = phone.replace(/\s+/g, '').replace(/-/g, '');
     window.open(`tel:${cleanPhone}`, '_self');
@@ -42,13 +90,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
   };
 
   const handleShare = () => {
-    const shareText = `Contact ${representative.name} - ${representative.party} MP for ${representative.constituency}, ${representative.province}
-
-Legislature Office: 1-613-992-4501
-Constituency Office: 1-416-321-5454
-Email: ${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
-
-Find your MP at: ${window.location.href}`;
+    const shareText = `Contact ${representative.name} - ${representative.party} MP for ${representative.constituency}, ${representative.province}\n\nLegislature Office: 1-613-992-4501\nConstituency Office: 1-416-321-5454\nEmail: ${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
+@parl.gc.ca`}\n\nFind your MP at: ${window.location.href}`;
 
     if (navigator.share) {
       navigator.share({
@@ -66,15 +109,6 @@ Find your MP at: ${window.location.href}`;
       const encodedText = encodeURIComponent(shareText);
       const encodedUrl = encodeURIComponent(window.location.href);
       
-      // Create sharing menu
-      const shareOptions = [
-        { name: 'Twitter', url: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
-        { name: 'Facebook', url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}` },
-        { name: 'WhatsApp', url: `https://api.whatsapp.com/send?text=${encodedText} ${encodedUrl}` },
-        { name: 'Email', url: `mailto:?subject=Contact ${representative.name}&body=${encodedText}` },
-        { name: 'Copy Link', action: () => navigator.clipboard.writeText(shareText).then(() => alert('Copied to clipboard!')) }
-      ];
-
       // Show sharing options (simplified - just copy to clipboard for now)
       navigator.clipboard.writeText(shareText).then(() => {
         alert('Contact information copied to clipboard! You can now paste it anywhere to share.');
@@ -97,10 +131,23 @@ Find your MP at: ${window.location.href}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg mx-4 max-h-[90vh] overflow-y-auto rounded-2xl safe-pb">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>Find Representatives</DialogTitle>
+          <DialogTitle>Representative Details</DialogTitle>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={handleSave}
+            >
+              {isSaved ? (
+                <Heart className="h-4 w-4 text-red-500 fill-current" />
+              ) : (
+                <Heart className="h-4 w-4" />
+              )}
+              Save
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -166,10 +213,12 @@ Find your MP at: ${window.location.href}`;
                 <div className="flex items-center space-x-3">
                   <Mail className="h-5 w-5 text-blue-600" />
                   <button 
-                    onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                    onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
+@parl.gc.ca`)}
                     className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
                   >
-                    {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
+                    {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
+@parl.gc.ca`}
                   </button>
                 </div>
                 
@@ -356,6 +405,25 @@ Find your MP at: ${window.location.href}`;
             Official Profile
           </Button>
         </div>
+
+        <DialogFooter className="bg-background border-t p-4 sticky bottom-0">
+          <SafeArea bottom className="w-full">
+            <Button 
+              className="w-full h-12 text-base"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : isSaved ? (
+                <Heart className="h-5 w-5 mr-2 fill-current" />
+              ) : (
+                <Heart className="h-5 w-5 mr-2" />
+              )}
+              {isSaved ? "Unsave Representative" : "Save Representative"}
+            </Button>
+          </SafeArea>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

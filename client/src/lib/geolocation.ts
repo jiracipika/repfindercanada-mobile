@@ -7,17 +7,17 @@ export async function getCurrentLocation(): Promise<GeolocationPosition> {
 
     // Request permissions if not granted
     if (permissionStatus.location !== 'granted') {
-      permissionStatus = await Geolocation.requestPermissions();
+      permissionStatus = await Geolocation.requestPermissions({ permissions: ['fine', 'coarse'] });
     }
 
     // If permission is not granted after request, throw an error
     if (permissionStatus.location !== 'granted') {
-      throw new Error('Location permission was not granted.');
+      throw new Error('Approximate location permission was not granted. Please enable it in your device settings or enter your postal code manually.');
     }
 
     // If we have permission, get the location
     const options: PositionOptions = {
-      enableHighAccuracy: true,
+      enableHighAccuracy: false, // Use approximate location
       timeout: 10000,
       maximumAge: 300000 // 5 minutes
     };

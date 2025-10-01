@@ -7,7 +7,12 @@ export interface UserData {
   searchCount: number;
   savedReps: Representative[];
   joinDate: string;
-  lastSearch: string;
+  lastPostalCodeSearch: string;
+  lastNameSearch: string;
+  lastSearchType: 'postalCode' | 'name';
+  searchResults: Representative[];
+  name: string;
+  homePostalCode: string;
 }
 
 // Define the shape of the context value
@@ -19,7 +24,9 @@ interface UserDataContextType {
   addSavedRep: (rep: Representative) => void;
   removeSavedRep: (repId: string) => void;
   isRepSaved: (repId: string) => boolean;
-  updateLastSearch: (search: string) => void;
+  updateLastSearch: (search: string, type: 'postalCode' | 'name') => void;
+  setSearchResults: (results: Representative[]) => void;
+  updateProfile: (name: string, homePostalCode: string) => void;
 }
 
 // Create the context
@@ -38,6 +45,9 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
         const { value } = await Preferences.get({ key: USER_DATA_KEY });
         if (value) {
           setUserData(JSON.parse(value));
+        } else {
+          // If no user data is found, initialize it
+          initializeUserData();
         }
       } catch (error) {
         console.error("Failed to load user data", error);
@@ -62,7 +72,12 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       searchCount: 0,
       savedReps: [],
       joinDate: new Date().toISOString(),
-      lastSearch: "",
+      lastPostalCodeSearch: "",
+      lastNameSearch: "",
+      lastSearchType: "postalCode",
+      searchResults: [],
+      name: "",
+      homePostalCode: "",
     };
     saveUserData(initialData);
   };
@@ -91,9 +106,28 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     return userData?.savedReps.some(r => r.id === parseInt(repId, 10)) ?? false;
   };
 
-  const updateLastSearch = (search: string) => {
+  const updateLastSearch = (search: string, type: 'postalCode' | 'name') => {
     if (userData) {
-      saveUserData({ ...userData, lastSearch: search });
+      const updatedData = {
+        ...userData,
+        lastSearchType: type,
+        lastPostalCodeSearch: type === 'postalCode' ? search : userData.lastPostalCodeSearch,
+        lastNameSearch: type === 'name' ? search : userData.lastNameSearch,
+      };
+      console.log('[useUserData] Updating last search. search:', search, 'type:', type, 'updatedData:', updatedData);
+      saveUserData(updatedData);
+    }
+  };
+
+  const setSearchResults = (results: Representative[]) => {
+    if (userData) {
+      saveUserData({ ...userData, searchResults: results });
+    }
+  };
+
+  const updateProfile = (name: string, homePostalCode: string) => {
+    if (userData) {
+      saveUserData({ ...userData, name, homePostalCode });
     }
   };
 
@@ -105,7 +139,9 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     addSavedRep, 
     removeSavedRep, 
     isRepSaved, 
-    updateLastSearch 
+    updateLastSearch,
+    setSearchResults,
+    updateProfile,
   };
 
   return (

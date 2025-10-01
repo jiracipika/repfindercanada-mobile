@@ -1,72 +1,121 @@
 import { useState, useEffect } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Preferences } from "@capacitor/preferences";
+import { App as CapApp } from "@capacitor/app";
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
-import Search from "@/pages/search";
 import Saved from "@/pages/saved";
 import Profile from "@/pages/profile";
+import Activity from "@/pages/activity";
 import NotFound from "@/pages/not-found";
-import { Header } from "@/components/header";
-import { BottomNav } from "@/components/bottom-nav";
+import { BottomNav } from "@/components/ui/bottom-nav";
+import { SafeArea } from "@/components/ui/safe-area";
 import LoadingScreen from "@/components/loading-screen";
 import TermsModal from "@/components/terms-modal";
 import NonAffiliationModal from "@/components/non-affiliation-modal";
 import { UserDataProvider, useUserData } from "@/hooks/use-user-data";
+import { SwipePager } from "@/components/SwipePager";
+import AppHeader from "@/components/app-header";
 
 import { SourcesDisclaimer } from "@/pages/sources-disclaimer";
 
+// Map routes to page indices
+const routeToIndex: Record<string, number> = {
+  '/': 0,
+  '/saved': 1,
+  '/activity': 2,
+  '/profile': 3,
+};
+
+const indexToRoute = ['/', '/saved', '/activity', '/profile'];
 
 function Router() {
+  const [location, setLocation] = useLocation();
+
+  // Handle special routes that aren't part of the main pager
+  if (location === '/sources-disclaimer') {
+    return (
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
+        <AppHeader />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <SourcesDisclaimer />
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Get current page index from route
+  const currentIndex = routeToIndex[location] ?? 0;
+
+  const handleIndexChange = (newIndex: number) => {
+    setLocation(indexToRoute[newIndex]);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-50">
-      <Header />
-      <main className="flex-1 pb-20">
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/search" component={Search} />
-          <Route path="/saved" component={Saved} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/sources-disclaimer" component={SourcesDisclaimer} />
-          
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-      <div className="fixed bottom-16 left-0 right-0 flex justify-center pb-1 pt-2 bg-neutral-50 text-xs">
-        <a href="/sources-disclaimer" className="text-blue-500 hover:underline">
-          Sources & Disclaimers
-        </a>
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <AppHeader />
+      <div className="flex-1 flex flex-col" style={{ overflow: 'hidden' }}>
+        <SwipePager
+          pages={[
+            <Home key="home" />,
+            <Saved key="saved" />,
+            <Activity key="activity" />,
+            <Profile key="profile" />
+          ]}
+          currentIndex={currentIndex}
+          onIndexChange={handleIndexChange}
+          className="flex-1"
+        />
       </div>
       <BottomNav />
     </div>
   );
 }
 
+const TERMS_KEY = 'termsAcceptedVersion';
+
 function AppContent() {
   const [appStatus, setAppStatus] = useState('initializing'); // 'initializing', 'needsTerms', 'needsDisclaimer', 'ready'
+  const [appVersion, setAppVersion] = useState<string>('0.0.0');
   const { initializeUserData } = useUserData();
 
   useEffect(() => {
     const startup = async () => {
       console.log('[Startup] Checking for terms and disclaimer acceptance...');
       try {
-        const { value: termsValue } = await Preferences.get({ key: 'termsAccepted' });
-        if (termsValue !== 'true') {
+        // Initialize StatusBar for native platforms
+        if (Capacitor.isNativePlatform()) {
+          await StatusBar.setStyle({ style: Style.Light }); // Or Dark, depending on theme
+          await StatusBar.setOverlaysWebView({ overlay: true });
+        }
+
+        // Get current app version
+        const info = await CapApp.getInfo();
+        const currentVersion = info.version ?? '0.0.0';
+        setAppVersion(currentVersion);
+        console.log('[Startup] Current app version:', currentVersion);
+
+        // Check if terms were accepted for this version
+        const { value: termsAcceptedVersion } = await Preferences.get({ key: TERMS_KEY });
+        console.log('[Startup] Terms accepted for version:', termsAcceptedVersion);
+
+        const needsTerms = !termsAcceptedVersion || termsAcceptedVersion !== currentVersion;
+        if (needsTerms) {
+          console.log('[Startup] User needs to accept terms for version', currentVersion);
           setAppStatus('needsTerms');
           return;
         }
 
-        const { value: disclaimerValue } = await Preferences.get({ key: 'disclaimerAcknowledged' });
-        if (disclaimerValue !== 'true') {
-          setAppStatus('needsDisclaimer');
-          return;
-        }
-
-        setAppStatus('ready');
+        // Terms are accepted for current version, show disclaimer on every launch
+        console.log('[Startup] Terms accepted, showing disclaimer');
+        setAppStatus('needsDisclaimer');
       } catch (error) {
         console.error('[Startup] Error checking preferences:', error);
         setAppStatus('needsTerms'); // Fallback to showing terms on error
@@ -76,14 +125,15 @@ function AppContent() {
     startup();
   }, []);
 
-  const handleAcceptTerms = async () => {
-    await Preferences.set({ key: 'termsAccepted', value: 'true' });
+  const handleAcceptPrivacyPolicy = async () => {
+    console.log('[Startup] User accepted terms for version', appVersion);
+    await Preferences.set({ key: TERMS_KEY, value: appVersion });
     initializeUserData();
     setAppStatus('needsDisclaimer');
   };
 
   const handleAcknowledgeDisclaimer = async () => {
-    await Preferences.set({ key: 'disclaimerAcknowledged', value: 'true' });
+    console.log('[Startup] User acknowledged disclaimer');
     setAppStatus('ready');
   };
 
@@ -92,12 +142,11 @@ function AppContent() {
   }
 
   if (appStatus === 'needsTerms') {
-    return <TermsModal onAccept={handleAcceptTerms} />;
+    return <TermsModal onAccept={handleAcceptPrivacyPolicy} />;
   }
 
   if (appStatus === 'needsDisclaimer') {
-    return <NonAffiliationModal onAcknowledge={handleAcknowledgeDisclaimer} />;
-  }
+    return <NonAffiliationModal onAcknowledge={handleAcknowledgeDisclaimer} />;}
 
   return <Router />;
 }

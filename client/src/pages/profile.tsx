@@ -1,10 +1,17 @@
+import { useState, useEffect } from "react";
 import { useUserData } from "@/hooks/use-user-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { User, MapPin, Clock, Heart, Info } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { User, MapPin, Clock, Heart, Info, Save, GitBranch, Loader2 } from "lucide-react";
 import { Browser } from '@capacitor/browser';
 import { isPlatform } from '@ionic/react';
+import { Capacitor } from '@capacitor/core';
+import { repRepository } from "@/lib/storage/repRepository";
+import { getSearchCount, subscribeActivityChanges } from "@/lib/storage/activityRepository";
 import {
   APP_DISCLAIMER,
   DATA_SOURCE_SINGLE,
@@ -12,151 +19,187 @@ import {
   PRIVACY_NOTE,
   ABOUT_PARAGRAPH_1,
 } from '../lib/constants/appCopy';
+import { Section } from "@/components/ui/section";
+import { Link } from "wouter";
+
+const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
 
 const openExternal = async (url: string) => {
+  const fullUrl = url.startsWith('http') ? url : `${BASE_WEB_URL}${url}`;
   if (isPlatform('capacitor')) {
-    await Browser.open({ url });
+    await Browser.open({ url: fullUrl });
   } else {
-    window.open(url, '_blank');
+    window.open(fullUrl, '_blank');
   }
 };
 
 export default function Profile() {
-  const { userData, isLoading } = useUserData();
+  const { userData, isLoading, updateProfile } = useUserData();
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [homePostalCode, setHomePostalCode] = useState("");
+  const [savedRepCount, setSavedRepCount] = useState(0);
+  const [searchCount, setSearchCount] = useState(0);
+
+  useEffect(() => {
+    if (userData) {
+      setName(userData.name || "");
+      setHomePostalCode(userData.homePostalCode || "");
+    }
+  }, [userData]);
+
+  // Load saved rep count from repRepository
+  useEffect(() => {
+    const loadSavedCount = async () => {
+      const reps = await repRepository.listSavedReps();
+      setSavedRepCount(reps.length);
+    };
+    loadSavedCount();
+
+    // Subscribe to saved changes
+    const unsubscribe = repRepository.subscribeSavedChanges(() => {
+      loadSavedCount();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Load search count from activity service
+  useEffect(() => {
+    const loadSearchCount = async () => {
+      const count = await getSearchCount();
+      setSearchCount(count);
+    };
+    loadSearchCount();
+
+    // Subscribe to activity changes
+    const unsubscribe = subscribeActivityChanges(() => {
+      loadSearchCount();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleSave = () => {
+    updateProfile(name, homePostalCode);
+    toast({
+      title: "Profile saved",
+      description: "Your profile has been updated.",
+    });
+  };
 
   if (isLoading) {
-    return <div>Loading...</div>; // Or a proper loading spinner
+    return (
+      <Section className="pt-8 pb-4 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+        <p className="text-muted-foreground mt-2">Loading profile...</p>
+      </Section>
+    );
   }
 
   if (!userData) {
-    return <div>No user data found.</div>; // Or some other fallback UI
+    return (
+      <Section className="pt-8 pb-4 text-center">
+        <p className="text-destructive">Error: No user data found.</p>
+      </Section>
+    );
   }
 
   return (
-    <div className="space-y-6 p-4">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-neutral-800 mb-2">Profile</h2>
-        <p className="text-neutral-600 text-sm">Manage your Find My Rep preferences</p>
-      </div>
+    <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="space-y-6 px-4 pt-8 pb-32">
+        <h2 className="text-3xl font-bold text-center mb-6">Profile</h2>
+
+      {/* Edit Profile Form */}
+      <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Edit Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">Home Postal Code</Label>
+              <Input id="postalCode" value={homePostalCode} onChange={(e) => setHomePostalCode(e.target.value)} placeholder="A1A 1A1" />
+            </div>
+            <Button onClick={handleSave} className="w-full">
+              <Save className="h-4 w-4 mr-2" />
+              Save Profile
+            </Button>
+          </CardContent>
+        </Card>
 
       {/* User Stats */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Your Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{userData.searchCount}</div>
-              <div className="text-sm text-neutral-600">Searches</div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Your Activity — {searchCount} searches
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-primary">{searchCount}</div>
+                <div className="text-sm text-muted-foreground">Searches</div>
+              </div>
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <div className="text-2xl font-bold text-primary">{savedRepCount}</div>
+                <div className="text-sm text-muted-foreground">Saved</div>
+              </div>
             </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{userData.savedReps.length}</div>
-              <div className="text-sm text-neutral-600">Saved</div>
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              <span>Last search: {userData.lastPostalCodeSearch || userData.lastNameSearch || "No recent search"}</span>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-neutral-600">
-            <MapPin className="h-4 w-4" />
-            <span>Last search: {userData.lastSearch}</span>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-neutral-600">
-            <Clock className="h-4 w-4" />
-            <span>Member since: {new Date(userData.joinDate).toLocaleDateString()}</span>
-          </div>
-        </CardContent>
-      </Card>
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Member since: {new Date(userData.joinDate).toLocaleDateString()}</span>
+            </div>
+          </CardContent>
+        </Card>
 
       {/* App Information */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5" />
-            About Find My Rep
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-neutral-600">
-            {ABOUT_PARAGRAPH_1}
-          </p>
-
-          <h3 className="font-semibold text-neutral-800">Disclaimer:</h3>
-          <p className="text-sm text-neutral-600">{APP_DISCLAIMER}</p>
-
-          <h3 className="font-semibold text-neutral-800">Data Source:</h3>
-          <p className="text-sm text-neutral-600">
-            {DATA_SOURCE_SINGLE.split('—')[0]}—{' '}
-            <a href="#" onClick={() => openExternal('https://represent.opennorth.ca/')} className="text-blue-600 hover:underline">
-              https://represent.opennorth.ca/
-            </a>
-          </p>
-
-          <h3 className="font-semibold text-neutral-800">Official Source Links (verification only):</h3>
-          <ul className="list-disc list-inside text-sm text-neutral-600 space-y-1">
-            <li>
-              House of Commons – Members (MPs):{' '}
-              <a href="#" onClick={() => openExternal(OFFICIAL_LINKS.HOUSE_OF_COMMONS)} className="text-blue-600 hover:underline">
-                {OFFICIAL_LINKS.HOUSE_OF_COMMONS}
-              </a>
-            </li>
-            <li>
-              Senate of Canada – Senators:{' '}
-              <a href="#" onClick={() => openExternal(OFFICIAL_LINKS.SENATE_OF_CANADA)} className="text-blue-600 hover:underline">
-                {OFFICIAL_LINKS.SENATE_OF_CANADA}
-              </a>
-            </li>
-            <li>
-              Elections Canada – Find your electoral district:{' '}
-              <a href="#" onClick={() => openExternal(OFFICIAL_LINKS.ELECTIONS_CANADA)} className="text-blue-600 hover:underline">
-                {OFFICIAL_LINKS.ELECTIONS_CANADA}
-              </a>
-            </li>
-          </ul>
-
-          <h3 className="font-semibold text-neutral-800">Privacy Note:</h3>
-          <p className="text-sm text-neutral-600">{PRIVACY_NOTE}</p>
-          
-          <div className="space-y-2">
-            <Badge variant="secondary" className="mr-2">Version 1.0.0</Badge>
-            <Badge variant="outline">PWA Ready</Badge>
-          </div>
-          
-          <div className="pt-4 space-y-2">
-            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/privacy-policy.html')}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              App Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <GitBranch className="h-4 w-4" />
+              <span>Version: 1.0.1</span>
+            </div>
+            <Link href="/sources-disclaimer">
+              <Button variant="outline" className="w-full justify-start">
+                <Info className="h-4 w-4 mr-2" />
+                Sources & Disclaimers
+              </Button>
+            </Link>
+            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/privacy')}>
               <Heart className="h-4 w-4 mr-2" />
               Privacy Policy
-            </Button>
-            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/sources-disclaimer')}>
-              <Info className="h-4 w-4 mr-2" />
-              Sources & Disclaimers
             </Button>
             <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/terms')}>
               <Info className="h-4 w-4 mr-2" />
               Terms of Service
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* PWA Install Prompt */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-3">
-            <div className="text-primary text-2xl">📱</div>
-            <h3 className="font-semibold text-neutral-800">Install Find My Rep</h3>
-            <p className="text-sm text-neutral-600">
-              Add this app to your home screen for quick access to your representatives.
-            </p>
-            <Button className="w-full">
-              Install App
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
