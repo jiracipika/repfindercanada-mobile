@@ -4,8 +4,6 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
-      groups:
-        # Add your environment variable groups here
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
@@ -38,8 +36,6 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
-      groups:
-        # Add your environment variable groups here
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
       node: 18.17.0
