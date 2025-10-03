@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.canadarepfinder.app',
+  appId: 'com.marcelsabas.repfinderforcanada',
   appName: 'Canadian Rep Finder',
   webDir: 'dist/public',
   server: {
