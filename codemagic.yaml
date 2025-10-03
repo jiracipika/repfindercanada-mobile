@@ -1,5 +1,5 @@
 workflows:
-  react-native-capacitor:
+  ios-app-store:
     name: React Native Capacitor Build
     max_build_duration: 120
     instance_type: mac_mini_m2
