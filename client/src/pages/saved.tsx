@@ -19,6 +19,7 @@ export default function Saved() {
     const fetchSavedReps = async () => {
       setIsLoading(true);
       const reps = await repRepository.listSavedReps();
+      console.log('[Saved Page] Fetched saved reps:', reps.length, 'reps:', reps);
       setSavedRepresentatives(reps);
       setIsLoading(false);
     };

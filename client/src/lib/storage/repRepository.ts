@@ -10,10 +10,13 @@ const emitSavedChange = () => {
 
 const getSavedReps = async (): Promise<Representative[]> => {
   const { value } = await Preferences.get({ key: KEY });
-  return value ? JSON.parse(value) : [];
+  const reps = value ? JSON.parse(value) : [];
+  console.log('[repRepository] getSavedReps:', reps.length, 'reps found');
+  return reps;
 };
 
 const saveReps = async (reps: Representative[]) => {
+  console.log('[repRepository] saveReps: Saving', reps.length, 'reps');
   await Preferences.set({ key: KEY, value: JSON.stringify(reps) });
   emitSavedChange();
 };
@@ -24,10 +27,16 @@ export const repRepository = {
   },
 
   saveRep: async (repToSave: Representative): Promise<void> => {
+    console.log('[repRepository] saveRep: Attempting to save rep:', repToSave.name, 'ID:', repToSave.id);
     const savedReps = await getSavedReps();
-    if (!savedReps.some(rep => rep.id === repToSave.id)) {
+    console.log('[repRepository] saveRep: Current saved reps before save:', savedReps.length);
+    // Use Number() to ensure consistent comparison
+    if (!savedReps.some(rep => Number(rep.id) === Number(repToSave.id))) {
       savedReps.unshift(repToSave); // Add to beginning
+      console.log('[repRepository] saveRep: Rep not already saved, adding. New total:', savedReps.length);
       await saveReps(savedReps);
+    } else {
+      console.log('[repRepository] saveRep: Rep already saved, skipping');
     }
   },
 
