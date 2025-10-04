@@ -49,5 +49,7 @@
 	<string>This app uses your location to help you find your local representatives based on your current location.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app uses your location to help you find your local representatives based on your current location.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
