@@ -17,20 +17,24 @@ export default function Saved() {
 
   useEffect(() => {
     const fetchSavedReps = async () => {
-      setIsLoading(true);
       const reps = await repRepository.listSavedReps();
       console.log('[Saved Page] Fetched saved reps:', reps.length, 'reps:', reps);
       setSavedRepresentatives(reps);
       setIsLoading(false);
     };
+
+    // Initial fetch
+    setIsLoading(true);
     fetchSavedReps();
 
-    // Subscribe to saved changes
+    // Subscribe to saved changes (don't set loading state for updates)
     const unsubscribe = repRepository.subscribeSavedChanges(() => {
+      console.log('[Saved Page] Received savedRepsChanged event, refetching...');
       fetchSavedReps();
     });
 
     return () => {
+      console.log('[Saved Page] Unsubscribing from saved changes');
       unsubscribe();
     };
   }, []);

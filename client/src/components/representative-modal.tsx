@@ -27,8 +27,16 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
       const saved = await repRepository.isSaved(String(representative.id));
       setIsSaved(saved);
     };
+
     if (isOpen) {
       checkSavedStatus();
+
+      // Subscribe to saved changes to update status in real-time
+      const unsubscribe = repRepository.subscribeSavedChanges(() => {
+        checkSavedStatus();
+      });
+
+      return () => unsubscribe();
     }
   }, [representative.id, isOpen]);
 
@@ -37,14 +45,14 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     try {
       if (isSaved) {
         await repRepository.removeRep(String(representative.id));
-        setIsSaved(false);
+        // Don't manually set state - let the subscription handle it
         toast({
           title: "Removed from saved",
           description: "Representative removed from your saved list",
         });
       } else {
         await repRepository.saveRep(representative);
-        setIsSaved(true);
+        // Don't manually set state - let the subscription handle it
         toast({
           title: "Saved successfully",
           description: "Representative added to your saved list",
