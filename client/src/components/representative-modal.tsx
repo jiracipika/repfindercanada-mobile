@@ -139,7 +139,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg mx-4 max-h-[90vh] flex flex-col rounded-2xl safe-pb p-0">
+      <DialogContent className="max-w-lg mx-4 max-h-[90vh] flex flex-col rounded-2xl safe-pb p-0 overflow-hidden">
         <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <DialogTitle>Representative Details</DialogTitle>
           <div className="flex gap-2">
@@ -177,19 +177,19 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 overflow-y-auto px-6 flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="space-y-6 overflow-y-auto overflow-x-hidden px-6 flex-1 w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Representative Header */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{representative.name}</h2>
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{representative.name}</h2>
             <p className="text-gray-600 dark:text-gray-400">MP</p>
           </div>
 
           {/* Profile Section */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <h3 className="text-lg font-semibold">Profile</h3>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 min-w-0">
               {/* Avatar and Basic Info */}
               <div className="text-center">
                 <Avatar className="w-20 h-20 mx-auto mb-3">
@@ -213,26 +213,26 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
               {/* Contact Information */}
               <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <span className="text-sm">{representative.constituency}</span>
+                <div className="flex items-center space-x-3 min-w-0">
+                  <MapPin className="h-5 w-5 text-primary shrink-0" />
+                  <span className="text-sm break-words">{representative.constituency}</span>
                 </div>
                 
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                  <button 
+                <div className="flex items-center space-x-3 min-w-0">
+                  <Mail className="h-5 w-5 text-blue-600 shrink-0" />
+                  <button
                     onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
 @parl.gc.ca`)}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium break-all text-left min-w-0"
                   >
                     {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
 @parl.gc.ca`}
                   </button>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-blue-600" />
-                  <button 
+
+                <div className="flex items-center space-x-3 min-w-0">
+                  <Phone className="h-5 w-5 text-blue-600 shrink-0" />
+                  <button
                     onClick={() => handleCall(representative.phone || '1 613 992-4501')}
                     className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
                   >
@@ -241,13 +241,13 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 </div>
 
                 {representative.website && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="h-5 w-5 text-primary" />
-                    <a 
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <Globe className="h-5 w-5 text-primary shrink-0" />
+                    <a
                       href={representative.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline break-all"
+                      className="text-sm text-primary hover:underline break-all min-w-0"
                     >
                       Official Website
                     </a>
@@ -255,13 +255,13 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 )}
 
                 {representative.personalWebsite && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="h-5 w-5 text-primary" />
-                    <a 
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <Globe className="h-5 w-5 text-primary shrink-0" />
+                    <a
                       href={representative.personalWebsite}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline"
+                      className="text-sm text-primary hover:underline break-all min-w-0"
                     >
                       Personal Website
                     </a>
@@ -286,26 +286,26 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
           </Card>
 
           {/* About Section */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <h3 className="text-lg font-semibold">About</h3>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 whitespace-pre-line">
+            <CardContent className="min-w-0">
+              <p className="text-sm text-gray-600 whitespace-pre-line break-words">
                 {representative.biography || `${representative.name} is the Member of Parliament for ${representative.constituency}, representing the ${representative.party} party.`}
               </p>
             </CardContent>
           </Card>
 
           {/* Interactive Map Section */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Map className="h-5 w-5" />
                 Office Locations
               </h3>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0">
               <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center mb-4">
                 <div className="text-center">
                   <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
@@ -337,65 +337,65 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
           </Card>
 
           {/* Offices Section */}
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <h3 className="text-lg font-semibold">Contact Information</h3>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 min-w-0">
               {/* Legislature Office */}
-              <div className="border rounded-lg p-4">
+              <div className="border rounded-lg p-4 min-w-0">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   Legislature Office
                 </h4>
-                
-                <p className="text-sm text-gray-600 mb-2">House of Commons Ottawa ON K1A 0A6</p>
-                
+
+                <p className="text-sm text-gray-600 mb-2 break-words">House of Commons Ottawa ON K1A 0A6</p>
+
                 <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-blue-600" />
-                    <button 
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <Phone className="h-4 w-4 text-blue-600 shrink-0" />
+                    <button
                       onClick={() => handleCall('1 613 992-4501')}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 px-2 py-1 rounded"
                     >
                       1 613 992-4501
                     </button>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Printer className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Fax: 1 613 992-4501</span>
+
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <Printer className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm break-words">Fax: 1 613 992-4501</span>
                   </div>
                 </div>
               </div>
 
               {/* Constituency Office */}
-              <div className="border rounded-lg p-4">
+              <div className="border rounded-lg p-4 min-w-0">
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   Constituency Office
                 </h4>
-                
-                <p className="text-sm text-gray-600 mb-2">
+
+                <p className="text-sm text-gray-600 mb-2 break-words">
                   Main office - {representative.constituency}<br/>
                   Sheppard avenue East {representative.constituency}<br/>
                   M1T 3K1
                 </p>
-                
+
                 <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-blue-600" />
-                    <button 
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <Phone className="h-4 w-4 text-blue-600 shrink-0" />
+                    <button
                       onClick={() => handleCall('1 416 321-5454')}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 px-2 py-1 rounded"
                     >
                       1 416 321-5454
                     </button>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Printer className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Fax: 1 416 321-5456</span>
+
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <Printer className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm break-words">Fax: 1 416 321-5456</span>
                   </div>
                 </div>
               </div>
