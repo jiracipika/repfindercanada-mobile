@@ -27,11 +27,19 @@ export const repRepository = {
   },
 
   saveRep: async (repToSave: Representative): Promise<void> => {
-    console.log('[repRepository] saveRep: Attempting to save rep:', repToSave.name, 'ID:', repToSave.id);
+    console.log('[repRepository] saveRep: Attempting to save rep:', repToSave.name, 'ID:', repToSave.id, 'Type:', typeof repToSave.id);
     const savedReps = await getSavedReps();
     console.log('[repRepository] saveRep: Current saved reps before save:', savedReps.length);
+    console.log('[repRepository] saveRep: Existing IDs:', savedReps.map(rep => `${rep.id} (${typeof rep.id})`).join(', '));
+
     // Use Number() to ensure consistent comparison
-    if (!savedReps.some(rep => Number(rep.id) === Number(repToSave.id))) {
+    const isDuplicate = savedReps.some(rep => {
+      const match = Number(rep.id) === Number(repToSave.id);
+      console.log(`[repRepository] saveRep: Comparing ${rep.id} (${typeof rep.id}) with ${repToSave.id} (${typeof repToSave.id}) => Number(${rep.id}) === Number(${repToSave.id}) => ${Number(rep.id)} === ${Number(repToSave.id)} => ${match}`);
+      return match;
+    });
+
+    if (!isDuplicate) {
       savedReps.unshift(repToSave); // Add to beginning
       console.log('[repRepository] saveRep: Rep not already saved, adding. New total:', savedReps.length);
       await saveReps(savedReps);
@@ -41,14 +49,24 @@ export const repRepository = {
   },
 
   removeRep: async (repId: number | string): Promise<void> => {
+    console.log('[repRepository] removeRep: Attempting to remove rep with ID:', repId, 'Type:', typeof repId);
     let savedReps = await getSavedReps();
-    savedReps = savedReps.filter(rep => rep.id !== Number(repId));
+    console.log('[repRepository] removeRep: Current saved reps before removal:', savedReps.length);
+    console.log('[repRepository] removeRep: Existing IDs:', savedReps.map(rep => `${rep.id} (${typeof rep.id})`).join(', '));
+
+    savedReps = savedReps.filter(rep => {
+      const keep = Number(rep.id) !== Number(repId);
+      console.log(`[repRepository] removeRep: Rep ${rep.id} => Number(${rep.id}) !== Number(${repId}) => ${Number(rep.id)} !== ${Number(repId)} => keep: ${keep}`);
+      return keep;
+    });
+
+    console.log('[repRepository] removeRep: Saved reps after removal:', savedReps.length);
     await saveReps(savedReps);
   },
 
   isSaved: async (repId: number | string): Promise<boolean> => {
     const savedReps = await getSavedReps();
-    return savedReps.some(rep => rep.id === Number(repId));
+    return savedReps.some(rep => Number(rep.id) === Number(repId));
   },
 
   toggleSaved: async (rep: Representative): Promise<void> => {
