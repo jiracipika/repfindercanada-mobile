@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink } from "lucide-react";
+import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink, Trash2 } from "lucide-react";
 import type { Representative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
@@ -12,19 +12,23 @@ interface RepresentativeCardProps {
   representative: Representative;
   onViewProfile: () => void;
   showSaveButton?: boolean;
+  showDeleteButton?: boolean;
+  onDelete?: () => void;
 }
 
 export function RepresentativeCard({
   representative,
   onViewProfile,
-  showSaveButton = true
+  showSaveButton = true,
+  showDeleteButton = false,
+  onDelete
 }: RepresentativeCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const checkSavedStatus = async () => {
-      const saved = await repRepository.isSaved(String(representative.id));
+      const saved = await repRepository.isSaved(representative.id);
       setIsSaved(saved);
     };
     checkSavedStatus();
@@ -40,7 +44,7 @@ export function RepresentativeCard({
   const handleSave = async () => {
     try {
       if (isSaved) {
-        await repRepository.removeRep(String(representative.id));
+        await repRepository.removeRep(representative.id);
         // Don't manually set state - let the subscription handle it
         toast({
           title: "Removed from saved",
@@ -61,6 +65,28 @@ export function RepresentativeCard({
         description: "Failed to update saved status",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      // Call onDelete first for optimistic UI update
+      if (onDelete) {
+        onDelete();
+      }
+      await repRepository.removeRep(representative.id);
+      toast({
+        title: "Removed from saved",
+        description: "Representative removed from your saved list",
+      });
+    } catch (error) {
+      console.error("Failed to delete representative:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove representative",
+        variant: "destructive",
+      });
+      // On error, the subscription will restore the correct state
     }
   };
 
@@ -113,20 +139,32 @@ export function RepresentativeCard({
               <h3 className="font-semibold text-lg text-foreground leading-tight">
                 {representative.name}
               </h3>
-              {showSaveButton && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSave}
-                  className="p-1 h-auto"
-                >
-                  {isSaved ? (
-                    <Heart className="h-5 w-5 text-red-500 fill-current" />
-                  ) : (
-                    <Heart className="h-5 w-5 text-neutral-400" />
-                  )}
-                </Button>
-              )}
+              <div className="flex gap-1">
+                {showSaveButton && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSave}
+                    className="p-1 h-auto"
+                  >
+                    {isSaved ? (
+                      <Heart className="h-5 w-5 text-red-500 fill-current" />
+                    ) : (
+                      <Heart className="h-5 w-5 text-neutral-400" />
+                    )}
+                  </Button>
+                )}
+                {showDeleteButton && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDelete}
+                    className="p-1 h-auto"
+                  >
+                    <Trash2 className="h-5 w-5 text-red-500" />
+                  </Button>
+                )}
+              </div>
             </div>
             
             <div className="space-y-2 text-sm">

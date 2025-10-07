@@ -88,10 +88,11 @@ function AppContent() {
 
   useEffect(() => {
     const startup = async () => {
-      console.log('[Startup] Checking for terms and disclaimer acceptance...');
+      console.log('[Startup] === App Startup Sequence Started ===');
       try {
         // Initialize StatusBar for native platforms
         if (Capacitor.isNativePlatform()) {
+          console.log('[Startup] Initializing StatusBar for native platform');
           await StatusBar.setStyle({ style: Style.Light }); // Or Dark, depending on theme
           await StatusBar.setOverlaysWebView({ overlay: true });
         }
@@ -103,21 +104,31 @@ function AppContent() {
         console.log('[Startup] Current app version:', currentVersion);
 
         // Check if terms were accepted for this version
-        const { value: termsAcceptedVersion } = await Preferences.get({ key: TERMS_KEY });
+        const result = await Preferences.get({ key: TERMS_KEY });
+        const termsAcceptedVersion = result?.value || null;
+        console.log('[Startup] Preferences.get result:', JSON.stringify(result));
         console.log('[Startup] Terms accepted for version:', termsAcceptedVersion);
+        console.log('[Startup] Terms value type:', typeof termsAcceptedVersion);
+        console.log('[Startup] Terms is null?:', termsAcceptedVersion === null);
+        console.log('[Startup] Terms is empty string?:', termsAcceptedVersion === '');
 
+        // Need to show terms if: never accepted OR accepted for different version
         const needsTerms = !termsAcceptedVersion || termsAcceptedVersion !== currentVersion;
+        console.log('[Startup] Does user need to accept terms?', needsTerms);
+        console.log('[Startup] Reason: !termsAcceptedVersion?', !termsAcceptedVersion, ', version mismatch?', termsAcceptedVersion !== currentVersion);
+
         if (needsTerms) {
-          console.log('[Startup] User needs to accept terms for version', currentVersion);
+          console.log('[Startup] --> SHOWING TERMS MODAL for version', currentVersion);
           setAppStatus('needsTerms');
           return;
         }
 
         // Terms are accepted for current version, show disclaimer on every launch
-        console.log('[Startup] Terms accepted, showing disclaimer');
+        console.log('[Startup] --> SHOWING DISCLAIMER (terms already accepted)');
         setAppStatus('needsDisclaimer');
       } catch (error) {
-        console.error('[Startup] Error checking preferences:', error);
+        console.error('[Startup] !!! Error during startup:', error);
+        console.error('[Startup] !!! Falling back to showing terms');
         setAppStatus('needsTerms'); // Fallback to showing terms on error
       }
     };
@@ -126,14 +137,28 @@ function AppContent() {
   }, []);
 
   const handleAcceptPrivacyPolicy = async () => {
-    console.log('[Startup] User accepted terms for version', appVersion);
-    await Preferences.set({ key: TERMS_KEY, value: appVersion });
-    initializeUserData();
-    setAppStatus('needsDisclaimer');
+    console.log('[Startup] === User Accepted Privacy Policy ===');
+    console.log('[Startup] Saving acceptance for version:', appVersion);
+    try {
+      await Preferences.set({ key: TERMS_KEY, value: appVersion });
+      console.log('[Startup] Successfully saved terms acceptance');
+
+      // Verify it was saved
+      const verification = await Preferences.get({ key: TERMS_KEY });
+      console.log('[Startup] Verification - saved value:', verification?.value);
+
+      initializeUserData();
+      console.log('[Startup] User data initialized');
+      console.log('[Startup] Transitioning to disclaimer...');
+      setAppStatus('needsDisclaimer');
+    } catch (error) {
+      console.error('[Startup] Error saving terms acceptance:', error);
+    }
   };
 
   const handleAcknowledgeDisclaimer = async () => {
-    console.log('[Startup] User acknowledged disclaimer');
+    console.log('[Startup] === User Acknowledged Disclaimer ===');
+    console.log('[Startup] App is now ready');
     setAppStatus('ready');
   };
 

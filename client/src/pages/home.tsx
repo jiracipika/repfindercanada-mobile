@@ -136,8 +136,8 @@ export default function Home() {
 
       {/* Recent Searches */}
       {recentSearches && recentSearches.length > 0 && (
-        <Section className="mt-6">
-          <h3 className="text-lg font-semibold mb-3">Recent Searches</h3>
+        <Section>
+          <h3 className="text-lg font-semibold mb-4">Recent Searches</h3>
           <div className="space-y-2">
             {loadingSearches ? (
               Array.from({ length: 3 }).map((_, i) => (
@@ -152,7 +152,7 @@ export default function Home() {
                   onClick={() => handleRecentSearchClick(search)}
                 >
                   <div className="flex items-center space-x-3">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="font-medium">{search.query}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">

@@ -17,10 +17,15 @@ export default function Saved() {
 
   useEffect(() => {
     const fetchSavedReps = async () => {
-      const reps = await repRepository.listSavedReps();
-      console.log('[Saved Page] Fetched saved reps:', reps.length, 'reps:', reps);
-      setSavedRepresentatives(reps);
-      setIsLoading(false);
+      try {
+        const reps = await repRepository.listSavedReps();
+        console.log('[Saved Page] Fetched saved reps:', reps.length, 'reps:', reps);
+        setSavedRepresentatives(reps);
+      } catch (error) {
+        console.error('[Saved Page] Error fetching saved reps:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     // Initial fetch
@@ -28,9 +33,11 @@ export default function Saved() {
     fetchSavedReps();
 
     // Subscribe to saved changes (don't set loading state for updates)
-    const unsubscribe = repRepository.subscribeSavedChanges(() => {
+    const unsubscribe = repRepository.subscribeSavedChanges(async () => {
       console.log('[Saved Page] Received savedRepsChanged event, refetching...');
-      fetchSavedReps();
+      const reps = await repRepository.listSavedReps();
+      console.log('[Saved Page] Updated saved reps from event:', reps.length, 'reps:', reps);
+      setSavedRepresentatives(reps);
     });
 
     return () => {
@@ -68,7 +75,13 @@ export default function Saved() {
               key={representative.id}
               representative={representative}
               onViewProfile={() => setSelectedRepresentative(representative)}
-              showSaveButton={true}
+              showSaveButton={false}
+              showDeleteButton={true}
+              onDelete={() => {
+                // Optimistic UI update: remove immediately from local state
+                console.log('[Saved Page] Optimistic delete for rep:', representative.id);
+                setSavedRepresentatives(prev => prev.filter(r => r.id !== representative.id));
+              }}
             />
           ))}
         </Section>

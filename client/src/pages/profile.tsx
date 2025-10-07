@@ -112,10 +112,13 @@ export default function Profile() {
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="space-y-6 px-4 pt-8 pb-32">
-        <h2 className="text-3xl font-bold text-center mb-6">Profile</h2>
+        <Section className="pt-8 pb-4">
+          <h2 className="text-3xl font-bold text-center">Profile</h2>
+        </Section>
 
-      {/* Edit Profile Form */}
-      <Card>
+        {/* Edit Profile Form */}
+        <Section>
+          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -136,10 +139,12 @@ export default function Profile() {
               Save Profile
             </Button>
           </CardContent>
-        </Card>
+          </Card>
+        </Section>
 
-      {/* User Stats */}
-      <Card>
+        {/* User Stats */}
+        <Section>
+          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -159,19 +164,21 @@ export default function Profile() {
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
+              <MapPin className="h-4 w-4 shrink-0" />
               <span>Last search: {userData.lastPostalCodeSearch || userData.lastNameSearch || "No recent search"}</span>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4 shrink-0" />
               <span>Member since: {new Date(userData.joinDate).toLocaleDateString()}</span>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </Section>
 
-      {/* App Information */}
-      <Card>
+        {/* App Information */}
+        <Section>
+          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Info className="h-5 w-5" />
@@ -180,7 +187,7 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <GitBranch className="h-4 w-4" />
+              <GitBranch className="h-4 w-4 shrink-0" />
               <span>Version: 0.3.0</span>
             </div>
             <Link href="/sources-disclaimer">
@@ -198,7 +205,8 @@ export default function Profile() {
               Terms of Service
             </Button>
           </CardContent>
-        </Card>
+          </Card>
+        </Section>
       </div>
     </div>
   );

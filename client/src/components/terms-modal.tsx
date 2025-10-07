@@ -30,8 +30,12 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
   const handleScroll = () => {
     if (termsRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = termsRef.current;
+      console.log('[TermsModal] Scroll check - scrollTop:', scrollTop, 'clientHeight:', clientHeight, 'scrollHeight:', scrollHeight);
       // Allow a small buffer (e.g., 10 pixels) for scrolling to the bottom
-      if (scrollTop + clientHeight >= scrollHeight - 10) {
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
+      console.log('[TermsModal] Is at bottom?', isAtBottom);
+      if (isAtBottom) {
+        console.log('[TermsModal] User reached bottom - enabling Accept button');
         setCanAccept(true);
       } else {
         setCanAccept(false); // In case user scrolls back up
@@ -40,6 +44,7 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
   };
 
   const handleCloseApp = () => {
+    console.log('[TermsModal] User declined terms - closing app');
     if (isPlatform('capacitor')) {
       (window as any).Capacitor.Plugins.App.exitApp();
     } else {
@@ -47,9 +52,16 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
     }
   };
 
+  const handleAccept = () => {
+    console.log('[TermsModal] User clicked Accept button');
+    onAccept();
+  };
+
   useEffect(() => {
+    console.log('[TermsModal] Component mounted');
     // Check initial scroll position in case content is not scrollable
     if (termsRef.current) {
+      console.log('[TermsModal] Checking if content is scrollable...');
       handleScroll();
     }
   }, []);
@@ -94,8 +106,8 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
             <Button variant="outline" onClick={() => setShowDisagreeAlert(true)}>
               Decline
             </Button>
-            <Button onClick={onAccept} disabled={!canAccept}>
-              Accept
+            <Button onClick={handleAccept} disabled={!canAccept}>
+              Accept {!canAccept && '(scroll to bottom)'}
             </Button>
           </div>
         </div>

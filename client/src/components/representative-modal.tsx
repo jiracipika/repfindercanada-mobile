@@ -24,7 +24,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
   useEffect(() => {
     const checkSavedStatus = async () => {
-      const saved = await repRepository.isSaved(String(representative.id));
+      const saved = await repRepository.isSaved(representative.id);
       setIsSaved(saved);
     };
 
@@ -44,7 +44,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     setIsSaving(true);
     try {
       if (isSaved) {
-        await repRepository.removeRep(String(representative.id));
+        await repRepository.removeRep(representative.id);
         // Don't manually set state - let the subscription handle it
         toast({
           title: "Removed from saved",
@@ -139,7 +139,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg mx-4 max-h-[90vh] flex flex-col rounded-2xl safe-pb p-0 overflow-hidden">
+      <DialogContent className="max-w-lg mx-4 h-[90vh] flex flex-col rounded-2xl safe-pb p-0 overflow-hidden">
         <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <DialogTitle>Representative Details</DialogTitle>
           <div className="flex gap-2">
@@ -177,111 +177,96 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 overflow-y-auto overflow-x-hidden px-6 flex-1 w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {/* Representative Header */}
-          <div className="min-w-0">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{representative.name}</h2>
-            <p className="text-gray-600 dark:text-gray-400">MP</p>
-          </div>
-
-          {/* Profile Section */}
+        <div className="space-y-6 overflow-y-auto overflow-x-hidden px-6 pb-6 flex-1 w-full min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Profile Section with Header */}
           <Card className="min-w-0">
-            <CardHeader>
-              <h3 className="text-lg font-semibold">Profile</h3>
-            </CardHeader>
-            <CardContent className="space-y-4 min-w-0">
-              {/* Avatar and Basic Info */}
-              <div className="text-center">
-                <Avatar className="w-20 h-20 mx-auto mb-3">
-                  <AvatarImage 
-                    src={representative.photo || undefined} 
-                    alt={`${representative.name} photo`} 
+            <CardContent className="space-y-6 min-w-0 pt-6">
+              {/* Avatar and Basic Info - Centered */}
+              <div className="flex flex-col items-center text-center">
+                <Avatar className="w-24 h-24 mb-4 border-4 border-background shadow-lg">
+                  <AvatarImage
+                    src={representative.photo || undefined}
+                    alt={`${representative.name} photo`}
                     className="object-cover"
                     onError={(e) => {
                       console.log('Modal avatar image failed to load:', representative.photo);
                     }}
                   />
-                  <AvatarFallback className="text-lg bg-blue-500 text-white font-semibold">
+                  <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
                     {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
-                
-                <Badge variant="secondary" className={getPartyColor(representative.party)}>
+
+                <h2 className="text-2xl font-bold text-foreground mb-2 break-words">{representative.name}</h2>
+                <p className="text-sm text-muted-foreground mb-3">Member of Parliament</p>
+
+                <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-4`}>
                   {representative.party}
                 </Badge>
+
+                <div className="flex items-center text-muted-foreground text-sm">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span>{representative.constituency}, {representative.province}</span>
+                </div>
               </div>
 
-              {/* Contact Information */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 min-w-0">
-                  <MapPin className="h-5 w-5 text-primary shrink-0" />
-                  <span className="text-sm break-words">{representative.constituency}</span>
-                </div>
-                
-                <div className="flex items-center space-x-3 min-w-0">
-                  <Mail className="h-5 w-5 text-blue-600 shrink-0" />
-                  <button
-                    onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
-@parl.gc.ca`)}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium break-all text-left min-w-0"
+              <Separator />
+
+              {/* Quick Contact Actions */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleCall(representative.phone || '1 613 992-4501')}
+                  className="w-full"
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                  className="w-full"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </Button>
+              </div>
+
+              {/* Contact Details */}
+              <div className="space-y-3 text-sm flex flex-col items-center">
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a
+                    href={`mailto:${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}`}
+                    className="text-blue-600 hover:text-blue-800 hover:underline break-all"
                   >
-                    {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
-@parl.gc.ca`}
-                  </button>
+                    {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
+                  </a>
                 </div>
 
-                <div className="flex items-center space-x-3 min-w-0">
-                  <Phone className="h-5 w-5 text-blue-600 shrink-0" />
-                  <button
-                    onClick={() => handleCall(representative.phone || '1 613 992-4501')}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
-                  >
-                    {representative.phone || '1 613 992-4501'}
-                  </button>
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">
+                    {representative.phone || '1-613-992-4501'}
+                  </span>
                 </div>
 
                 {representative.website && (
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <Globe className="h-5 w-5 text-primary shrink-0" />
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                     <a
                       href={representative.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline break-all min-w-0"
+                      className="text-blue-600 hover:text-blue-800 hover:underline break-all"
                     >
                       Official Website
                     </a>
                   </div>
                 )}
-
-                {representative.personalWebsite && (
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <Globe className="h-5 w-5 text-primary shrink-0" />
-                    <a
-                      href={representative.personalWebsite}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline break-all min-w-0"
-                    >
-                      Personal Website
-                    </a>
-                  </div>
-                )}
               </div>
-
-              {/* Social Media */}
-              {Object.keys(socialMedia).length > 0 && (
-                <>
-                  <Separator />
-                  <div>
-                    <h4 className="font-semibold mb-2">Social Media</h4>
-                    <div className="flex items-center space-x-3">
-                      <Globe className="h-5 w-5 text-primary" />
-                      {/* Social media links would go here */}
-                    </div>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
 
@@ -305,12 +290,13 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 Office Locations
               </h3>
             </CardHeader>
-            <CardContent className="min-w-0">
-              <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Interactive Map</p>
-                  <p className="text-xs text-gray-500">Click buttons below to view locations</p>
+            <CardContent className="min-w-0 space-y-4">
+              <div className="w-full h-48 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 rounded-xl border border-border flex items-center justify-center overflow-hidden relative">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--tw-gradient-from)_100%)]"></div>
+                <div className="text-center z-10">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm font-medium text-foreground">Office Locations</p>
+                  <p className="text-xs text-muted-foreground">Click buttons below to view on map</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -321,7 +307,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   className="flex-1"
                 >
                   <MapPin className="h-4 w-4 mr-2" />
-                  View Both Offices
+                  Both Offices
                 </Button>
                 <Button
                   variant="outline"
@@ -330,7 +316,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   className="flex-1"
                 >
                   <Building2 className="h-4 w-4 mr-2" />
-                  Constituency Office
+                  Constituency
                 </Button>
               </div>
             </CardContent>
