@@ -49,7 +49,7 @@ workflows:
       - name: Build Android .aab
         script: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew clean bundleRelease
     artifacts:
       - build/ios/ipa/*.ipa
       - android/app/build/outputs/**/*.aab
