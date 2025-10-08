@@ -21,9 +21,6 @@ workflows:
         bundle_identifier: com.marcelsabas.repfinderforcanada
       android_signing:
         - akey                    # uses your uploaded keystore
-    triggering:
-      events:
-        - manual                  # run this on demand
     scripts:
       - name: Install npm deps
         script: |
