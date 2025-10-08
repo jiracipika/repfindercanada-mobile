@@ -31,6 +31,18 @@ allprojects {
                 }
             }
         }
+        // Configure Kotlin JVM target for modules with Kotlin
+        project.tasks.configureEach { task ->
+            if (task.name.contains("compileReleaseKotlin") || task.name.contains("compileDebugKotlin")) {
+                try {
+                    task.kotlinOptions {
+                        jvmTarget = "17"
+                    }
+                } catch (Exception e) {
+                    // Ignore if kotlinOptions is not available
+                }
+            }
+        }
     }
 }
 
