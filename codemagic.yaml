@@ -67,7 +67,7 @@ workflows:
         PACKAGE_NAME: "com.marcelsabas.canadarepfinder"
       node: 20
       android_signing:
-        - keystore_reference
+        - akey
     triggering:
       events:
         - push
