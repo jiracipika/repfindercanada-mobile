@@ -55,15 +55,31 @@ workflows:
         submit_to_testflight: true
         submit_to_app_store: false
 
-  android-build:
-    name: Android Build
+  android-play-store:
+    name: Android Play Store Build
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
+      groups:
+        - google_play
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+        PACKAGE_NAME: "com.marcelsabas.canadarepfinder"
       node: 20
+      android_signing:
+        - keystore_reference
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+        - pattern: 'master'
+          include: true
     scripts:
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
       - name: Install npm dependencies
         script: |
           npm install
@@ -71,8 +87,21 @@ workflows:
         script: |
           npm run build
           npx cap sync android
-      - name: Build Android
+      - name: Build Android App Bundle
         script: |
-          cd android && ./gradlew assembleRelease
+          cd android
+          ./gradlew bundleRelease
     artifacts:
+      - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - rajingajadhar@gmail.com
+        notify:
+          success: true
+          failure: true
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: alpha
+        submit_as_draft: false
