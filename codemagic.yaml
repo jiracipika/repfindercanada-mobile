@@ -1,6 +1,6 @@
 workflows:
   release-both:
-    name: One-click: Build iOS (TestFlight) + Android (Play)
+    name: "One-click: Build iOS (TestFlight) + Android (Play)"
     max_build_duration: 180
     instance_type: mac_mini_m2
     environment:
