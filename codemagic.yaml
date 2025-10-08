@@ -22,6 +22,9 @@ workflows:
       android_signing:
         - akey                    # uses your uploaded keystore
     scripts:
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
       - name: Install npm deps
         script: |
           npm install
@@ -41,7 +44,8 @@ workflows:
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --config Release
       - name: Build Android .aab
         script: |
           cd android
