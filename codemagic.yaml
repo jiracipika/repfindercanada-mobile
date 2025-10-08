@@ -1,4 +1,70 @@
 workflows:
+  release-both:
+    name: One-click: Build iOS (TestFlight) + Android (Play)
+    max_build_duration: 180
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - app_store_connect       # same group you use for iOS
+        - google_play             # must exist and contain GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.marcelsabas.repfinderforcanada"
+        JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+        PACKAGE_NAME: "com.marcelsabas.canadarepfinder"
+      node: 20
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.marcelsabas.repfinderforcanada
+      android_signing:
+        - akey                    # uses your uploaded keystore
+    triggering:
+      events:
+        - manual                  # run this on demand
+    scripts:
+      - name: Install npm deps
+        script: |
+          npm install
+      - name: Build web + sync Capacitor (iOS & Android)
+        script: |
+          npm run build
+          npx cap sync ios
+          npx cap sync android
+      - name: Install CocoaPods
+        script: |
+          cd ios/App && pod install
+      - name: Increment iOS build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($BUILD_NUMBER + 1))
+      - name: Build iOS .ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+      - name: Build Android .aab
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        submit_to_app_store: false
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: alpha
+        submit_as_draft: false
+
   ios-app-store:
     name: React Native Capacitor Build
     max_build_duration: 120
