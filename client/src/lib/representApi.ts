@@ -1,5 +1,6 @@
 import type { Representative } from "@shared/schema";
 import { searchByName } from "./api/represent";
+import { makeRepresentativeId, __debugCheckRepId } from "./repId";
 
 interface OpenNorthRepresentative {
   name: string;
@@ -24,10 +25,19 @@ interface OpenNorthRepresentative {
 /**
  * Convert raw result from Represent API to our internal Representative shape.
  */
-function toRepresentative(raw: OpenNorthRepresentative, idx: number = 0): Representative {
-  return {
-    // The mobile-only build doesn't use DB ids – just generate a stable pseudo-id.
-    id: (raw.district_id ?? `postal-search-${idx}`) as any, // Cast to any as schema expects number, but we might get string
+async function toRepresentative(raw: OpenNorthRepresentative): Promise<Representative> {
+  const id = await makeRepresentativeId({
+    source: "opennorth-postal",
+    elected_office: raw.elected_office,
+    name: raw.name,
+    district_name: raw.district_name,
+    ocd_id: raw.district_id ? String(raw.district_id) : undefined,
+    party_name: raw.party_name,
+    email: raw.email,
+  });
+
+  const rep: Representative = {
+    id: id as any, // Cast to any as schema expects number, but we use string for mobile-only build
     name: raw.name,
     party: raw.party_name ?? "Independent",
     constituency: raw.district_name,
@@ -44,6 +54,9 @@ function toRepresentative(raw: OpenNorthRepresentative, idx: number = 0): Repres
     parliamentId: raw.district_id ? String(raw.district_id) : undefined,
     createdAt: undefined,
   } as unknown as Representative;
+
+  __debugCheckRepId(rep.id as string);
+  return rep;
 }
 
 export async function fetchRepsByPostal(postal: string): Promise<Representative[]> {
@@ -55,7 +68,7 @@ export async function fetchRepsByPostal(postal: string): Promise<Representative[
   const data = await res.json();
   const reps: OpenNorthRepresentative[] = (data.representatives_centroid || data.representatives_concordance || [])
     .filter((r: any) => r.elected_office === "MP");
-  return reps.map(toRepresentative);
+  return Promise.all(reps.map(toRepresentative));
 }
 
 export { searchByName as fetchRepsByName }; 

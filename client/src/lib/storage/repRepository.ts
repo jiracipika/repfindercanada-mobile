@@ -1,12 +1,13 @@
 import { Preferences } from '@capacitor/preferences';
 import type { Representative } from "@shared/schema";
 
-const KEY = 'SAVED_REPS_V1';
+const KEY = 'SAVED_REPS_V2';
+const OLD_KEY_V1 = 'SAVED_REPS_V1';
 const OLD_KEY = 'savedReps';
 const EVT = "savedRepsChanged";
 
 // Helper to normalize representative IDs for comparison
-// Returns a string to handle both numeric and synthetic string IDs (e.g., "postal-search-0")
+// Returns a string to handle both numeric and synthetic string IDs (e.g., "rep_abc123...")
 const normalizeId = (id: number | string): string => {
   return String(id);
 };
@@ -18,13 +19,26 @@ const emitSavedChange = () => {
 
 // Migrate old data if exists
 const migrateOldData = async (): Promise<void> => {
-  const { value: oldValue } = await Preferences.get({ key: OLD_KEY });
   const { value: newValue } = await Preferences.get({ key: KEY });
 
-  if (oldValue && !newValue) {
-    console.log('[repRepository] Migrating old data from', OLD_KEY, 'to', KEY);
-    await Preferences.set({ key: KEY, value: oldValue });
-    await Preferences.remove({ key: OLD_KEY });
+  // Skip if we already have V2 data
+  if (newValue) {
+    return;
+  }
+
+  // Try V1 first
+  const { value: v1Value } = await Preferences.get({ key: OLD_KEY_V1 });
+  if (v1Value) {
+    console.log('[repRepository] Found V1 data, will be migrated by migration script');
+    // Migration handled by migrateSavedRepsV2 in migrations
+    return;
+  }
+
+  // Fall back to original old key
+  const { value: oldValue } = await Preferences.get({ key: OLD_KEY });
+  if (oldValue) {
+    console.log('[repRepository] Migrating legacy data from', OLD_KEY, 'to', KEY);
+    // This is legacy data with numeric IDs, will be handled by migration script
   }
 };
 
@@ -67,21 +81,40 @@ export const repRepository = {
     console.log('[repRepository] saveRep: Current saved reps before save:', savedReps.length);
     console.log('[repRepository] saveRep: Existing IDs:', savedReps.map(rep => `${rep.id} (${typeof rep.id})`).join(', '));
 
-    // Ensure we're comparing numbers strictly using normalizeId
-    const repIdNum = normalizeId(repToSave.id);
-    const isDuplicate = savedReps.some(rep => {
-      const savedIdNum = normalizeId(rep.id);
-      const match = savedIdNum === repIdNum;
-      console.log(`[repRepository] saveRep: Comparing ${rep.id} (${typeof rep.id}) with ${repToSave.id} (${typeof repToSave.id}) => ${savedIdNum} === ${repIdNum} => ${match}`);
-      return match;
-    });
+    const repIdStr = normalizeId(repToSave.id);
+    const existingIndex = savedReps.findIndex(rep => normalizeId(rep.id) === repIdStr);
 
-    if (!isDuplicate) {
-      savedReps.push(repToSave); // Add to end
+    if (existingIndex === -1) {
+      // Not a duplicate, add it
+      savedReps.push(repToSave);
       console.log('[repRepository] saveRep: Rep not already saved, adding. New total:', savedReps.length);
       await saveReps(savedReps);
     } else {
-      console.log('[repRepository] saveRep: Rep already saved, skipping');
+      // Check if it's truly the same representative (content-wise)
+      const existing = savedReps[existingIndex];
+      const same =
+        existing.name === repToSave.name &&
+        existing.constituency === repToSave.constituency &&
+        existing.party === repToSave.party &&
+        existing.email === repToSave.email;
+
+      if (same) {
+        console.log('[repRepository] saveRep: Rep already saved with identical content, skipping');
+      } else {
+        // Extremely unlikely: same ID but different content
+        // This should never happen with a good hash, but handle gracefully
+        console.warn('[repRepository] saveRep: ID collision detected! Same ID but different content. Generating suffix.');
+        let suffix = 2;
+        let newId = `${repIdStr}-${suffix}`;
+        while (savedReps.some(r => normalizeId(r.id) === newId)) {
+          suffix++;
+          newId = `${repIdStr}-${suffix}`;
+        }
+        const repWithNewId = { ...repToSave, id: newId as any };
+        savedReps.push(repWithNewId);
+        console.log('[repRepository] saveRep: Added rep with collision-resolved ID:', newId);
+        await saveReps(savedReps);
+      }
     }
   },
 

@@ -1,4 +1,5 @@
 import type { Representative } from "@shared/schema";
+import { makeRepresentativeId, __debugCheckRepId } from "../repId";
 
 interface OpenNorthRepresentative {
   name: string;
@@ -12,12 +13,18 @@ interface OpenNorthRepresentative {
   url?: string; // Sometimes available
 }
 
-const normalizeRepresentative = (rep: OpenNorthRepresentative, index: number): Representative => {
-  // Create a stable ID. If OpenNorth provides a unique ID, use it. Otherwise, generate one.
-  // For this endpoint, a unique ID is not directly available, so we generate one.
-  const id = `open-north-${btoa(encodeURIComponent(`${rep.name}-${rep.district_name}-${rep.elected_office}-${index}`))}`;
+const normalizeRepresentative = async (rep: OpenNorthRepresentative): Promise<Representative> => {
+  // Create a stable, deterministic ID based on representative's key fields
+  const id = await makeRepresentativeId({
+    source: "opennorth-search",
+    elected_office: rep.elected_office,
+    name: rep.name,
+    district_name: rep.district_name,
+    party_name: rep.party_name,
+    email: rep.email,
+  });
 
-  return {
+  const representative: Representative = {
     id: id as any, // Cast to any because the schema expects number, but we're generating string for now
     name: rep.name,
     party: rep.party_name || "Independent",
@@ -35,6 +42,9 @@ const normalizeRepresentative = (rep: OpenNorthRepresentative, index: number): R
     parliamentId: undefined, // Not provided by this OpenNorth endpoint
     createdAt: undefined,
   };
+
+  __debugCheckRepId(representative.id as string);
+  return representative;
 };
 
 export const searchByName = async (name: string): Promise<Representative[]> => {
@@ -48,16 +58,16 @@ export const searchByName = async (name: string): Promise<Representative[]> => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    
+
     // OpenNorth API returns a 'objects' array
     if (data && Array.isArray(data.objects)) {
       // Client-side filtering for robustness (case/diacritic-insensitive)
       const normalizedName = name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
-      return data.objects
-        .filter((rep: OpenNorthRepresentative) => 
+      const filtered = data.objects
+        .filter((rep: OpenNorthRepresentative) =>
           rep.name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").includes(normalizedName)
-        )
-        .map((rep: OpenNorthRepresentative, index: number) => normalizeRepresentative(rep, index));
+        );
+      return Promise.all(filtered.map((rep: OpenNorthRepresentative) => normalizeRepresentative(rep)));
     }
     return [];
   } catch (error) {
