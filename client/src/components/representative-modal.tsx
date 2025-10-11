@@ -139,280 +139,292 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg mx-4 h-[90vh] flex flex-col rounded-2xl safe-pb p-0 overflow-hidden">
-        <DialogHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-4 shrink-0">
-          <DialogTitle>Representative Details</DialogTitle>
-          <div className="flex gap-2">
+      <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+        {/* Header - Responsive */}
+        <DialogHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 shrink-0 border-b">
+          <DialogTitle className="text-lg sm:text-xl">Representative Details</DialogTitle>
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
-              onClick={handleSave}
-            >
-              {isSaved ? (
-                <Heart className="h-4 w-4 text-red-500 fill-current" />
-              ) : (
-                <Heart className="h-4 w-4" />
-              )}
-              Save
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={handleShare}
-            >
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={handleMap}
-            >
-              <Map className="h-4 w-4" />
-              Map
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-6 overflow-y-auto overflow-x-hidden px-6 pb-6 flex-1 w-full min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {/* Profile Section with Header */}
-          <Card className="min-w-0">
-            <CardContent className="space-y-6 min-w-0 pt-6">
-              {/* Avatar and Basic Info - Centered */}
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="w-24 h-24 mb-4 border-4 border-background shadow-lg">
-                  <AvatarImage
-                    src={representative.photo || undefined}
-                    alt={`${representative.name} photo`}
-                    className="object-cover"
-                    onError={(e) => {
-                      console.log('Modal avatar image failed to load:', representative.photo);
-                    }}
-                  />
-                  <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
-                    {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-
-                <h2 className="text-2xl font-bold text-foreground mb-2 break-words">{representative.name}</h2>
-                <p className="text-sm text-muted-foreground mb-3">Member of Parliament</p>
-
-                <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-4`}>
-                  {representative.party}
-                </Badge>
-
-                <div className="flex items-center text-muted-foreground text-sm">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{representative.constituency}, {representative.province}</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Quick Contact Actions */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleCall(representative.phone || '1 613 992-4501')}
-                  className="w-full"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
-                  className="w-full"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email
-                </Button>
-              </div>
-
-              {/* Contact Details */}
-              <div className="space-y-3 text-sm flex flex-col items-center">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <a
-                    href={`mailto:${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline break-all"
-                  >
-                    {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
-                  </a>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">
-                    {representative.phone || '1-613-992-4501'}
-                  </span>
-                </div>
-
-                {representative.website && (
-                  <div className="flex items-center space-x-3">
-                    <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <a
-                      href={representative.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline break-all"
-                    >
-                      Official Website
-                    </a>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* About Section */}
-          <Card className="min-w-0">
-            <CardHeader>
-              <h3 className="text-lg font-semibold">About</h3>
-            </CardHeader>
-            <CardContent className="min-w-0">
-              <p className="text-sm text-gray-600 whitespace-pre-line break-words">
-                {representative.biography || `${representative.name} is the Member of Parliament for ${representative.constituency}, representing the ${representative.party} party.`}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Interactive Map Section */}
-          <Card className="min-w-0">
-            <CardHeader>
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Map className="h-5 w-5" />
-                Office Locations
-              </h3>
-            </CardHeader>
-            <CardContent className="min-w-0 space-y-4">
-              <div className="w-full h-48 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 rounded-xl border border-border flex items-center justify-center overflow-hidden relative">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--tw-gradient-from)_100%)]"></div>
-                <div className="text-center z-10">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Office Locations</p>
-                  <p className="text-xs text-muted-foreground">Click buttons below to view on map</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMap}
-                  className="flex-1"
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Both Offices
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
-                  className="flex-1"
-                >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Constituency
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Offices Section */}
-          <Card className="min-w-0">
-            <CardHeader>
-              <h3 className="text-lg font-semibold">Contact Information</h3>
-            </CardHeader>
-            <CardContent className="space-y-4 min-w-0">
-              {/* Legislature Office */}
-              <div className="border rounded-lg p-4 min-w-0">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Legislature Office
-                </h4>
-
-                <p className="text-sm text-gray-600 mb-2 break-words">House of Commons Ottawa ON K1A 0A6</p>
-
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Phone className="h-4 w-4 text-blue-600 shrink-0" />
-                    <button
-                      onClick={() => handleCall('1 613 992-4501')}
-                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 px-2 py-1 rounded"
-                    >
-                      1 613 992-4501
-                    </button>
-                  </div>
-
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Printer className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm break-words">Fax: 1 613 992-4501</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Constituency Office */}
-              <div className="border rounded-lg p-4 min-w-0">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Constituency Office
-                </h4>
-
-                <p className="text-sm text-gray-600 mb-2 break-words">
-                  Main office - {representative.constituency}<br/>
-                  Sheppard avenue East {representative.constituency}<br/>
-                  M1T 3K1
-                </p>
-
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Phone className="h-4 w-4 text-blue-600 shrink-0" />
-                    <button
-                      onClick={() => handleCall('1 416 321-5454')}
-                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 px-2 py-1 rounded"
-                    >
-                      1 416 321-5454
-                    </button>
-                  </div>
-
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Printer className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm break-words">Fax: 1 416 321-5456</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Official Profile Button */}
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={() => representative.website && handleWebsite(representative.website)}
-            disabled={!representative.website}
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Official Profile
-          </Button>
-        </div>
-
-        <DialogFooter className="bg-background border-t px-6 py-4 shrink-0">
-          <SafeArea bottom className="w-full">
-            <Button
-              className="w-full h-12 text-base"
+              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
               onClick={handleSave}
               disabled={isSaving}
             >
               {isSaving ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
               ) : isSaved ? (
-                <Heart className="h-5 w-5 mr-2 fill-current" />
+                <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 fill-current" />
               ) : (
-                <Heart className="h-5 w-5 mr-2" />
+                <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              )}
+              <span className="hidden sm:inline">Save</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
+              onClick={handleShare}
+            >
+              <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
+              onClick={handleMap}
+            >
+              <Map className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Map</span>
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {/* Scrollable Content Area */}
+        <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="space-y-4 sm:space-y-5 px-4 sm:px-6 py-4 sm:py-5">
+            {/* Profile Section */}
+            <Card>
+              <CardContent className="p-4 sm:p-6">
+                {/* Avatar and Basic Info - Centered */}
+                <div className="flex flex-col items-center text-center">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mb-3 sm:mb-4 border-2 sm:border-4 border-background shadow-lg">
+                    <AvatarImage
+                      src={representative.photo || undefined}
+                      alt={`${representative.name} photo`}
+                      className="object-cover"
+                      onError={(e) => {
+                        console.log('Modal avatar image failed to load:', representative.photo);
+                      }}
+                    />
+                    <AvatarFallback className="text-xl sm:text-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
+                      {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 break-words px-2">{representative.name}</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">Member of Parliament</p>
+
+                  <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-3 sm:mb-4 text-xs sm:text-sm`}>
+                    {representative.party}
+                  </Badge>
+
+                  <div className="flex items-center justify-center text-muted-foreground text-xs sm:text-sm px-2">
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 shrink-0" />
+                    <span className="break-words text-center">{representative.constituency}, {representative.province}</span>
+                  </div>
+                </div>
+
+                <Separator className="my-4 sm:my-5" />
+
+                {/* Quick Contact Actions */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-5">
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={() => handleCall(representative.phone || '1 613 992-4501')}
+                    className="w-full h-10 sm:h-11 text-sm sm:text-base"
+                  >
+                    <Phone className="h-4 w-4 mr-1.5 sm:mr-2" />
+                    Call
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                    className="w-full h-10 sm:h-11 text-sm sm:text-base"
+                  >
+                    <Mail className="h-4 w-4 mr-1.5 sm:mr-2" />
+                    Email
+                  </Button>
+                </div>
+
+                {/* Contact Details */}
+                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
+                  <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                    <Mail className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <a
+                      href={`mailto:${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                    >
+                      {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
+                    </a>
+                  </div>
+
+                  <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground flex-1">
+                      {representative.phone || '1-613-992-4501'}
+                    </span>
+                  </div>
+
+                  {representative.website && (
+                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                      <Globe className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <a
+                        href={representative.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                      >
+                        Official Website
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* About Section */}
+            <Card>
+              <CardHeader className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-semibold">About</h3>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0">
+                <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line break-words leading-relaxed">
+                  {representative.biography || `${representative.name} is the Member of Parliament for ${representative.constituency}, representing the ${representative.party} party.`}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Interactive Map Section */}
+            <Card>
+              <CardHeader className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                  <Map className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Office Locations
+                </h3>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
+                <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 rounded-lg sm:rounded-xl border border-border flex items-center justify-center overflow-hidden relative">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--tw-gradient-from)_100%)]"></div>
+                  <div className="text-center z-10 px-4">
+                    <MapPin className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs sm:text-sm font-medium text-foreground">Office Locations</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Click buttons below to view on map</p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMap}
+                    className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                  >
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    Both Offices
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
+                    className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                  >
+                    <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    Constituency
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Offices Section */}
+            <Card>
+              <CardHeader className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-semibold">Contact Information</h3>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
+                {/* Legislature Office */}
+                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    Legislature Office
+                  </h4>
+
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed">
+                    House of Commons<br/>
+                    Ottawa ON K1A 0A6
+                  </p>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                      <button
+                        onClick={() => handleCall('1 613 992-4501')}
+                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded"
+                      >
+                        1 613 992-4501
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                      <span className="text-xs sm:text-sm text-muted-foreground">Fax: 1 613 992-4501</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Constituency Office */}
+                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    Constituency Office
+                  </h4>
+
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed">
+                    Main office - {representative.constituency}<br/>
+                    Sheppard Avenue East<br/>
+                    {representative.constituency}<br/>
+                    M1T 3K1
+                  </p>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                      <button
+                        onClick={() => handleCall('1 416 321-5454')}
+                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded"
+                      >
+                        1 416 321-5454
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                      <span className="text-xs sm:text-sm text-muted-foreground">Fax: 1 416 321-5456</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Official Profile Button */}
+            <Button
+              variant="outline"
+              className="w-full h-10 sm:h-11 text-sm sm:text-base"
+              onClick={() => representative.website && handleWebsite(representative.website)}
+              disabled={!representative.website}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Official Profile
+            </Button>
+          </div>
+        </div>
+
+        {/* Footer with Save Action */}
+        <DialogFooter className="bg-background border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+          <SafeArea bottom className="w-full">
+            <Button
+              className="w-full h-11 sm:h-12 text-sm sm:text-base"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
+              ) : isSaved ? (
+                <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 fill-current" />
+              ) : (
+                <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               )}
               {isSaved ? "Unsave Representative" : "Save Representative"}
             </Button>
