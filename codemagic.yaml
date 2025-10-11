@@ -63,7 +63,7 @@ workflows:
         submit_to_app_store: false
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: alpha
+        track: internal
         submit_as_draft: false
 
   ios-app-store:
@@ -170,5 +170,5 @@ workflows:
           failure: true
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: alpha
+        track: internal
         submit_as_draft: false
