@@ -169,7 +169,10 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                    representative.electedOffice?.toLowerCase() === 'mla' ||
                    representative.electedOffice?.toLowerCase() === 'mna') ? 'provincial' : 'municipal';
 
-    return `${representative.name} serves as the ${position} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}. As a ${level} representative of the ${representative.party}, they work to address the needs and concerns of their constituents.`;
+    const hasParty = representative.party && representative.party.toLowerCase() !== 'independent';
+    const partyText = hasParty ? ` of the ${representative.party}` : '';
+
+    return `${representative.name} serves as the ${position} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}. As a ${level} representative${partyText}, they work to address the needs and concerns of their constituents.`;
   };
 
   // Parse offices from the representative data
@@ -245,9 +248,11 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 break-words px-2">{representative.name}</h2>
                   <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">{getPositionLabel(representative.electedOffice)}</p>
 
-                  <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-3 sm:mb-4 text-xs sm:text-sm`}>
-                    {representative.party}
-                  </Badge>
+                  {representative.party && representative.party.toLowerCase() !== 'independent' && (
+                    <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-3 sm:mb-4 text-xs sm:text-sm`}>
+                      {representative.party}
+                    </Badge>
+                  )}
 
                   <div className="flex items-center justify-center text-muted-foreground text-xs sm:text-sm px-2">
                     <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 shrink-0" />

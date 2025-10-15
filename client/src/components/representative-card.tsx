@@ -193,12 +193,14 @@ export function RepresentativeCard({
             </div>
             
             <div className="space-y-2 text-sm">
-              <div className="flex items-center">
-                <Flag className="h-4 w-4 mr-2 text-muted-foreground" />
-                <Badge variant="secondary" className={getPartyColor(representative.party)}>
-                  {representative.party}
-                </Badge>
-              </div>
+              {representative.party && representative.party.toLowerCase() !== 'independent' && (
+                <div className="flex items-center">
+                  <Flag className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <Badge variant="secondary" className={getPartyColor(representative.party)}>
+                    {representative.party}
+                  </Badge>
+                </div>
+              )}
 
               <div className="flex items-center text-muted-foreground">
                 <MapPin className="h-4 w-4 mr-2" />
