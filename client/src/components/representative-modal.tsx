@@ -133,6 +133,45 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     return 'bg-neutral-100 text-neutral-800';
   };
 
+  const getPositionLabel = (electedOffice?: string | null) => {
+    if (!electedOffice) return 'Representative';
+
+    const office = electedOffice.toLowerCase();
+
+    // Federal
+    if (office === 'mp') return 'Member of Parliament';
+
+    // Provincial
+    if (office === 'mla') return 'Member of Legislative Assembly';
+    if (office === 'mpp') return 'Member of Provincial Parliament';
+    if (office === 'mna') return 'Member of National Assembly';
+
+    // Municipal
+    if (office === 'mayor') return 'Mayor';
+    if (office === 'councillor') return 'City Councillor';
+    if (office.includes('councillor')) return 'Councillor';
+    if (office.includes('councilor')) return 'Councilor';
+
+    // Default: capitalize first letter of each word
+    return electedOffice.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const getAboutText = () => {
+    if (representative.biography) {
+      return representative.biography;
+    }
+
+    const position = getPositionLabel(representative.electedOffice);
+    const level = representative.electedOffice?.toLowerCase() === 'mp' ? 'federal' :
+                  (representative.electedOffice?.toLowerCase() === 'mpp' ||
+                   representative.electedOffice?.toLowerCase() === 'mla' ||
+                   representative.electedOffice?.toLowerCase() === 'mna') ? 'provincial' : 'municipal';
+
+    return `${representative.name} serves as the ${position} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}. As a ${level} representative of the ${representative.party}, they work to address the needs and concerns of their constituents.`;
+  };
+
   // Parse offices from the representative data
   const offices = representative.offices as any[] || [];
   const socialMedia = representative.socialMedia as any || {};
@@ -204,7 +243,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   </Avatar>
 
                   <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 break-words px-2">{representative.name}</h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">Member of Parliament</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">{getPositionLabel(representative.electedOffice)}</p>
 
                   <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-3 sm:mb-4 text-xs sm:text-sm`}>
                     {representative.party}
@@ -283,7 +322,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
               </CardHeader>
               <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0">
                 <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line break-words leading-relaxed">
-                  {representative.biography || `${representative.name} is the Member of Parliament for ${representative.constituency}, representing the ${representative.party} party.`}
+                  {getAboutText()}
                 </p>
               </CardContent>
             </Card>
