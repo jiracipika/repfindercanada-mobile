@@ -42,6 +42,7 @@ async function toRepresentative(raw: OpenNorthRepresentative): Promise<Represent
     party: raw.party_name ?? "Independent",
     constituency: raw.district_name,
     province: raw.province ?? "",
+    electedOffice: raw.elected_office ?? undefined,
     email: raw.email ?? undefined,
     phone: raw.offices?.[0]?.tel ?? undefined,
     photo: raw.photo_url ?? undefined,

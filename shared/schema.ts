@@ -8,6 +8,7 @@ export const representatives = pgTable("representatives", {
   party: text("party").notNull(),
   constituency: text("constituency").notNull(),
   province: text("province").notNull(),
+  electedOffice: text("elected_office"), // e.g., "MP", "MPP", "Mayor", "Councillor"
   email: text("email"),
   phone: text("phone"),
   photo: text("photo"),

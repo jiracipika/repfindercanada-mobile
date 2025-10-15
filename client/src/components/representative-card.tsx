@@ -116,6 +116,31 @@ export function RepresentativeCard({
     return 'bg-muted text-muted-foreground';
   };
 
+  const getPositionLabel = (electedOffice?: string | null) => {
+    if (!electedOffice) return 'Representative';
+
+    const office = electedOffice.toLowerCase();
+
+    // Federal
+    if (office === 'mp') return 'Member of Parliament';
+
+    // Provincial
+    if (office === 'mla') return 'Member of Legislative Assembly';
+    if (office === 'mpp') return 'Member of Provincial Parliament';
+    if (office === 'mna') return 'Member of National Assembly';
+
+    // Municipal
+    if (office === 'mayor') return 'Mayor';
+    if (office === 'councillor') return 'City Councillor';
+    if (office.includes('councillor')) return 'Councillor';
+    if (office.includes('councilor')) return 'Councilor';
+
+    // Default: capitalize first letter of each word
+    return electedOffice.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <Card className="rounded-xl border bg-card shadow-sm p-4 mb-3 transition-all hover:shadow-md">
       <CardContent className="p-0">
@@ -182,7 +207,7 @@ export function RepresentativeCard({
 
               <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2" />
-                <span>Member of Parliament</span>
+                <span>{getPositionLabel(representative.electedOffice)}</span>
               </div>
             </div>
           </div>
