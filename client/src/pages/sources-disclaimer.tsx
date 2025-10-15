@@ -106,6 +106,13 @@ export function SourcesDisclaimer() {
             </li>
           </ul>
         </div>
+
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 mt-4 space-y-4">
+          <h2 className="text-lg font-semibold">Special Thanks</h2>
+          <p>
+            We would like to extend our gratitude to <span className="font-semibold">Layla Sharif</span> for their valuable contributions to this project.
+          </p>
+        </div>
       </main>
       </div>
     </div>

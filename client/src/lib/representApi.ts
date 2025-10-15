@@ -66,8 +66,8 @@ export async function fetchRepsByPostal(postal: string): Promise<Representative[
     throw new Error(`Represent API error ${res.status}`);
   }
   const data = await res.json();
-  const reps: OpenNorthRepresentative[] = (data.representatives_centroid || data.representatives_concordance || [])
-    .filter((r: any) => r.elected_office === "MP");
+  // Include all levels of government: Federal (MP), Provincial (MPP/MLA/MNA), and Municipal
+  const reps: OpenNorthRepresentative[] = (data.representatives_centroid || data.representatives_concordance || []);
   return Promise.all(reps.map(toRepresentative));
 }
 
