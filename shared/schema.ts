@@ -19,8 +19,6 @@ export const representatives = pgTable("representatives", {
   offices: jsonb("offices"), // Legislature and constituency office details
   fax: text("fax"),
   parliamentId: text("parliament_id").unique(),
-  boundaryUrl: text("boundary_url"), // OpenNorth boundary URL for map rendering
-  boundaryExtent: jsonb("boundary_extent"), // Bounding box [minLng, minLat, maxLng, maxLat]
   createdAt: timestamp("created_at").defaultNow(),
 });
 

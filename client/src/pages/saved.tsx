@@ -48,7 +48,7 @@ export default function Saved() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-24">
+      <div className="space-y-6 px-4 pt-8 pb-32">
         <Section className="pt-8 pb-4">
           <h2 className="text-3xl font-bold text-center">Saved Representatives</h2>
         </Section>

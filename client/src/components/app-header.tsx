@@ -46,7 +46,7 @@ export default function AppHeader() {
   return (
     <header className="bg-background">
       <div
-        className="px-4 flex items-end justify-between pb-3"
+        className="mx-auto max-w-screen-md px-4 flex items-end justify-between pb-3"
         style={{
           paddingTop: 'max(1rem, env(safe-area-inset-top))',
           minHeight: 'calc(3.5rem + env(safe-area-inset-top))'

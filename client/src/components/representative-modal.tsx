@@ -10,7 +10,6 @@ import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SafeArea } from "@/components/ui/safe-area";
-import { RidingMap } from "@/components/riding-map";
 
 interface RepresentativeModalProps {
   representative: Representative;
@@ -333,44 +332,45 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
               </CardContent>
             </Card>
 
-            {/* Riding Boundary Map Section */}
-            {representative.boundaryUrl && representative.boundaryExtent && (
-              <Card>
-                <CardHeader className="p-4 sm:p-5">
-                  <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                    <Map className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Electoral District Map
-                  </h3>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
-                  <RidingMap
-                    boundaryUrl={representative.boundaryUrl}
-                    extent={representative.boundaryExtent as number[]}
-                    className="w-full h-40 sm:h-48 rounded-lg sm:rounded-xl border border-border overflow-hidden"
-                  />
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleMap}
-                      className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
-                    >
-                      <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      Office Locations
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
-                      className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
-                    >
-                      <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      View on Google Maps
-                    </Button>
+            {/* Interactive Map Section */}
+            <Card>
+              <CardHeader className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                  <Map className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Office Locations
+                </h3>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
+                <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 rounded-lg sm:rounded-xl border border-border flex items-center justify-center overflow-hidden relative">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--tw-gradient-from)_100%)]"></div>
+                  <div className="text-center z-10 px-4">
+                    <MapPin className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs sm:text-sm font-medium text-foreground">Office Locations</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Click buttons below to view on map</p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMap}
+                    className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                  >
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    Both Offices
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
+                    className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                  >
+                    <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    Constituency
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Offices Section */}
             <Card>

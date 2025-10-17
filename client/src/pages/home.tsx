@@ -75,7 +75,7 @@ export default function Home() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-24">
+      <div className="space-y-6 px-4 pt-8 pb-32">
         <Section className="pt-8 pb-4">
           <h2 className="text-3xl font-bold text-center mb-6">Find Your Representative</h2>
         <SearchForm 
