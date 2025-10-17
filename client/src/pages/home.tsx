@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SearchForm } from "@/components/search-form";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
@@ -11,17 +11,31 @@ import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { logActivity } from "@/lib/storage/activityRepository";
+import { useLocation } from "wouter";
 
 export default function Home() {
+  const [location] = useLocation();
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [initialQuery, setInitialQuery] = useState<string>("");
 
   // Get recent searches
   const { data: recentSearches, isLoading: loadingSearches } = useQuery<Search[]>({
     queryKey: ['/api/searches/recent'],
   });
+
+  // Check for query parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('query');
+    if (query) {
+      setInitialQuery(query);
+      // Clear the URL params after reading them
+      window.history.replaceState({}, '', '/');
+    }
+  }, [location]);
 
   const handleSearchComplete = (results: Representative[]) => {
     setSearchResults(results);
@@ -78,10 +92,11 @@ export default function Home() {
       <div className="space-y-6 px-4 pt-8 pb-24">
         <Section className="pt-8 pb-4">
           <h2 className="text-3xl font-bold text-center mb-6">Find Your Representative</h2>
-        <SearchForm 
+        <SearchForm
           onSearchStart={handleSearchStart}
           onSearchComplete={handleSearchComplete}
           onSearchError={handleSearchError}
+          initialQuery={initialQuery}
         />
       </Section>
 
