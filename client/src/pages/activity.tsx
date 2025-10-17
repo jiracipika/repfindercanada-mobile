@@ -3,18 +3,12 @@ import { getRecentActivity, type ActivityItem } from "@/lib/storage/activityRepo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Search } from "lucide-react";
 import { Section } from "@/components/ui/section";
-<<<<<<< HEAD
 import { useLocation } from "wouter";
-=======
->>>>>>> parent of 991b0c6 (Bug Fixes)
 
 export default function Activity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-<<<<<<< HEAD
   const [, setLocation] = useLocation();
-=======
->>>>>>> parent of 991b0c6 (Bug Fixes)
 
   const refresh = async () => {
     setIsLoading(true);
@@ -23,7 +17,6 @@ export default function Activity() {
     setIsLoading(false);
   };
 
-<<<<<<< HEAD
   const handleActivityClick = async (item: ActivityItem) => {
     if (!item.query) return;
 
@@ -31,8 +24,6 @@ export default function Activity() {
     setLocation(`/?query=${encodeURIComponent(item.query)}&type=${item.searchType}`);
   };
 
-=======
->>>>>>> parent of 991b0c6 (Bug Fixes)
   useEffect(() => {
     refresh();
 
@@ -51,7 +42,7 @@ export default function Activity() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-32">
+      <div className="space-y-6 px-4 pt-8 pb-24">
         <Section className="pt-8 pb-4">
           <h2 className="text-3xl font-bold text-center">Activity</h2>
         </Section>
@@ -74,7 +65,8 @@ export default function Activity() {
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                    onClick={() => handleActivityClick(item)}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                   >
                     <Search className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                     <div className="flex-1 min-w-0">

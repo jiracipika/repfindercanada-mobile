@@ -93,8 +93,12 @@ function AppContent() {
         // Initialize StatusBar for native platforms
         if (Capacitor.isNativePlatform()) {
           console.log('[Startup] Initializing StatusBar for native platform');
-          await StatusBar.setStyle({ style: Style.Light }); // Or Dark, depending on theme
-          await StatusBar.setOverlaysWebView({ overlay: true });
+          try {
+            await StatusBar.setStyle({ style: Style.Light }); // Or Dark, depending on theme
+            // Note: Using edge-to-edge mode in MainActivity.java for Android 15 compatibility
+          } catch (error) {
+            console.error('[Startup] StatusBar initialization error:', error);
+          }
         }
 
         // Get current app version
