@@ -12,38 +12,24 @@ interface SearchFormProps {
   onSearchStart: () => void;
   onSearchComplete: (results: Representative[]) => void;
   onSearchError?: (error: string) => void;
-  initialQuery?: string;
 }
 
-export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, initialQuery }: SearchFormProps) {
+export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: SearchFormProps) {
   const { userData, incrementSearchCount, updateLastSearch } = useUserData();
   const [query, setQuery] = useState(() => {
-    return initialQuery || userData?.lastPostalCodeSearch || "";
+    return userData?.lastPostalCodeSearch || "";
   });
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const hasAutoSearched = useRef(false);
-
-  // Handle initial query from activity page
-  useEffect(() => {
-    if (initialQuery && initialQuery !== query) {
-      setQuery(initialQuery);
-      // Auto-search if we have an initial query and haven't searched yet
-      if (!hasAutoSearched.current) {
-        hasAutoSearched.current = true;
-        performSearch(initialQuery);
-      }
-    }
-  }, [initialQuery]);
 
   useEffect(() => {
-    if (userData?.lastPostalCodeSearch && !initialQuery) {
+    if (userData?.lastPostalCodeSearch) {
       setQuery(userData.lastPostalCodeSearch);
     }
-  }, [userData?.lastPostalCodeSearch, initialQuery]);
+  }, [userData?.lastPostalCodeSearch]);
 
   // Show dropdown when user is typing and input is focused
   useEffect(() => {

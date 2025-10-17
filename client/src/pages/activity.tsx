@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { getRecentActivity, type ActivityItem } from "@/lib/storage/activityRepository";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Search } from "lucide-react";
+import { Clock, Search, Loader2 } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Activity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchingId, setSearchingId] = useState<string | null>(null);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const refresh = async () => {
     setIsLoading(true);
@@ -20,8 +23,38 @@ export default function Activity() {
   const handleActivityClick = async (item: ActivityItem) => {
     if (!item.query) return;
 
-    // Navigate to home page with query parameter
-    setLocation(`/?query=${encodeURIComponent(item.query)}&type=${item.searchType}`);
+    setSearchingId(item.id);
+    try {
+      const response = await fetch('/api/representatives/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: item.query,
+          type: item.searchType === 'postalCode' ? 'postal_code' : 'name'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to search");
+      }
+
+      // Navigate to home page with search results
+      setLocation('/');
+
+      toast({
+        title: "Search completed",
+        description: `Found results for "${item.query}"`,
+      });
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search failed",
+        description: "Could not complete the search. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSearchingId(null);
+    }
   };
 
   useEffect(() => {
@@ -68,7 +101,11 @@ export default function Activity() {
                     onClick={() => handleActivityClick(item)}
                     className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                   >
-                    <Search className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    {searchingId === item.id ? (
+                      <Loader2 className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{item.query}</p>
                       <p className="text-xs text-muted-foreground">
