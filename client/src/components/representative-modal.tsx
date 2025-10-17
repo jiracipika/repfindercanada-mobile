@@ -348,23 +348,23 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                     extent={representative.boundaryExtent as number[]}
                     className="w-full h-40 sm:h-48 rounded-lg sm:rounded-xl border border-border overflow-hidden"
                   />
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={handleMap}
-                      className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                      className="flex-1 h-11 sm:h-12 text-sm sm:text-base"
                     >
-                      <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                       Office Locations
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
-                      className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                      className="flex-1 h-11 sm:h-12 text-sm sm:text-base"
                     >
-                      <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                      <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                       View on Google Maps
                     </Button>
                   </div>
