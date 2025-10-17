@@ -20,31 +20,6 @@ interface OpenNorthRepresentative {
   elected_office: string;
   district_id?: number;
   extra?: Record<string, any>;
-  related?: {
-    boundary_url?: string;
-  };
-}
-
-interface BoundaryInfo {
-  extent?: number[]; // [minLng, minLat, maxLng, maxLat]
-}
-
-/**
- * Fetch boundary information from OpenNorth API
- */
-async function fetchBoundaryInfo(boundaryUrl: string): Promise<BoundaryInfo> {
-  try {
-    const response = await fetch(`https://represent.opennorth.ca${boundaryUrl}?format=json`);
-    if (!response.ok) return {};
-
-    const data = await response.json();
-    return {
-      extent: data.extent, // [minLng, minLat, maxLng, maxLat]
-    };
-  } catch (error) {
-    console.error('Failed to fetch boundary info:', error);
-    return {};
-  }
 }
 
 /**
@@ -60,12 +35,6 @@ async function toRepresentative(raw: OpenNorthRepresentative): Promise<Represent
     party_name: raw.party_name,
     email: raw.email,
   });
-
-  // Fetch boundary information if available
-  let boundaryInfo: BoundaryInfo = {};
-  if (raw.related?.boundary_url) {
-    boundaryInfo = await fetchBoundaryInfo(raw.related.boundary_url);
-  }
 
   const rep: Representative = {
     id: id as any, // Cast to any as schema expects number, but we use string for mobile-only build
@@ -84,30 +53,11 @@ async function toRepresentative(raw: OpenNorthRepresentative): Promise<Represent
     offices: raw.offices ?? [],
     fax: raw.offices?.[0]?.fax ?? undefined,
     parliamentId: raw.district_id ? String(raw.district_id) : undefined,
-    boundaryUrl: raw.related?.boundary_url ?? undefined,
-    boundaryExtent: boundaryInfo.extent ?? undefined,
     createdAt: undefined,
   } as unknown as Representative;
 
   __debugCheckRepId(rep.id as string);
   return rep;
-}
-
-/**
- * Sort representatives by government level: MP first, MPP second, municipal third
- */
-function sortRepresentatives(reps: Representative[]): Representative[] {
-  return reps.sort((a, b) => {
-    const getLevel = (office?: string | null): number => {
-      if (!office) return 3;
-      const officeStr = office.toLowerCase();
-      if (officeStr === 'mp') return 0; // Federal first
-      if (officeStr === 'mpp' || officeStr === 'mla' || officeStr === 'mna') return 1; // Provincial second
-      return 2; // Municipal third
-    };
-
-    return getLevel(a.electedOffice) - getLevel(b.electedOffice);
-  });
 }
 
 export async function fetchRepsByPostal(postal: string): Promise<Representative[]> {
@@ -119,8 +69,7 @@ export async function fetchRepsByPostal(postal: string): Promise<Representative[
   const data = await res.json();
   // Include all levels of government: Federal (MP), Provincial (MPP/MLA/MNA), and Municipal
   const reps: OpenNorthRepresentative[] = (data.representatives_centroid || data.representatives_concordance || []);
-  const representatives = await Promise.all(reps.map(toRepresentative));
-  return sortRepresentatives(representatives);
+  return Promise.all(reps.map(toRepresentative));
 }
 
 export { searchByName as fetchRepsByName }; 
