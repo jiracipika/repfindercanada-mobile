@@ -144,7 +144,7 @@ export function RepresentativeCard({
   return (
     <Card className="rounded-xl border bg-card shadow-sm p-4 mb-3 transition-all hover:shadow-md">
       <CardContent className="p-0">
-        <div className="flex items-start space-x-4">
+        <div className="flex items-start space-x-4 cursor-pointer" onClick={onViewProfile}>
           <Avatar className="!w-16 !h-16 border-2 border-border shadow-sm">
             <AvatarImage
               src={representative.photo || undefined}
@@ -164,7 +164,7 @@ export function RepresentativeCard({
               <h3 className="font-semibold text-lg text-foreground leading-tight">
                 {representative.name}
               </h3>
-              <div className="flex gap-1">
+              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                 {showSaveButton && (
                   <Button
                     variant="ghost"
@@ -216,7 +216,7 @@ export function RepresentativeCard({
         </div>
 
         {/* Contact Actions */}
-        <div className="mt-5 pt-4 border-t border-border">
+        <div className="mt-5 pt-4 border-t border-border" onClick={(e) => e.stopPropagation()}>
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"

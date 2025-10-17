@@ -21,9 +21,9 @@ export function SourcesDisclaimer() {
 
   return (
     <div ref={containerRef} className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-32">
+      <div className="space-y-6 px-4 pt-8 pb-24">
         {/* Back Button */}
-        <div className="sticky top-0 bg-background/95 backdrop-blur-lg border-b z-10 px-4 py-3">
+        <div className="sticky top-0 bg-background/95 backdrop-blur-lg border-b z-10 py-3">
           <Button
             variant="ghost"
             size="sm"
@@ -108,9 +108,9 @@ export function SourcesDisclaimer() {
         </div>
 
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 mt-4 space-y-4">
-          <h2 className="text-lg font-semibold">Special Thanks</h2>
+          <h2 className="text-lg font-semibold">Credits</h2>
           <p>
-            We would like to extend our gratitude to <span className="font-semibold">Layla Sharif</span> for their valuable contributions to this project.
+            Created in collaboration with <span className="font-semibold">Layla Sharif</span> (Concept) and <span className="font-semibold">Rajin Santos Gajadhar</span> (Development).
           </p>
         </div>
       </main>
