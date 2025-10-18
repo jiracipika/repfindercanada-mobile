@@ -17,19 +17,19 @@ import { logActivity } from "@/lib/storage/activityRepository";
 const sortRepresentatives = (representatives: Representative[]): Representative[] => {
   return [...representatives].sort((a, b) => {
     const getLevel = (office: string | null | undefined): number => {
-      if (!office) return 999; // Unknown goes last
+      if (!office) return -999; // Unknown goes last
       const o = office.toLowerCase();
 
-      // Federal level (highest priority)
-      if (o === 'mp') return 1;
+      // Municipal level (lowest priority - shown last)
+      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return -3;
 
       // Provincial level
-      if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
+      if (o === 'mpp' || o === 'mla' || o === 'mna') return -2;
 
-      // Municipal level
-      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
+      // Federal level (highest priority - shown first)
+      if (o === 'mp') return -1;
 
-      return 999; // Unknown offices go last
+      return -999; // Unknown offices go last
     };
 
     return getLevel(a.electedOffice) - getLevel(b.electedOffice);
