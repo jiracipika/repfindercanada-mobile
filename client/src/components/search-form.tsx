@@ -80,12 +80,13 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: S
       const results = await fetchRepsByPostal(trimmedQuery);
       onSearchComplete(results);
 
-      // Log the search activity
+      // Log the search activity with representatives
       await logActivity({
         type: "search",
         query: trimmedQuery,
         searchType: "postalCode",
         ts: Date.now(),
+        representatives: results, // Store the representatives found
       });
 
       if (results.length > 0) {

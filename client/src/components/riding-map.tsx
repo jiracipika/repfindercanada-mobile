@@ -38,77 +38,153 @@ export function RidingMap({ boundaryUrl, ridingName, province, className }: Ridi
           maxZoom: 19,
         }).addTo(map);
 
-        // Fetch boundary metadata to get centroid
-        const metadataUrl = `https://represent.opennorth.ca${boundaryUrl}`;
-        const response = await fetch(metadataUrl);
+        // First, try to get the actual GeoJSON boundary shape
+        let shapeLoaded = false;
 
-        if (response.ok) {
-          const data = await response.json();
-          const centroid = data.centroid;
-          const extent = data.extent; // [west, south, east, north]
+        try {
+          // Try to fetch directly from Represent API
+          const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
+          const shapeResponse = await fetch(shapeUrl);
 
-          // Center on the riding
-          const lat = centroid.coordinates[1];
-          const lng = centroid.coordinates[0];
-          map.setView([lat, lng], 12);
+          if (shapeResponse.ok) {
+            const geoJson = await shapeResponse.json();
 
-          // Create a custom marker icon
-          const customIcon = L.divIcon({
-            html: `
-              <div style="position: relative;">
-                <div style="
-                  background: #3b82f6;
-                  width: 24px;
-                  height: 24px;
-                  border-radius: 50% 50% 50% 0;
-                  transform: rotate(-45deg);
-                  border: 3px solid white;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                "></div>
-                <div style="
-                  position: absolute;
-                  top: 6px;
-                  left: 6px;
-                  background: white;
-                  width: 12px;
-                  height: 12px;
-                  border-radius: 50%;
-                "></div>
-              </div>
-            `,
-            className: '',
-            iconSize: [24, 24],
-            iconAnchor: [12, 24],
-          });
-
-          // Add marker
-          L.marker([lat, lng], { icon: customIcon })
-            .addTo(map)
-            .bindPopup(`
-              <div style="text-align: center; padding: 4px;">
-                <strong style="font-size: 14px;">${ridingName}</strong>
-                ${province ? `<br/><span style="font-size: 12px; color: #666;">${province}</span>` : ''}
-              </div>
-            `)
-            .openPopup();
-
-          // If we have extent, draw a rectangle to show the approximate riding boundary
-          if (extent && extent.length === 4) {
-            const bounds = L.latLngBounds(
-              [extent[1], extent[0]], // southwest
-              [extent[3], extent[2]]  // northeast
-            );
-
-            L.rectangle(bounds, {
-              color: '#3b82f6',
-              weight: 2,
-              opacity: 0.6,
-              fillColor: '#3b82f6',
-              fillOpacity: 0.1,
+            // Add the actual boundary shape to the map
+            const geoJsonLayer = L.geoJSON(geoJson, {
+              style: {
+                color: '#3b82f6',
+                weight: 3,
+                opacity: 0.8,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.15,
+              },
             }).addTo(map);
 
-            // Fit map to the boundary with some padding
+            // Fit map to the boundary
+            const bounds = geoJsonLayer.getBounds();
             map.fitBounds(bounds, { padding: [30, 30] });
+
+            // Get center of the boundary
+            const center = bounds.getCenter();
+
+            // Add marker at center
+            const customIcon = L.divIcon({
+              html: `
+                <div style="position: relative;">
+                  <div style="
+                    background: #3b82f6;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    border: 3px solid white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                  "></div>
+                  <div style="
+                    position: absolute;
+                    top: 6px;
+                    left: 6px;
+                    background: white;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                  "></div>
+                </div>
+              `,
+              className: '',
+              iconSize: [24, 24],
+              iconAnchor: [12, 24],
+            });
+
+            L.marker(center, { icon: customIcon })
+              .addTo(map)
+              .bindPopup(`
+                <div style="text-align: center; padding: 4px;">
+                  <strong style="font-size: 14px;">${ridingName}</strong>
+                  ${province ? `<br/><span style="font-size: 12px; color: #666;">${province}</span>` : ''}
+                </div>
+              `)
+              .openPopup();
+
+            shapeLoaded = true;
+          }
+        } catch (shapeError) {
+          console.log('Could not load GeoJSON shape, falling back to extent rectangle');
+        }
+
+        // If shape didn't load, fall back to metadata with extent rectangle
+        if (!shapeLoaded) {
+          const metadataUrl = `https://represent.opennorth.ca${boundaryUrl}`;
+          const response = await fetch(metadataUrl);
+
+          if (response.ok) {
+            const data = await response.json();
+            const centroid = data.centroid;
+            const extent = data.extent; // [west, south, east, north]
+
+            // Center on the riding
+            const lat = centroid.coordinates[1];
+            const lng = centroid.coordinates[0];
+            map.setView([lat, lng], 12);
+
+            // Create a custom marker icon
+            const customIcon = L.divIcon({
+              html: `
+                <div style="position: relative;">
+                  <div style="
+                    background: #3b82f6;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    border: 3px solid white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                  "></div>
+                  <div style="
+                    position: absolute;
+                    top: 6px;
+                    left: 6px;
+                    background: white;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                  "></div>
+                </div>
+              `,
+              className: '',
+              iconSize: [24, 24],
+              iconAnchor: [12, 24],
+            });
+
+            // Add marker
+            L.marker([lat, lng], { icon: customIcon })
+              .addTo(map)
+              .bindPopup(`
+                <div style="text-align: center; padding: 4px;">
+                  <strong style="font-size: 14px;">${ridingName}</strong>
+                  ${province ? `<br/><span style="font-size: 12px; color: #666;">${province}</span>` : ''}
+                </div>
+              `)
+              .openPopup();
+
+            // If we have extent, draw a rectangle to show the approximate riding boundary
+            if (extent && extent.length === 4) {
+              const bounds = L.latLngBounds(
+                [extent[1], extent[0]], // southwest
+                [extent[3], extent[2]]  // northeast
+              );
+
+              L.rectangle(bounds, {
+                color: '#3b82f6',
+                weight: 2,
+                opacity: 0.6,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.1,
+              }).addTo(map);
+
+              // Fit map to the boundary with some padding
+              map.fitBounds(bounds, { padding: [30, 30] });
+            }
           }
         } else {
           // Fallback: geocode the riding name

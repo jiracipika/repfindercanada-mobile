@@ -1,4 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
+import type { Representative } from "@shared/schema";
 
 const KEY = "activityLog";
 const EVT = "activityLogChanged";
@@ -9,6 +10,7 @@ export type ActivityItem = {
   query: string;
   searchType: "postalCode" | "name";
   ts: number;
+  representatives?: Representative[]; // Store representatives found in this search
 };
 
 function emitActivityChange() {

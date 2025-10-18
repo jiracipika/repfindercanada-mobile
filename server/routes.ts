@@ -731,17 +731,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get boundary GeoJSON for a representative's riding
   app.get("/api/boundaries/:boundaryUrl(*)", async (req, res) => {
     try {
-      const boundaryUrl = req.params.boundaryUrl;
+      let boundaryUrl = req.params.boundaryUrl;
 
       if (!boundaryUrl) {
         return res.status(400).json({ message: "Boundary URL is required" });
       }
 
+      // Decode the URL-encoded boundary path
+      boundaryUrl = decodeURIComponent(boundaryUrl);
+
+      // Ensure boundaryUrl starts with /
+      if (!boundaryUrl.startsWith('/')) {
+        boundaryUrl = '/' + boundaryUrl;
+      }
+
       // Fetch simplified shape from Represent API
       const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
+      console.log('Fetching boundary from:', shapeUrl);
+
       const response = await fetch(shapeUrl);
 
       if (!response.ok) {
+        console.error(`Represent API error: ${response.status} for ${shapeUrl}`);
         throw new Error(`Represent API error: ${response.status}`);
       }
 
