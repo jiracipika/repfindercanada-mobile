@@ -346,6 +346,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   <RidingMap
                     boundaryUrl={representative.boundaryUrl}
                     ridingName={representative.constituency}
+                    province={representative.province}
                     className="relative w-full h-64 sm:h-80 rounded-lg overflow-hidden border"
                   />
                   <div className="mt-3 flex flex-col sm:flex-row gap-2">

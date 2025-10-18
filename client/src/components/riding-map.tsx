@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface RidingMapProps {
   boundaryUrl: string;
   ridingName: string;
+  province?: string;
   className?: string;
 }
 
-export function RidingMap({ boundaryUrl, ridingName, className }: RidingMapProps) {
+export function RidingMap({ boundaryUrl, ridingName, province, className }: RidingMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current || !boundaryUrl) return;
@@ -38,44 +40,106 @@ export function RidingMap({ boundaryUrl, ridingName, className }: RidingMapProps
       try {
         setLoading(true);
         setError(null);
+        setUseFallback(false);
 
-        // Encode the boundary URL for the API endpoint
-        const encodedUrl = encodeURIComponent(boundaryUrl);
-        const response = await fetch(`/api/boundaries/${encodedUrl}`);
+        // First, try to get the boundary metadata to get the centroid
+        const metadataUrl = `https://represent.opennorth.ca${boundaryUrl}`;
+        const metadataResponse = await fetch(metadataUrl);
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch boundary data');
+        if (!metadataResponse.ok) {
+          throw new Error('Failed to fetch boundary metadata');
         }
 
-        const geoJson = await response.json();
+        const metadata = await metadataResponse.json();
+        const centroid = metadata.centroid;
 
-        // Add GeoJSON to map
-        const geoJsonLayer = L.geoJSON(geoJson, {
-          style: {
-            color: '#3b82f6', // Blue border
-            weight: 3,
-            opacity: 0.8,
+        // Try to fetch the simplified shape
+        const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
+        const shapeResponse = await fetch(shapeUrl);
+
+        if (shapeResponse.ok) {
+          const geoJson = await shapeResponse.json();
+
+          // Add GeoJSON to map
+          const geoJsonLayer = L.geoJSON(geoJson, {
+            style: {
+              color: '#3b82f6', // Blue border
+              weight: 3,
+              opacity: 0.8,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.2,
+            },
+          }).addTo(map);
+
+          // Fit map to boundary
+          const bounds = geoJsonLayer.getBounds();
+          map.fitBounds(bounds, { padding: [20, 20] });
+
+          // Add marker at centroid
+          L.marker([centroid.coordinates[1], centroid.coordinates[0]], {
+            icon: L.divIcon({
+              html: '<div style="background: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
+              className: '',
+              iconSize: [12, 12],
+            })
+          }).addTo(map);
+
+        } else {
+          // Fallback: just show the centroid on the map
+          console.warn('Shape fetch failed, using centroid fallback');
+          setUseFallback(true);
+
+          const lat = centroid.coordinates[1];
+          const lng = centroid.coordinates[0];
+
+          map.setView([lat, lng], 12);
+
+          // Add a marker at the centroid
+          L.marker([lat, lng]).addTo(map)
+            .bindPopup(`<strong>${ridingName}</strong>`)
+            .openPopup();
+
+          // Add a circle to show approximate area
+          L.circle([lat, lng], {
+            radius: 3000, // 3km radius
+            color: '#3b82f6',
             fillColor: '#3b82f6',
-            fillOpacity: 0.2,
-          },
-        }).addTo(map);
-
-        // Fit map to boundary
-        const bounds = geoJsonLayer.getBounds();
-        map.fitBounds(bounds, { padding: [20, 20] });
-
-        // Add popup with riding name
-        const center = bounds.getCenter();
-        L.popup()
-          .setLatLng(center)
-          .setContent(`<strong>${ridingName}</strong>`)
-          .openOn(map);
+            fillOpacity: 0.1,
+            weight: 2,
+          }).addTo(map);
+        }
 
         setLoading(false);
       } catch (err) {
         console.error('Error fetching boundary:', err);
-        setError('Failed to load riding boundary map');
+        setError(null); // Don't show error, just use fallback
+        setUseFallback(true);
         setLoading(false);
+
+        // Fallback: Show a general area map
+        if (province && ridingName) {
+          // Try to geocode using the riding name and province
+          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ridingName + ', ' + province + ', Canada')}`;
+
+          fetch(geocodeUrl)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                map.setView([lat, lon], 11);
+                L.marker([lat, lon]).addTo(map)
+                  .bindPopup(`<strong>${ridingName}</strong>`)
+                  .openPopup();
+              } else {
+                // Last fallback: center on Canada
+                map.setView([56.1304, -106.3468], 4);
+              }
+            })
+            .catch(() => {
+              map.setView([56.1304, -106.3468], 4);
+            });
+        }
       }
     };
 
