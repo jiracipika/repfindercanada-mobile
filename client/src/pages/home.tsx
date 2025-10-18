@@ -12,6 +12,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { logActivity } from "@/lib/storage/activityRepository";
 
+// Helper function to sort representatives by government level
+// Order: Federal (MP) -> Provincial (MPP/MLA/MNA) -> Municipal (Mayor/Councillor)
+const sortRepresentatives = (representatives: Representative[]): Representative[] => {
+  return [...representatives].sort((a, b) => {
+    const getLevel = (office: string | null | undefined): number => {
+      if (!office) return 999; // Unknown goes last
+      const o = office.toLowerCase();
+
+      // Federal level (highest priority)
+      if (o === 'mp') return 1;
+
+      // Provincial level
+      if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
+
+      // Municipal level
+      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
+
+      return 999; // Unknown offices go last
+    };
+
+    return getLevel(a.electedOffice) - getLevel(b.electedOffice);
+  });
+};
+
 export default function Home() {
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
@@ -24,7 +48,7 @@ export default function Home() {
   });
 
   const handleSearchComplete = (results: Representative[]) => {
-    setSearchResults(results);
+    setSearchResults(sortRepresentatives(results));
     setIsSearching(false);
     setSearchError(null);
   };
@@ -55,7 +79,7 @@ export default function Home() {
           throw new Error("Failed to fetch recent search results.");
         }
         const data = await response.json();
-        setSearchResults(data.representatives || []);
+        setSearchResults(sortRepresentatives(data.representatives || []));
 
         // Log the search activity
         await logActivity({
