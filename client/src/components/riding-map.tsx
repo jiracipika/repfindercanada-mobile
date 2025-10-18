@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Loader2, AlertCircle, MapPin } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, MapPin } from 'lucide-react';
 
 interface RidingMapProps {
   boundaryUrl: string;
@@ -15,135 +14,152 @@ export function RidingMap({ boundaryUrl, ridingName, province, className }: Ridi
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current || !boundaryUrl) return;
 
-    // Initialize map
-    const map = L.map(mapContainer.current, {
-      zoomControl: true,
-      attributionControl: true,
-    });
+    let map: L.Map | null = null;
 
-    mapInstance.current = map;
-
-    // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(map);
-
-    // Fetch and display boundary
-    const fetchBoundary = async () => {
+    const initMap = async () => {
       try {
         setLoading(true);
-        setError(null);
-        setUseFallback(false);
 
-        // First, try to get the boundary metadata to get the centroid
+        // Create map
+        map = L.map(mapContainer.current!, {
+          zoomControl: true,
+          attributionControl: true,
+        });
+
+        mapInstance.current = map;
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19,
+        }).addTo(map);
+
+        // Fetch boundary metadata to get centroid
         const metadataUrl = `https://represent.opennorth.ca${boundaryUrl}`;
-        const metadataResponse = await fetch(metadataUrl);
+        const response = await fetch(metadataUrl);
 
-        if (!metadataResponse.ok) {
-          throw new Error('Failed to fetch boundary metadata');
-        }
+        if (response.ok) {
+          const data = await response.json();
+          const centroid = data.centroid;
+          const extent = data.extent; // [west, south, east, north]
 
-        const metadata = await metadataResponse.json();
-        const centroid = metadata.centroid;
-
-        // Try to fetch the simplified shape
-        const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
-        const shapeResponse = await fetch(shapeUrl);
-
-        if (shapeResponse.ok) {
-          const geoJson = await shapeResponse.json();
-
-          // Add GeoJSON to map
-          const geoJsonLayer = L.geoJSON(geoJson, {
-            style: {
-              color: '#3b82f6', // Blue border
-              weight: 3,
-              opacity: 0.8,
-              fillColor: '#3b82f6',
-              fillOpacity: 0.2,
-            },
-          }).addTo(map);
-
-          // Fit map to boundary
-          const bounds = geoJsonLayer.getBounds();
-          map.fitBounds(bounds, { padding: [20, 20] });
-
-          // Add marker at centroid
-          L.marker([centroid.coordinates[1], centroid.coordinates[0]], {
-            icon: L.divIcon({
-              html: '<div style="background: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
-              className: '',
-              iconSize: [12, 12],
-            })
-          }).addTo(map);
-
-        } else {
-          // Fallback: just show the centroid on the map
-          console.warn('Shape fetch failed, using centroid fallback');
-          setUseFallback(true);
-
+          // Center on the riding
           const lat = centroid.coordinates[1];
           const lng = centroid.coordinates[0];
-
           map.setView([lat, lng], 12);
 
-          // Add a marker at the centroid
-          L.marker([lat, lng]).addTo(map)
-            .bindPopup(`<strong>${ridingName}</strong>`)
+          // Create a custom marker icon
+          const customIcon = L.divIcon({
+            html: `
+              <div style="position: relative;">
+                <div style="
+                  background: #3b82f6;
+                  width: 24px;
+                  height: 24px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  border: 3px solid white;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                "></div>
+                <div style="
+                  position: absolute;
+                  top: 6px;
+                  left: 6px;
+                  background: white;
+                  width: 12px;
+                  height: 12px;
+                  border-radius: 50%;
+                "></div>
+              </div>
+            `,
+            className: '',
+            iconSize: [24, 24],
+            iconAnchor: [12, 24],
+          });
+
+          // Add marker
+          L.marker([lat, lng], { icon: customIcon })
+            .addTo(map)
+            .bindPopup(`
+              <div style="text-align: center; padding: 4px;">
+                <strong style="font-size: 14px;">${ridingName}</strong>
+                ${province ? `<br/><span style="font-size: 12px; color: #666;">${province}</span>` : ''}
+              </div>
+            `)
             .openPopup();
 
-          // Add a circle to show approximate area
-          L.circle([lat, lng], {
-            radius: 3000, // 3km radius
-            color: '#3b82f6',
-            fillColor: '#3b82f6',
-            fillOpacity: 0.1,
-            weight: 2,
-          }).addTo(map);
+          // If we have extent, draw a rectangle to show the approximate riding boundary
+          if (extent && extent.length === 4) {
+            const bounds = L.latLngBounds(
+              [extent[1], extent[0]], // southwest
+              [extent[3], extent[2]]  // northeast
+            );
+
+            L.rectangle(bounds, {
+              color: '#3b82f6',
+              weight: 2,
+              opacity: 0.6,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.1,
+            }).addTo(map);
+
+            // Fit map to the boundary with some padding
+            map.fitBounds(bounds, { padding: [30, 30] });
+          }
+        } else {
+          // Fallback: geocode the riding name
+          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ridingName + ', ' + (province || '') + ', Canada')}`;
+          const geocodeResponse = await fetch(geocodeUrl);
+
+          if (geocodeResponse.ok) {
+            const geocodeData = await geocodeResponse.json();
+            if (geocodeData && geocodeData.length > 0) {
+              const lat = parseFloat(geocodeData[0].lat);
+              const lon = parseFloat(geocodeData[0].lon);
+
+              map.setView([lat, lon], 11);
+
+              L.marker([lat, lon])
+                .addTo(map)
+                .bindPopup(`<strong>${ridingName}</strong>`)
+                .openPopup();
+            }
+          }
         }
 
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching boundary:', err);
-        setError(null); // Don't show error, just use fallback
-        setUseFallback(true);
-        setLoading(false);
+        console.error('Error loading map:', err);
 
-        // Fallback: Show a general area map
-        if (province && ridingName) {
-          // Try to geocode using the riding name and province
-          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ridingName + ', ' + province + ', Canada')}`;
+        // Final fallback: try geocoding
+        if (map && ridingName) {
+          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ridingName + ', ' + (province || '') + ', Canada')}`;
 
           fetch(geocodeUrl)
             .then(res => res.json())
             .then(data => {
-              if (data && data.length > 0) {
+              if (data && data.length > 0 && map) {
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
                 map.setView([lat, lon], 11);
-                L.marker([lat, lon]).addTo(map)
+                L.marker([lat, lon])
+                  .addTo(map)
                   .bindPopup(`<strong>${ridingName}</strong>`)
                   .openPopup();
-              } else {
-                // Last fallback: center on Canada
-                map.setView([56.1304, -106.3468], 4);
               }
             })
-            .catch(() => {
-              map.setView([56.1304, -106.3468], 4);
-            });
+            .finally(() => setLoading(false));
+        } else {
+          setLoading(false);
         }
       }
     };
 
-    fetchBoundary();
+    initMap();
 
     // Cleanup
     return () => {
@@ -152,24 +168,17 @@ export function RidingMap({ boundaryUrl, ridingName, province, className }: Ridi
         mapInstance.current = null;
       }
     };
-  }, [boundaryUrl, ridingName]);
+  }, [boundaryUrl, ridingName, province]);
 
   return (
     <div className={className}>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/80 z-10 rounded-lg">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Loading map...</p>
           </div>
         </div>
-      )}
-
-      {error && (
-        <Alert variant="destructive" className="mb-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
       )}
 
       <div
