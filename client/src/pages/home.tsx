@@ -11,25 +11,27 @@ import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { logActivity } from "@/lib/storage/activityRepository";
+import { searchCacheRepository } from "@/lib/storage/searchCacheRepository";
+import { useToast } from "@/hooks/use-toast";
 
 // Helper function to sort representatives by government level
 // Order: Federal (MP) -> Provincial (MPP/MLA/MNA) -> Municipal (Mayor/Councillor)
 const sortRepresentatives = (representatives: Representative[]): Representative[] => {
   return [...representatives].sort((a, b) => {
     const getLevel = (office: string | null | undefined): number => {
-      if (!office) return -999; // Unknown goes last
+      if (!office) return 999; // Unknown goes last
       const o = office.toLowerCase();
 
-      // Municipal level (lowest priority - shown last)
-      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return -3;
+      // Federal level (highest priority - shown first)
+      if (o === 'mp') return 1;
 
       // Provincial level
-      if (o === 'mpp' || o === 'mla' || o === 'mna') return -2;
+      if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
 
-      // Federal level (highest priority - shown first)
-      if (o === 'mp') return -1;
+      // Municipal level (lowest priority - shown last)
+      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
 
-      return -999; // Unknown offices go last
+      return 999; // Unknown offices go last
     };
 
     return getLevel(a.electedOffice) - getLevel(b.electedOffice);
@@ -41,6 +43,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Get recent searches
   const { data: recentSearches, isLoading: loadingSearches } = useQuery<Search[]>({
@@ -70,6 +73,31 @@ export default function Home() {
       setIsSearching(true);
       setSearchError(null);
       try {
+        // For postal code searches, check cache first
+        if (search.postalCode) {
+          const cleanQuery = search.query.replace(/\s+/g, "").toUpperCase();
+          const cachedResults = await searchCacheRepository.getCachedSearch(cleanQuery);
+
+          if (cachedResults && cachedResults.length > 0) {
+            setSearchResults(sortRepresentatives(cachedResults));
+            toast({
+              title: "Loaded from cache",
+              description: "Using previously downloaded data for faster results.",
+            });
+
+            // Log the search activity
+            await logActivity({
+              type: "search",
+              query: search.query,
+              searchType: "postalCode",
+              ts: Date.now(),
+            });
+            setIsSearching(false);
+            return;
+          }
+        }
+
+        // If not cached or not a postal code search, fetch from API
         const response = await fetch('/api/representatives/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -90,6 +118,22 @@ export default function Home() {
         });
       } catch (error) {
         console.error('Search error:', error);
+
+        // Try to use cached data as fallback for postal code searches
+        if (search.postalCode) {
+          const cleanQuery = search.query.replace(/\s+/g, "").toUpperCase();
+          const cachedResults = await searchCacheRepository.getCachedSearch(cleanQuery);
+
+          if (cachedResults && cachedResults.length > 0) {
+            setSearchResults(sortRepresentatives(cachedResults));
+            toast({
+              title: "Using cached data",
+              description: "Unable to reach the server. Showing previously downloaded results.",
+            });
+            return;
+          }
+        }
+
         handleSearchError("Failed to load recent search results.");
       } finally {
         setIsSearching(false);

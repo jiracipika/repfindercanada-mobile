@@ -711,20 +711,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/geocode", async (req, res) => {
     try {
       const { address } = req.body;
-      
+
       if (!address) {
         return res.status(400).json({ message: "Address is required" });
       }
 
       // Simple geocoding - in a real app, you'd use a service like Google Maps API
       // For now, we'll just return the address as-is and let the frontend handle it
-      res.json({ 
-        postalCode: null, 
+      res.json({
+        postalCode: null,
         address,
-        message: "Please use postal code for more accurate results" 
+        message: "Please use postal code for more accurate results"
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to geocode address" });
+    }
+  });
+
+  // Get boundary GeoJSON for a representative's riding
+  app.get("/api/boundaries/:boundaryUrl(*)", async (req, res) => {
+    try {
+      const boundaryUrl = req.params.boundaryUrl;
+
+      if (!boundaryUrl) {
+        return res.status(400).json({ message: "Boundary URL is required" });
+      }
+
+      // Fetch simplified shape from Represent API
+      const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
+      const response = await fetch(shapeUrl);
+
+      if (!response.ok) {
+        throw new Error(`Represent API error: ${response.status}`);
+      }
+
+      const geoJson = await response.json();
+      res.json(geoJson);
+    } catch (error) {
+      console.error('Boundary fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch boundary data" });
     }
   });
 

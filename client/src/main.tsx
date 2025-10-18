@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 import { migrateSavedRepsV2 } from "./lib/migrations/migrateSavedReps";
 
 // Run migration on app startup

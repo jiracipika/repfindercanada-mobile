@@ -19,6 +19,8 @@ export const representatives = pgTable("representatives", {
   offices: jsonb("offices"), // Legislature and constituency office details
   fax: text("fax"),
   parliamentId: text("parliament_id").unique(),
+  boundaryUrl: text("boundary_url"), // URL to fetch GeoJSON boundary from Represent API
+  boundaryData: jsonb("boundary_data"), // Cached GeoJSON boundary shape
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
 import { fetchRepsByPostal } from "@/lib/representApi";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
+import { searchCacheRepository } from "@/lib/storage/searchCacheRepository";
 
 interface SearchFormProps {
   onSearchStart: () => void;
@@ -72,6 +73,10 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: S
     onSearchStart();
 
     try {
+      // Check if we have cached data first
+      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
+      const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
+
       const results = await fetchRepsByPostal(trimmedQuery);
       onSearchComplete(results);
 
@@ -86,6 +91,14 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: S
       if (results.length > 0) {
         incrementSearchCount();
         updateLastSearch(trimmedQuery, 'postalCode');
+
+        // Show toast if using cached data
+        if (hasCached) {
+          toast({
+            title: "Loaded from cache",
+            description: "Using previously downloaded data for faster results.",
+          });
+        }
       } else {
         toast({
           title: "No representatives found",
@@ -94,15 +107,31 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: S
       }
     } catch (error) {
       console.error('[SearchForm] Search error:', error);
-      const errorMessage = "Could not retrieve representatives. Please try again later.";
-      toast({
-        title: "Search failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      onSearchComplete([]);
-      if (onSearchError) {
-        onSearchError(errorMessage);
+
+      // Try to get cached data as a last resort
+      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
+      const cachedResults = await searchCacheRepository.getCachedSearch(cleanQuery);
+
+      if (cachedResults && cachedResults.length > 0) {
+        // We have cached data, use it!
+        onSearchComplete(cachedResults);
+        toast({
+          title: "Using cached data",
+          description: "Unable to reach the server. Showing previously downloaded results.",
+          variant: "default",
+        });
+      } else {
+        // No cached data available
+        const errorMessage = "Could not retrieve representatives. Please check your connection and try again.";
+        toast({
+          title: "Search failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        onSearchComplete([]);
+        if (onSearchError) {
+          onSearchError(errorMessage);
+        }
       }
     } finally {
       setIsSearching(false);
