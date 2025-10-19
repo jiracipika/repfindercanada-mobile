@@ -35,7 +35,7 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
 
   // Update query when initialQuery prop changes (from parent)
   useEffect(() => {
-    if (initialQuery !== undefined) {
+    if (initialQuery !== undefined && initialQuery !== null) {
       setQuery(initialQuery);
     }
   }, [initialQuery]);
