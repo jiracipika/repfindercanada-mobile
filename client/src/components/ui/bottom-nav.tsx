@@ -42,12 +42,12 @@ export function BottomNav() {
   ];
 
   return (
-    <SafeArea bottom className="fixed inset-x-0 bottom-0 z-40 bg-background/95 backdrop-blur-lg border-t">
-      <nav className="flex h-12 items-center justify-around px-2">
+    <div className="fixed inset-x-0 bottom-0 z-40 bg-background/95 backdrop-blur-lg border-t pb-[env(safe-area-inset-bottom)]">
+      <nav className="flex h-14 items-center justify-around px-2">
         {navItems.map((item) => (
           <NavItem key={item.path} {...item} isActive={location === item.path} />
         ))}
       </nav>
-    </SafeArea>
+    </div>
   );
 }

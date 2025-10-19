@@ -45,6 +45,7 @@ export default function Home() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<ActivityItem[]>([]);
   const [loadingSearches, setLoadingSearches] = useState(true);
+  const [triggeredSearch, setTriggeredSearch] = useState<{ query: string; representatives?: Representative[] } | null>(null);
   const { toast } = useToast();
 
   // Load recent searches from local storage
@@ -66,6 +67,28 @@ export default function Home() {
     return unsubscribe;
   }, []);
 
+  // Listen for search triggers from Activity page
+  useEffect(() => {
+    const handleTriggerSearch = (event: CustomEvent) => {
+      const { query, representatives } = event.detail;
+      setTriggeredSearch({ query, representatives });
+
+      // Show results if we have them
+      if (representatives && representatives.length > 0) {
+        setSearchResults(sortRepresentatives(representatives));
+        toast({
+          title: "Loaded from history",
+          description: "Showing your previous search results.",
+        });
+      }
+    };
+
+    window.addEventListener('triggerSearch', handleTriggerSearch as EventListener);
+    return () => {
+      window.removeEventListener('triggerSearch', handleTriggerSearch as EventListener);
+    };
+  }, [toast]);
+
   const handleSearchComplete = (results: Representative[]) => {
     setSearchResults(sortRepresentatives(results));
     setIsSearching(false);
@@ -86,6 +109,9 @@ export default function Home() {
 
   const handleRecentSearchClick = async (activity: ActivityItem) => {
     if (activity.query) {
+      // Set the triggered search to populate the search box
+      setTriggeredSearch({ query: activity.query, representatives: activity.representatives });
+
       // If we have representatives stored in the activity, use them directly
       if (activity.representatives && activity.representatives.length > 0) {
         setSearchResults(sortRepresentatives(activity.representatives));
@@ -159,10 +185,11 @@ export default function Home() {
       <div className="space-y-6 px-4 pt-8 pb-32">
         <Section className="pt-8 pb-4">
           <h2 className="text-3xl font-bold text-center mb-6">Find Your Representative</h2>
-        <SearchForm 
+        <SearchForm
           onSearchStart={handleSearchStart}
           onSearchComplete={handleSearchComplete}
           onSearchError={handleSearchError}
+          initialQuery={triggeredSearch?.query}
         />
       </Section>
 

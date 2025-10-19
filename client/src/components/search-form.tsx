@@ -13,9 +13,10 @@ interface SearchFormProps {
   onSearchStart: () => void;
   onSearchComplete: (results: Representative[]) => void;
   onSearchError?: (error: string) => void;
+  initialQuery?: string; // Allow parent to set initial query
 }
 
-export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: SearchFormProps) {
+export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, initialQuery }: SearchFormProps) {
   const { userData, incrementSearchCount, updateLastSearch } = useUserData();
   const [query, setQuery] = useState(() => {
     return userData?.lastPostalCodeSearch || "";
@@ -31,6 +32,13 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError }: S
       setQuery(userData.lastPostalCodeSearch);
     }
   }, [userData?.lastPostalCodeSearch]);
+
+  // Update query when initialQuery prop changes (from parent)
+  useEffect(() => {
+    if (initialQuery !== undefined) {
+      setQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   // Show dropdown when user is typing and input is focused
   useEffect(() => {
