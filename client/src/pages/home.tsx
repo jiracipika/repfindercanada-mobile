@@ -44,7 +44,10 @@ export default function Home() {
   // Listen for search triggers from Activity page
   useEffect(() => {
     const handleTriggerSearch = (event: CustomEvent) => {
+      console.log('[Home] Received triggerSearch event:', event.detail);
       const { query, representatives } = event.detail;
+
+      // Set the triggered search to update search box
       setTriggeredSearch({ query, representatives });
 
       // Show results if we have them
@@ -54,11 +57,17 @@ export default function Home() {
           title: "Loaded from history",
           description: "Showing your previous search results.",
         });
+      } else {
+        // Clear results if no representatives
+        setSearchResults([]);
       }
     };
 
+    console.log('[Home] Setting up triggerSearch event listener');
     window.addEventListener('triggerSearch', handleTriggerSearch as EventListener);
+
     return () => {
+      console.log('[Home] Removing triggerSearch event listener');
       window.removeEventListener('triggerSearch', handleTriggerSearch as EventListener);
     };
   }, [toast]);

@@ -38,20 +38,23 @@ export default function Activity() {
   };
 
   const handleSearchClick = async (activity: ActivityItem) => {
-    if (activity.query) {
-      // Navigate to home and set the search
-      setLocation('/');
+    if (!activity.query) return;
 
-      // Dispatch event with query and representatives
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('triggerSearch', {
-          detail: {
-            query: activity.query,
-            representatives: activity.representatives
-          }
-        }));
-      }, 100);
-    }
+    console.log('[Activity] Clicked search:', activity.query, 'with', activity.representatives?.length || 0, 'representatives');
+
+    // Navigate to home first
+    setLocation('/');
+
+    // Small delay to ensure home page loads, then dispatch event
+    setTimeout(() => {
+      console.log('[Activity] Dispatching triggerSearch event');
+      window.dispatchEvent(new CustomEvent('triggerSearch', {
+        detail: {
+          query: activity.query,
+          representatives: activity.representatives
+        }
+      }));
+    }, 150); // Increased timeout to 150ms
   };
 
   useEffect(() => {
