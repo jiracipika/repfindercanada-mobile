@@ -14,9 +14,10 @@ interface SearchFormProps {
   onSearchComplete: (results: Representative[]) => void;
   onSearchError?: (error: string) => void;
   initialQuery?: string; // Allow parent to set initial query
+  shouldAutoSearch?: boolean; // Trigger search automatically when initialQuery is set
 }
 
-export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, initialQuery }: SearchFormProps) {
+export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, initialQuery, shouldAutoSearch }: SearchFormProps) {
   const { userData, incrementSearchCount, updateLastSearch } = useUserData();
   const [query, setQuery] = useState(() => {
     return userData?.lastPostalCodeSearch || "";
@@ -24,6 +25,7 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const [pendingAutoSearch, setPendingAutoSearch] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -36,9 +38,16 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   // Update query when initialQuery prop changes (from parent)
   useEffect(() => {
     if (initialQuery !== undefined && initialQuery !== null) {
+      console.log('[SearchForm] Received initialQuery:', initialQuery, 'shouldAutoSearch:', shouldAutoSearch);
       setQuery(initialQuery);
+
+      // Automatically trigger search if shouldAutoSearch is true
+      if (shouldAutoSearch && initialQuery.trim()) {
+        console.log('[SearchForm] Setting up auto-search for:', initialQuery);
+        setPendingAutoSearch(initialQuery);
+      }
     }
-  }, [initialQuery]);
+  }, [initialQuery, shouldAutoSearch]);
 
   // Show dropdown when user is typing and input is focused
   useEffect(() => {
@@ -150,6 +159,15 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   const handleManualSearch = () => {
     performSearch(query);
   };
+
+  // Handle pending auto-search after performSearch is available
+  useEffect(() => {
+    if (pendingAutoSearch && !isSearching) {
+      console.log('[SearchForm] Executing auto-search for:', pendingAutoSearch);
+      performSearch(pendingAutoSearch);
+      setPendingAutoSearch(null); // Clear after triggering
+    }
+  }, [pendingAutoSearch, isSearching]);
 
   const getDropdownContent = () => {
     const cleanCode = query.replace(/\s+/g, "");

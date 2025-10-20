@@ -38,38 +38,44 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [triggeredSearch, setTriggeredSearch] = useState<{ query: string; representatives?: Representative[] } | null>(null);
+  const [triggeredSearch, setTriggeredSearch] = useState<{ query: string; representatives?: Representative[]; shouldAutoSearch?: boolean } | null>(null);
   const { toast } = useToast();
 
-  // Listen for search triggers from Activity page
+  // Check for pending search from Activity page on mount
   useEffect(() => {
-    const handleTriggerSearch = (event: CustomEvent) => {
-      console.log('[Home] Received triggerSearch event:', event.detail);
-      const { query, representatives } = event.detail;
+    console.log('[Home] Checking for pending search in sessionStorage');
+    const pendingSearchStr = sessionStorage.getItem('pendingSearch');
 
-      // Set the triggered search to update search box
-      setTriggeredSearch({ query, representatives });
+    if (pendingSearchStr) {
+      try {
+        const pendingSearch = JSON.parse(pendingSearchStr);
+        console.log('[Home] Found pending search:', pendingSearch);
 
-      // Show results if we have them
-      if (representatives && representatives.length > 0) {
-        setSearchResults(sortRepresentatives(representatives));
-        toast({
-          title: "Loaded from history",
-          description: "Showing your previous search results.",
-        });
-      } else {
-        // Clear results if no representatives
-        setSearchResults([]);
+        // Clear it immediately to prevent re-triggering
+        sessionStorage.removeItem('pendingSearch');
+
+        const { query, representatives } = pendingSearch;
+
+        // If we have cached representatives, show them immediately without re-searching
+        if (representatives && representatives.length > 0) {
+          console.log('[Home] Showing cached representatives from pending search');
+          setTriggeredSearch({ query, representatives, shouldAutoSearch: false });
+          setSearchResults(sortRepresentatives(representatives));
+          toast({
+            title: "Loaded from history",
+            description: "Showing your previous search results.",
+          });
+        } else {
+          // No cached results - trigger a new search
+          console.log('[Home] No cached representatives, will trigger new search');
+          setTriggeredSearch({ query, representatives, shouldAutoSearch: true });
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error('[Home] Error parsing pending search:', error);
+        sessionStorage.removeItem('pendingSearch');
       }
-    };
-
-    console.log('[Home] Setting up triggerSearch event listener');
-    window.addEventListener('triggerSearch', handleTriggerSearch as EventListener);
-
-    return () => {
-      console.log('[Home] Removing triggerSearch event listener');
-      window.removeEventListener('triggerSearch', handleTriggerSearch as EventListener);
-    };
+    }
   }, [toast]);
 
   const handleSearchComplete = (results: Representative[]) => {
@@ -101,6 +107,7 @@ export default function Home() {
           onSearchComplete={handleSearchComplete}
           onSearchError={handleSearchError}
           initialQuery={triggeredSearch?.query}
+          shouldAutoSearch={triggeredSearch?.shouldAutoSearch}
         />
       </Section>
 

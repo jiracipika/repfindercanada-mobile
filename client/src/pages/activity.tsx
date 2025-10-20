@@ -42,19 +42,17 @@ export default function Activity() {
 
     console.log('[Activity] Clicked search:', activity.query, 'with', activity.representatives?.length || 0, 'representatives');
 
-    // Navigate to home first
-    setLocation('/');
+    // Store the search data in sessionStorage for the Home page to pick up
+    sessionStorage.setItem('pendingSearch', JSON.stringify({
+      query: activity.query,
+      representatives: activity.representatives,
+      timestamp: Date.now()
+    }));
 
-    // Small delay to ensure home page loads, then dispatch event
-    setTimeout(() => {
-      console.log('[Activity] Dispatching triggerSearch event');
-      window.dispatchEvent(new CustomEvent('triggerSearch', {
-        detail: {
-          query: activity.query,
-          representatives: activity.representatives
-        }
-      }));
-    }, 150); // Increased timeout to 150ms
+    console.log('[Activity] Stored search in sessionStorage, navigating to home');
+
+    // Navigate to home
+    setLocation('/');
   };
 
   useEffect(() => {
