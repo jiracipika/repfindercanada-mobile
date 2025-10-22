@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { SearchForm } from "@/components/search-form";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
-import { Building, Loader2, Terminal } from "lucide-react";
+import { Building, Loader2, Terminal, UserSearch } from "lucide-react";
 import type { Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 // Helper function to sort representatives by government level
@@ -109,6 +111,15 @@ export default function Home() {
           initialQuery={triggeredSearch?.query}
           shouldAutoSearch={triggeredSearch?.shouldAutoSearch}
         />
+
+        <div className="mt-4">
+          <Link href="/name-search">
+            <Button variant="outline" className="w-full">
+              <UserSearch className="mr-2 h-4 w-4" />
+              Search by Representative Name
+            </Button>
+          </Link>
+        </div>
       </Section>
 
       {searchError && (

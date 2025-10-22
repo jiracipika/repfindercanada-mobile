@@ -24,6 +24,7 @@ import { SwipePager } from "@/components/SwipePager";
 import AppHeader from "@/components/app-header";
 
 import { SourcesDisclaimer } from "@/pages/sources-disclaimer";
+import NameSearch from "@/pages/name-search";
 
 // Map routes to page indices
 const routeToIndex: Record<string, number> = {
@@ -45,6 +46,18 @@ function Router() {
         <AppHeader />
         <div className="flex-1 flex flex-col overflow-hidden">
           <SourcesDisclaimer />
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  if (location === '/name-search') {
+    return (
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
+        <AppHeader />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <NameSearch />
         </div>
         <BottomNav />
       </div>
