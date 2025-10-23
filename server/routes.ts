@@ -384,48 +384,33 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
     const enhancedReps = await Promise.all(repsToTransform.map(async (rep: any) => {
       const detailedInfo = await fetchDetailedMPInfo(rep.name);
       
-      // Extract office information
+      // Extract office information - only use real data from APIs
       const offices = [];
-      
-      // Legislature office from detailed info
+
+      // Legislature office from detailed info (only if we have real contact data)
       if (detailedInfo?.voice || detailedInfo?.email) {
         offices.push({
           type: 'Legislature Office',
           address: 'House of Commons Ottawa ON K1A 0A6',
-          phone: detailedInfo.voice || '1 613 992-4501',
-          fax: detailedInfo.other_info?.fax || '1 613 992-4501',
-          email: detailedInfo.email
+          phone: detailedInfo.voice || null,
+          fax: detailedInfo.other_info?.fax || null,
+          email: detailedInfo.email || null
         });
       }
-      
+
       // Constituency office from Represent API or OpenParliament data
+      // Only include if we have actual office data with real contact information
       if (rep.offices && rep.offices.length > 0) {
         rep.offices.forEach((office: any) => {
-          offices.push({
-            type: 'Constituency Office',
-            address: office.postal_address || `Main office - ${rep.district_name}`,
-            phone: office.tel,
-            fax: office.fax
-          });
-        });
-      } else if (detailedInfo?.other_info?.constituency_offices) {
-        // Add constituency office from detailed MP info
-        const constituencyOffice = detailedInfo.other_info.constituency_offices[0];
-        if (constituencyOffice) {
-          offices.push({
-            type: 'Constituency Office',
-            address: constituencyOffice,
-            phone: '1 416 321-5454',
-            fax: '1 416 321-5456'
-          });
-        }
-      } else {
-        // Add default constituency office for demonstration
-        offices.push({
-          type: 'Constituency Office',
-          address: `Main office - ${rep.district_name}\n${rep.district_name} Office`,
-          phone: '1 416 321-5454',
-          fax: '1 416 321-5456'
+          // Only add office if it has meaningful data (not just placeholders)
+          if (office.postal_address || office.tel || office.fax) {
+            offices.push({
+              type: 'Constituency Office',
+              address: office.postal_address || null,
+              phone: office.tel || null,
+              fax: office.fax || null
+            });
+          }
         });
       }
       
@@ -492,9 +477,9 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
         },
         image: photoUrl?.replace('openparliament.cahttps://', 'https://') || null,
         url: profileUrl?.replace('openparliament.cahttps://', 'https://') || null,
-        email: detailedInfo?.email || rep.email || `${rep.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`,
-        phone: detailedInfo?.voice || rep.offices?.[0]?.tel || '1 613 992-4501',
-        personalWebsite: rep.personal_url,
+        email: detailedInfo?.email || rep.email || null,
+        phone: detailedInfo?.voice || rep.offices?.[0]?.tel || null,
+        personalWebsite: rep.personal_url || null,
         website: detailedInfo?.links?.[0]?.url || profileUrl,
         socialMedia: {
           twitter: detailedInfo?.other_info?.twitter?.[0] || rep.extra?.twitter,
@@ -502,7 +487,7 @@ async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRep
         },
         biography: biography,
         offices: offices,
-        fax: detailedInfo?.other_info?.fax || '1 613 992-4501',
+        fax: detailedInfo?.other_info?.fax || null,
         parliamentId: detailedInfo?.other_info?.parl_mp_id?.[0] || rep.name.toLowerCase().replace(/\s+/g, '-')
       };
     }));

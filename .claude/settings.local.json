@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run check:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx cap sync:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
