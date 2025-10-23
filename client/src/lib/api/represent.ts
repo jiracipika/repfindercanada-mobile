@@ -75,17 +75,11 @@ export const searchByName = async (name: string): Promise<Representative[]> => {
 
     // OpenNorth API returns a 'objects' array
     if (data && Array.isArray(data.objects)) {
-      // Client-side filtering for robustness (case/diacritic-insensitive)
-      const normalizedName = name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
-      console.log('[searchByName] Normalized search query:', normalizedName);
+      // Trust the API's filtering - it already filtered by the 'q' parameter
+      // The API searches across multiple fields (name, district, office, etc.)
+      console.log('[searchByName] Using API results directly (trusting API filtering)');
 
-      const filtered = data.objects
-        .filter((rep: OpenNorthRepresentative) =>
-          rep.name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").includes(normalizedName)
-        );
-      console.log('[searchByName] After filtering:', filtered.length, 'representatives');
-
-      const representatives = await Promise.all(filtered.map((rep: OpenNorthRepresentative) => normalizeRepresentative(rep)));
+      const representatives = await Promise.all(data.objects.map((rep: OpenNorthRepresentative) => normalizeRepresentative(rep)));
       console.log('[searchByName] After normalization:', representatives.length, 'representatives');
       console.log('[searchByName] First result (if any):', representatives[0] ? JSON.stringify(representatives[0]).substring(0, 300) : 'none');
 
