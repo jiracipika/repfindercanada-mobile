@@ -4,7 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Canadian Rep Finder is a cross-platform mobile application (iOS and Android) built with Capacitor that helps Canadian citizens find their elected representatives by postal code, name, or riding. The app fetches data from external Canadian parliamentary APIs (Represent API and OpenParliament) and provides representative contact information, biographies, and constituency boundaries.
+Canadian Rep Finder is a cross-platform mobile application (iOS and Android) built with Capacitor that helps Canadian citizens find their elected representatives by postal code, name, or riding.
+
+**Data Architecture (Hybrid Multi-Source):**
+The app uses a hybrid approach combining multiple data sources for improved accuracy:
+1. **House of Commons XML** (primary) - Official MP data
+2. **Represent API** (postal code lookup) - With verification against House of Commons
+3. **Statistics Canada WMS** - Official riding boundaries
+4. **ourcommons.ca scraping** - Detailed contact information
+5. **Database caching** - With manual correction support for postal codes near riding boundaries
+
+See `HYBRID_API_MIGRATION.md` for detailed architecture documentation.
 
 ## Development Commands
 
@@ -95,11 +105,24 @@ ios/                 - iOS native project (Capacitor)
 
 **Hybrid Development/Production Serving**: The Express server serves the Vite dev server in development mode and static files in production. All traffic flows through port 5000.
 
-**API Integration Strategy**: The app uses two external APIs:
+**API Integration Strategy (Hybrid Multi-Source)**: The app uses multiple data sources with fallbacks:
+
+**New v2 API Architecture** (recommended):
+1. **House of Commons XML** (`ourcommons.ca/Members/en/search/xml`) - Official MP data (24-hour cache)
+2. **Represent API** (`represent.opennorth.ca`) - Postal code to riding lookup, verified against House of Commons
+3. **Statistics Canada WMS** - Official electoral district boundaries (GeoJSON)
+4. **ourcommons.ca scraping** - Detailed contact information (constituency offices, phone numbers)
+5. **Database cache** - Postal code lookups with manual correction support for boundary edge cases
+
+**Legacy v1 API** (still functional):
 1. **Represent API** (`represent.opennorth.ca`) - For postal code lookups and current MP data
 2. **OpenParliament API** (`openparliament.ca`) - For detailed MP information and photos
 
-Data flows: External API → Transform → MemStorage cache → Client. The app maintains a 5-minute cache of politician data and includes sample/fallback data when APIs are unavailable.
+Data flows (v2): Postal code → Cache check → Represent API → House of Commons verification → Contact scraping → Statistics Canada boundaries → Client
+
+Data flows (v1): External API → Transform → MemStorage cache → Client. Maintains 5-minute cache with sample/fallback data.
+
+**Key Improvement**: V2 API addresses accuracy issues with postal codes near riding boundaries by using official House of Commons data as the source of truth and supporting manual corrections.
 
 **Storage Layer**: `server/storage.ts` implements an in-memory storage (MemStorage) that can be swapped for a database implementation. Currently stores representatives, searches, and saved representatives in memory Maps.
 
@@ -119,11 +142,18 @@ Data flows: External API → Transform → MemStorage cache → Client. The app 
 
 ## Database Schema
 
-Uses Drizzle ORM with PostgreSQL. Three main tables:
+Uses Drizzle ORM with PostgreSQL. Main tables:
 
+**Core Tables:**
 - **representatives**: Stores MP data (name, party, constituency, contact info, biography, offices, photo, boundary data)
 - **searches**: Logs search queries and results for activity tracking
 - **savedRepresentatives**: User's saved MPs (many-to-many via userId)
+
+**Hybrid API Tables (new):**
+- **postalCodeCache**: Caches postal code→riding lookups with manual correction support
+  - Fields: postalCode (unique), ridingName, province, source, confidence, manualOverride, boundaryUrl, lastVerified, notes
+- **officialMPData**: Caches House of Commons MP data with scraped contact details
+  - Fields: name, ridingName, party, parliamentId (unique), email, phone, constituencyOffice, hillOffice, photoUrl, profileUrl, lastScraped
 
 Configure via `DATABASE_URL` environment variable (required for migrations).
 

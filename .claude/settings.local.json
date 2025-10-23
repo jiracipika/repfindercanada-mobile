@@ -8,7 +8,16 @@
       "WebFetch(domain:openparliament.ca)",
       "WebFetch(domain:www.ourcommons.ca)",
       "WebFetch(domain:represent.opennorth.ca)",
-      "WebFetch(domain:api.openparliament.ca)"
+      "WebFetch(domain:api.openparliament.ca)",
+      "WebFetch(domain:parliamentdata.ca)",
+      "WebFetch(domain:open.canada.ca)",
+      "WebFetch(domain:www150.statcan.gc.ca)",
+      "WebFetch(domain:www.elections.ca)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(timeout 10 npx tsx:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertRepresentativeSchema, insertSearchSchema, insertSavedRepresentativeSchema } from "@shared/schema";
 import { z } from "zod";
+import { registerHybridRoutes } from "./hybridRoutes";
 
 interface OpenParliamentRepresentative {
   name: string;
@@ -748,6 +749,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch boundary data" });
     }
   });
+
+  // Register new hybrid API routes (v2)
+  // These use multiple data sources for improved accuracy
+  registerHybridRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
