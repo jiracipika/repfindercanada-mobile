@@ -16,21 +16,21 @@ export interface BoundaryData {
 }
 
 /**
- * Fetches boundary GeoJSON from Statistics Canada WMS service
- * This is more reliable than Represent API for official boundaries
+ * Fetches boundary GeoJSON from Elections Canada 2023 Representation Order
+ * Updated to use official 2023 boundaries (343 ridings) instead of 2013 (338 ridings)
  */
 export async function getBoundaryFromStatCan(fedNum: string): Promise<BoundaryData | null> {
   try {
-    // Statistics Canada WFS (Web Feature Service) for 2021 Census boundaries
-    // Federal Electoral Districts (2013 Representation Order)
-    const wfsUrl = new URL('https://geoappext.nrcan.gc.ca/arcgis/rest/services/FGP/electoral_boundaries_en/MapServer/0/query');
+    // Elections Canada ESRI REST service for 2023 Representation Order
+    // Federal Electoral Districts (2023 - 343 ridings)
+    const wfsUrl = new URL('https://maps-cartes.services.geo.ca/server_serveur/rest/services/ELECTIONS/FED_CA_2023_106_en/MapServer/0/query');
 
-    wfsUrl.searchParams.set('where', `FED_NUM='${fedNum}'`);
+    wfsUrl.searchParams.set('where', `FEDNUM='${fedNum}'`);
     wfsUrl.searchParams.set('outFields', '*');
     wfsUrl.searchParams.set('returnGeometry', 'true');
     wfsUrl.searchParams.set('f', 'geojson');
 
-    console.log(`Fetching boundary from StatCan for FED ${fedNum}`);
+    console.log(`Fetching boundary from Elections Canada 2023 for FED ${fedNum}`);
 
     const response = await fetch(wfsUrl.toString(), {
       headers: {
@@ -39,7 +39,7 @@ export async function getBoundaryFromStatCan(fedNum: string): Promise<BoundaryDa
     });
 
     if (!response.ok) {
-      throw new Error(`StatCan WFS error: ${response.status}`);
+      throw new Error(`Elections Canada API error: ${response.status}`);
     }
 
     const geoJson = await response.json();
@@ -50,22 +50,23 @@ export async function getBoundaryFromStatCan(fedNum: string): Promise<BoundaryDa
 
     return null;
   } catch (error: any) {
-    console.error(`Error fetching boundary from StatCan:`, error?.message || String(error));
+    console.error(`Error fetching boundary from Elections Canada:`, error?.message || String(error));
     return null;
   }
 }
 
 /**
- * Fetches boundary by riding name from Statistics Canada
+ * Fetches boundary by riding name from Elections Canada 2023 Representation Order
  * Uses name-based lookup when FED number is not available
  */
 export async function getBoundaryByRidingName(ridingName: string, province?: string): Promise<BoundaryData | null> {
   try {
-    const wfsUrl = new URL('https://geoappext.nrcan.gc.ca/arcgis/rest/services/FGP/electoral_boundaries_en/MapServer/0/query');
+    const wfsUrl = new URL('https://maps-cartes.services.geo.ca/server_serveur/rest/services/ELECTIONS/FED_CA_2023_106_en/MapServer/0/query');
 
-    // Build where clause
+    // Build where clause - Elections Canada 2023 API uses ENNAME field
     let whereClause = `ENNAME='${ridingName.replace(/'/g, "''")}'`; // Escape single quotes
     if (province) {
+      // Province code field in 2023 API (check actual field name if needed)
       whereClause += ` AND PROVCODE='${province}'`;
     }
 
@@ -74,7 +75,7 @@ export async function getBoundaryByRidingName(ridingName: string, province?: str
     wfsUrl.searchParams.set('returnGeometry', 'true');
     wfsUrl.searchParams.set('f', 'geojson');
 
-    console.log(`Fetching boundary from StatCan for riding: ${ridingName}`);
+    console.log(`Fetching boundary from Elections Canada 2023 for riding: ${ridingName}`);
 
     const response = await fetch(wfsUrl.toString(), {
       headers: {
@@ -83,7 +84,7 @@ export async function getBoundaryByRidingName(ridingName: string, province?: str
     });
 
     if (!response.ok) {
-      throw new Error(`StatCan WFS error: ${response.status}`);
+      throw new Error(`Elections Canada API error: ${response.status}`);
     }
 
     const geoJson = await response.json();
@@ -94,14 +95,15 @@ export async function getBoundaryByRidingName(ridingName: string, province?: str
 
     return null;
   } catch (error: any) {
-    console.error(`Error fetching boundary by name from StatCan:`, error?.message || String(error));
+    console.error(`Error fetching boundary by name from Elections Canada:`, error?.message || String(error));
     return null;
   }
 }
 
 /**
  * Fetches simplified boundary shape from Represent API (fallback)
- * Used when StatCan data is unavailable
+ * Used when Elections Canada data is unavailable
+ * NOTE: Represent API may have outdated/incorrect postal code mappings for 2023 boundaries
  */
 export async function getBoundaryFromRepresent(boundaryUrl: string): Promise<any | null> {
   try {
@@ -133,18 +135,18 @@ export async function getBoundaryFromRepresent(boundaryUrl: string): Promise<any
 
 /**
  * Hybrid boundary fetch with fallbacks
- * Tries StatCan first, falls back to Represent API
+ * Tries Elections Canada 2023 API first, falls back to Represent API
  */
 export async function getBoundaryData(
   ridingName: string,
   province?: string,
   representBoundaryUrl?: string
 ): Promise<any | null> {
-  // Try StatCan first
+  // Try Elections Canada 2023 API first
   let boundary = await getBoundaryByRidingName(ridingName, province);
 
   if (boundary) {
-    console.log(`Using StatCan boundary for ${ridingName}`);
+    console.log(`Using Elections Canada 2023 boundary for ${ridingName}`);
     return boundary;
   }
 

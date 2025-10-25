@@ -27,6 +27,9 @@ let hocMPsCache: HouseOfCommonsMP[] = [];
 let hocCacheTimestamp = 0;
 const HOC_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+// Expected number of ridings based on 2023 Representation Order
+const EXPECTED_RIDING_COUNT_2023 = 343;
+
 /**
  * Fetches all current MPs from House of Commons XML feeds
  * Source: https://www.ourcommons.ca/Members/en/search/xml
@@ -98,6 +101,17 @@ export async function getAllMPsFromHouseOfCommons(): Promise<HouseOfCommonsMP[]>
 
     hocCacheTimestamp = now;
     console.log(`Successfully fetched ${hocMPsCache.length} MPs from House of Commons`);
+
+    // Validate riding count matches 2023 Representation Order
+    if (hocMPsCache.length !== EXPECTED_RIDING_COUNT_2023) {
+      console.warn(
+        `⚠️  WARNING: Expected ${EXPECTED_RIDING_COUNT_2023} ridings (2023 Representation Order), ` +
+        `but found ${hocMPsCache.length}. ` +
+        `This may indicate missing data or incorrect parliament session.`
+      );
+    } else {
+      console.log(`✓ Validated: ${hocMPsCache.length} ridings match 2023 Representation Order`);
+    }
 
     return hocMPsCache;
   } catch (error: any) {

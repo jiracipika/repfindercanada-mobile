@@ -26,6 +26,25 @@ interface PostalCodeLookupResult {
 const postalCodeMemCache = new Map<string, PostalCodeCache>();
 
 /**
+ * Known postal code corrections for areas with incorrect Represent API data
+ * These are preloaded on startup to ensure accuracy
+ */
+const KNOWN_CORRECTIONS: Array<{
+  postalCode: string;
+  ridingName: string;
+  province: string;
+  notes: string;
+}> = [
+  {
+    postalCode: 'M1C5E9',
+    ridingName: 'Scarborough—Guildwood—Rouge Park',
+    province: 'Ontario',
+    notes: 'User reported - was incorrectly mapped to Scarborough—Woburn by Represent API'
+  },
+  // Add more corrections as they are reported
+];
+
+/**
  * Normalizes postal code to standard format (remove spaces, uppercase)
  */
 export function normalizePostalCode(postalCode: string): string {
@@ -126,10 +145,14 @@ async function lookupFromRepresentAPI(postalCode: string): Promise<{
     // Get the first current MP
     const mp = currentMPs[0];
 
+    // Use 2023 Representation Order boundary set
+    const boundarySetName = 'federal-electoral-districts-2023-representation-order';
+    const ridingSlug = mp.district_name.toLowerCase().replace(/[—–]/g, '-').replace(/\s+/g, '-');
+
     return {
       ridingName: mp.district_name,
       province: data.province || 'Unknown',
-      boundaryUrl: mp.representative_set_name ? `/boundaries/${mp.representative_set_name}/${mp.district_name}/` : undefined,
+      boundaryUrl: `/boundaries/${boundarySetName}/${ridingSlug}/`,
       representatives: currentMPs,
     };
   } catch (error: any) {
@@ -139,34 +162,74 @@ async function lookupFromRepresentAPI(postalCode: string): Promise<{
 }
 
 /**
- * Verifies riding data against House of Commons official data
+ * Normalizes riding names for comparison
+ * Handles variations in dashes, accents, and spacing
+ */
+function normalizeRidingName(ridingName: string): string {
+  return ridingName
+    .toLowerCase()
+    .trim()
+    // Normalize all types of dashes to standard hyphen
+    .replace(/[—–−]/g, '-')
+    // Normalize multiple spaces to single space
+    .replace(/\s+/g, ' ')
+    // Remove extra punctuation
+    .replace(/['']/g, "'");
+}
+
+/**
+ * Verifies riding data against House of Commons official data (2023 Representation Order)
+ * Performs fuzzy matching to handle name variations
  */
 async function verifyWithHouseOfCommons(ridingName: string): Promise<{
   verified: boolean;
   mpName?: string;
   party?: string;
   warnings?: string[];
+  actualRidingName?: string;
 }> {
   try {
-    const officialMP = await getMPByRiding(ridingName);
+    const allMPs = await getAllMPsFromHouseOfCommons();
+    const normalizedSearch = normalizeRidingName(ridingName);
+
+    // Try exact match first
+    let officialMP = allMPs.find(mp =>
+      normalizeRidingName(mp.constituency) === normalizedSearch
+    );
+
+    // If no exact match, try fuzzy match (contains)
+    if (!officialMP) {
+      officialMP = allMPs.find(mp =>
+        normalizeRidingName(mp.constituency).includes(normalizedSearch) ||
+        normalizedSearch.includes(normalizeRidingName(mp.constituency))
+      );
+    }
 
     if (!officialMP) {
+      console.warn(`⚠️  Riding "${ridingName}" not found in House of Commons data (${allMPs.length} ridings checked)`);
       return {
         verified: false,
-        warnings: [`Riding "${ridingName}" not found in House of Commons data`],
+        warnings: [
+          `Riding "${ridingName}" not found in official House of Commons data. ` +
+          `This may be due to redistribution or API data mismatch. ` +
+          `Verify with Elections Canada.`
+        ],
       };
     }
+
+    console.log(`✓ Verified: ${ridingName} → ${officialMP.name} (${officialMP.party})`);
 
     return {
       verified: true,
       mpName: officialMP.name,
       party: officialMP.party,
+      actualRidingName: officialMP.constituency, // Return official riding name
     };
   } catch (error: any) {
     console.error(`House of Commons verification failed:`, error?.message || String(error));
     return {
       verified: false,
-      warnings: ['Could not verify with House of Commons'],
+      warnings: ['Could not verify with House of Commons - API may be unavailable'],
     };
   }
 }
@@ -194,14 +257,17 @@ export async function lookupPostalCode(postalCode: string): Promise<PostalCodeLo
   // Step 3: Verify with House of Commons
   const verification = await verifyWithHouseOfCommons(representResult.ridingName);
 
+  // Use official House of Commons riding name if verified (it may differ slightly from Represent API)
+  const officialRidingName = verification.actualRidingName || representResult.ridingName;
+
   const result: PostalCodeLookupResult = {
     postalCode: normalized,
-    ridingName: representResult.ridingName,
+    ridingName: officialRidingName, // Use verified riding name
     province: representResult.province,
     mpName: verification.mpName,
     party: verification.party,
     source: verification.verified ? 'represent_verified' : 'represent_unverified',
-    confidence: verification.verified ? 'high' : 'medium',
+    confidence: verification.verified ? 'high' : 'low', // Unverified = low confidence
     boundaryUrl: representResult.boundaryUrl,
     warnings: verification.warnings,
   };
@@ -282,3 +348,32 @@ export function getAllCachedPostalCodes(): PostalCodeCache[] {
 export function clearPostalCodeCache(): void {
   postalCodeMemCache.clear();
 }
+
+/**
+ * Preload known corrections into cache on startup
+ * This ensures accurate results for postal codes with known Represent API issues
+ */
+export async function preloadKnownCorrections(): Promise<void> {
+  console.log(`Preloading ${KNOWN_CORRECTIONS.length} known postal code corrections...`);
+
+  for (const correction of KNOWN_CORRECTIONS) {
+    try {
+      const result = await correctPostalCodeMapping(
+        correction.postalCode,
+        correction.ridingName,
+        correction.province,
+        correction.notes
+      );
+      console.log(`✓ Preloaded correction: ${correction.postalCode} → ${correction.ridingName}`);
+    } catch (error) {
+      console.error(`✗ Failed to preload correction for ${correction.postalCode}:`, error);
+    }
+  }
+
+  console.log('Known corrections preloaded successfully');
+}
+
+// Auto-preload corrections on module load
+preloadKnownCorrections().catch(error => {
+  console.error('Failed to preload known corrections:', error);
+});

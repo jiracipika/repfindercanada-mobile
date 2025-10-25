@@ -59,24 +59,26 @@ export function registerHybridRoutes(app: Express) {
         boundaryData = await getBoundaryMetadata(lookupResult.boundaryUrl);
       }
 
-      // Construct representative object
+      // Construct representative object with data quality metadata
       const representative = {
         name: mp.name,
         party: mp.party,
         constituency: mp.constituency,
         province: mp.province,
+        electedOffice: 'MP',
         email: contactInfo?.email || mp.email,
         phone: contactInfo?.phone,
         photo: contactInfo?.photoUrl,
         offices: contactInfo?.offices || [],
         parliamentId: mp.id,
         profileUrl: mp.profileUrl,
+        website: mp.profileUrl,
         boundaryUrl: lookupResult.boundaryUrl,
-        boundary: boundaryData,
+        boundaryData: boundaryData,
         dataQuality: {
           source: lookupResult.source,
           confidence: lookupResult.confidence,
-          warnings: lookupResult.warnings,
+          warnings: lookupResult.warnings || [],
         },
       };
 
@@ -345,6 +347,85 @@ export function registerHybridRoutes(app: Express) {
       console.error('Batch scrape error:', error);
       res.status(500).json({
         message: "Failed to start scraping",
+        error: error?.message || String(error),
+      });
+    }
+  });
+
+  /**
+   * Export postal code corrections as JSON
+   * Useful for backup and sharing corrections
+   */
+  app.get("/api/v2/admin/export-corrections", async (req, res) => {
+    try {
+      const cache = getAllCachedPostalCodes();
+
+      // Filter to only manual corrections and high-confidence entries
+      const corrections = cache.filter(entry =>
+        entry.manualOverride || entry.source === 'cache_manual'
+      );
+
+      res.json({
+        exportedAt: new Date().toISOString(),
+        count: corrections.length,
+        corrections: corrections.map(c => ({
+          postalCode: c.postalCode,
+          ridingName: c.ridingName,
+          province: c.province,
+          source: c.source,
+          confidence: c.confidence,
+          notes: c.notes,
+        })),
+      });
+    } catch (error: any) {
+      console.error('Export corrections error:', error);
+      res.status(500).json({
+        message: "Failed to export corrections",
+        error: error?.message || String(error),
+      });
+    }
+  });
+
+  /**
+   * Import postal code corrections from JSON
+   * Used to restore backups or share corrections
+   */
+  app.post("/api/v2/admin/import-corrections", async (req, res) => {
+    try {
+      const { corrections } = req.body;
+
+      if (!Array.isArray(corrections)) {
+        return res.status(400).json({ message: "corrections must be an array" });
+      }
+
+      let imported = 0;
+      let failed = 0;
+
+      for (const correction of corrections) {
+        try {
+          await correctPostalCodeMapping(
+            correction.postalCode,
+            correction.ridingName,
+            correction.province,
+            correction.notes || 'Imported correction'
+          );
+          imported++;
+        } catch (error) {
+          console.error(`Failed to import ${correction.postalCode}:`, error);
+          failed++;
+        }
+      }
+
+      res.json({
+        message: "Import completed",
+        imported,
+        failed,
+        total: corrections.length,
+      });
+    } catch (error: any) {
+      console.error('Import corrections error:', error);
+      res.status(500).json({
+        message: "Failed to import corrections",
         error: error?.message || String(error),
       });
     }
