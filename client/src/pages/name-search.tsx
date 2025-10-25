@@ -9,7 +9,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fetchRepsByName } from "@/lib/representApi";
+import { fetchRepsByNameV2 } from "@/lib/api/v2";
 import { logActivity } from "@/lib/storage/activityRepository";
 
 // Helper function to sort representatives by government level
@@ -66,9 +66,9 @@ export default function NameSearch() {
     setSearchResults([]);
 
     try {
-      console.log('[NameSearch] Calling fetchRepsByName with:', trimmedQuery);
-      const results = await fetchRepsByName(trimmedQuery);
-      console.log('[NameSearch] fetchRepsByName returned:', results.length, 'results');
+      console.log('[NameSearch] Calling fetchRepsByNameV2 with:', trimmedQuery);
+      const results = await fetchRepsByNameV2(trimmedQuery);
+      console.log('[NameSearch] V2 API returned:', results.length, 'results');
 
       if (results.length === 0) {
         console.log('[NameSearch] No results found, showing error');
@@ -92,7 +92,7 @@ export default function NameSearch() {
         console.log('[NameSearch] Activity logged successfully');
       }
     } catch (error) {
-      console.error('[NameSearch] !!! Name search error:', error);
+      console.error('[NameSearch] !!! V2 API name search error:', error);
       console.error('[NameSearch] !!! Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       setSearchError("Failed to search. Please check your connection and try again.");
     } finally {

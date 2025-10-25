@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostal } from "@/lib/representApi";
+import { fetchRepsByPostalV2 } from "@/lib/api/v2";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -94,7 +94,15 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
       const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
 
-      const results = await fetchRepsByPostal(trimmedQuery);
+      // Use V2 API (hybrid multi-source backend)
+      const results = await fetchRepsByPostalV2(trimmedQuery);
+
+      // Cache the results for offline use
+      if (results.length > 0) {
+        await searchCacheRepository.cacheSearch(cleanQuery, results);
+        console.log('[SearchForm] Cached', results.length, 'representatives from V2 API');
+      }
+
       onSearchComplete(results);
 
       // Log the search activity with representatives
@@ -124,7 +132,7 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         });
       }
     } catch (error) {
-      console.error('[SearchForm] Search error:', error);
+      console.error('[SearchForm] V2 API search error:', error);
 
       // Try to get cached data as a last resort
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
