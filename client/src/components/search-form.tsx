@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostalV2 } from "@/lib/api/v2";
+import { lookupByPostalCode } from "@/lib/postal-code-lookup";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -90,49 +90,90 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Check if we have cached data first
-      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
-      const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
+      console.log('[SearchForm] Looking up postal code:', trimmedQuery);
 
-      // Use V2 API (hybrid multi-source backend)
-      const results = await fetchRepsByPostalV2(trimmedQuery);
+      // Use new hybrid lookup: Represent API + local IndexedDB
+      const lookupResult = await lookupByPostalCode(trimmedQuery);
+
+      if (!lookupResult) {
+        toast({
+          title: "No representative found",
+          description: "Please check your postal code and try again.",
+          variant: "destructive",
+        });
+        onSearchComplete([]);
+        return;
+      }
+
+      // Convert FederalMP to Representative format
+      const representative: Representative = {
+        id: parseInt(lookupResult.mp.id) || 0,
+        name: lookupResult.mp.name,
+        party: lookupResult.mp.party,
+        constituency: lookupResult.mp.riding,
+        province: lookupResult.mp.province,
+        electedOffice: 'MP',
+        email: lookupResult.mp.email,
+        phone: lookupResult.mp.phone,
+        photo: lookupResult.mp.photoUrl,
+        website: lookupResult.mp.profileUrl,
+        personalWebsite: null,
+        socialMedia: null,
+        biography: null,
+        offices: lookupResult.mp.offices ? JSON.parse(JSON.stringify(lookupResult.mp.offices)) : null,
+        fax: null,
+        parliamentId: lookupResult.mp.id,
+        boundaryUrl: null,
+        boundaryData: null,
+        dataQuality: {
+          source: lookupResult.source,
+          confidence: lookupResult.confidence,
+          warnings: lookupResult.warnings || [],
+        },
+        createdAt: new Date(),
+      };
+
+      const results = [representative];
 
       // Cache the results for offline use
-      if (results.length > 0) {
-        await searchCacheRepository.cacheSearch(cleanQuery, results);
-        console.log('[SearchForm] Cached', results.length, 'representatives from V2 API');
-      }
+      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
+      await searchCacheRepository.cacheSearch(cleanQuery, results);
+      console.log('[SearchForm] Cached representative with confidence:', lookupResult.confidence);
 
       onSearchComplete(results);
 
-      // Log the search activity with representatives
+      // Log the search activity
       await logActivity({
         type: "search",
         query: trimmedQuery,
         searchType: "postalCode",
         ts: Date.now(),
-        representatives: results, // Store the representatives found
+        representatives: results,
       });
 
-      if (results.length > 0) {
-        incrementSearchCount();
-        updateLastSearch(trimmedQuery, 'postalCode');
+      incrementSearchCount();
+      updateLastSearch(trimmedQuery, 'postalCode');
 
-        // Show toast if using cached data
-        if (hasCached) {
-          toast({
-            title: "Loaded from cache",
-            description: "Using previously downloaded data for faster results.",
-          });
-        }
-      } else {
+      // Show confidence indicator
+      if (lookupResult.confidence === 'high' && lookupResult.source === 'cache_manual') {
         toast({
-          title: "No representatives found",
-          description: "Please check your postal code and try again.",
+          title: "Verified Result",
+          description: `Found ${representative.name} (manually verified correction)`,
+        });
+      } else if (lookupResult.confidence === 'low') {
+        toast({
+          title: "Unverified Result",
+          description: "This result could not be verified. Please double-check with Elections Canada.",
+          variant: "default",
         });
       }
+
+      // Show warnings if present
+      if (lookupResult.warnings && lookupResult.warnings.length > 0) {
+        console.warn('[SearchForm] Lookup warnings:', lookupResult.warnings);
+      }
     } catch (error) {
-      console.error('[SearchForm] V2 API search error:', error);
+      console.error('[SearchForm] Postal code lookup error:', error);
 
       // Try to get cached data as a last resort
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
@@ -143,12 +184,12 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         onSearchComplete(cachedResults);
         toast({
           title: "Using cached data",
-          description: "Unable to reach the server. Showing previously downloaded results.",
+          description: "Unable to look up postal code. Showing previously downloaded results.",
           variant: "default",
         });
       } else {
         // No cached data available
-        const errorMessage = "Could not retrieve representatives. Please check your connection and try again.";
+        const errorMessage = "Could not retrieve representative. Please check your connection and try again.";
         toast({
           title: "Search failed",
           description: errorMessage,
