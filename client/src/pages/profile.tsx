@@ -188,7 +188,7 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <GitBranch className="h-4 w-4 shrink-0" />
-              <span>Version: 2.2.0</span>
+              <span>Version: 2.3.0</span>
             </div>
             <Link href="/sources-disclaimer">
               <Button variant="outline" className="w-full justify-start">

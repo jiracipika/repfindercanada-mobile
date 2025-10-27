@@ -1,6 +1,6 @@
 /**
- * V2 API Client
- * Uses the hybrid multi-source backend API for improved accuracy
+ * V2/V3 API Client
+ * Now uses v3 bundled data API with offline-first architecture
  */
 
 import type { Representative } from "@shared/schema";
@@ -102,16 +102,16 @@ async function toRepresentative(
 }
 
 /**
- * Search by postal code using V2 hybrid API
- * Uses: Cache → Represent API → House of Commons verification
+ * Search by postal code using V3 bundled data API
+ * Uses: Bundled XML → Represent API for postal code lookup → Scraped contact info
  */
 export async function fetchRepsByPostalV2(postalCode: string): Promise<Representative[]> {
   const cleanPostalCode = postalCode.replace(/\s+/g, '').toUpperCase();
 
-  console.log('[V2 API] Searching postal code:', cleanPostalCode);
+  console.log('[V3 API] Searching postal code:', cleanPostalCode);
 
   try {
-    const response = await fetch('/api/v2/representatives/postal-code', {
+    const response = await fetch('/api/v3/representatives/postal-code', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -121,14 +121,14 @@ export async function fetchRepsByPostalV2(postalCode: string): Promise<Represent
 
     if (!response.ok) {
       if (response.status === 404) {
-        console.log('[V2 API] No representative found for postal code');
+        console.log('[V3 API] No representative found for postal code');
         return [];
       }
-      throw new Error(`V2 API error: ${response.status} ${response.statusText}`);
+      throw new Error(`V3 API error: ${response.status} ${response.statusText}`);
     }
 
     const data: V2PostalCodeResponse = await response.json();
-    console.log('[V2 API] Response data quality:', data.representative.dataQuality);
+    console.log('[V3 API] Response data source:', data.representative.dataQuality);
 
     // Convert to internal Representative type
     const representative = await toRepresentative(
@@ -138,25 +138,25 @@ export async function fetchRepsByPostalV2(postalCode: string): Promise<Represent
 
     return [representative];
   } catch (error) {
-    console.error('[V2 API] Postal code search error:', error);
+    console.error('[V3 API] Postal code search error:', error);
     throw error;
   }
 }
 
 /**
- * Search by name using V2 hybrid API
- * Uses: House of Commons XML as source of truth
+ * Search by name using V3 bundled data API
+ * Uses: Bundled House of Commons XML
  */
 export async function fetchRepsByNameV2(name: string): Promise<Representative[]> {
-  console.log('[V2 API] Searching by name:', name);
+  console.log('[V3 API] Searching by name:', name);
 
   if (!name.trim()) {
-    console.log('[V2 API] Empty query, returning empty array');
+    console.log('[V3 API] Empty query, returning empty array');
     return [];
   }
 
   try {
-    const response = await fetch('/api/v2/representatives/search-name', {
+    const response = await fetch('/api/v3/representatives/search-name', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -165,11 +165,11 @@ export async function fetchRepsByNameV2(name: string): Promise<Representative[]>
     });
 
     if (!response.ok) {
-      throw new Error(`V2 API error: ${response.status} ${response.statusText}`);
+      throw new Error(`V3 API error: ${response.status} ${response.statusText}`);
     }
 
     const data: V2NameSearchResponse = await response.json();
-    console.log('[V2 API] Found', data.count, 'representatives from', data.source);
+    console.log('[V3 API] Found', data.count, 'representatives from', data.source);
 
     // Convert all representatives to internal type
     const representatives = await Promise.all(
@@ -178,26 +178,26 @@ export async function fetchRepsByNameV2(name: string): Promise<Representative[]>
 
     return representatives;
   } catch (error) {
-    console.error('[V2 API] Name search error:', error);
+    console.error('[V3 API] Name search error:', error);
     throw error;
   }
 }
 
 /**
- * Get all current MPs using V2 API
+ * Get all current MPs using V3 bundled data API
  */
 export async function fetchAllMPsV2(): Promise<Representative[]> {
-  console.log('[V2 API] Fetching all MPs');
+  console.log('[V3 API] Fetching all MPs');
 
   try {
-    const response = await fetch('/api/v2/representatives/all');
+    const response = await fetch('/api/v3/representatives/all');
 
     if (!response.ok) {
-      throw new Error(`V2 API error: ${response.status} ${response.statusText}`);
+      throw new Error(`V3 API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('[V2 API] Fetched', data.count, 'MPs');
+    console.log('[V3 API] Fetched', data.count, 'MPs');
 
     // Convert all to internal type
     const representatives = await Promise.all(
@@ -206,7 +206,7 @@ export async function fetchAllMPsV2(): Promise<Representative[]> {
 
     return representatives;
   } catch (error) {
-    console.error('[V2 API] Fetch all MPs error:', error);
+    console.error('[V3 API] Fetch all MPs error:', error);
     throw error;
   }
 }

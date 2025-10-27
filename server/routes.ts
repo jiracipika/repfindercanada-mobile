@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertRepresentativeSchema, insertSearchSchema, insertSavedRepresentativeSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerHybridRoutes } from "./hybridRoutes";
+import { registerBundledRoutes } from "./bundledRoutes";
 
 interface OpenParliamentRepresentative {
   name: string;
@@ -753,6 +754,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register new hybrid API routes (v2)
   // These use multiple data sources for improved accuracy
   registerHybridRoutes(app);
+
+  // Register bundled data routes (v3)
+  // These use offline-first architecture with bundled MP XML data
+  registerBundledRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
