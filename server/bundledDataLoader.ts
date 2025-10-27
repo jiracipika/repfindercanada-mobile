@@ -1,6 +1,16 @@
 /**
  * Bundled Data Loader Service
- * Loads MP data from bundled XML and checks for updates
+ *
+ * OFFLINE-FIRST ARCHITECTURE
+ * Loads MP data from bundled XML with periodic online updates
+ *
+ * Data Strategy:
+ * 1. Load from bundled XML file (offline capability)
+ * 2. Periodically check House of Commons website for updates (every 6 hours)
+ * 3. Update in-memory cache if new data available
+ *
+ * This ensures the app works offline while staying current with official data.
+ * All XML fetching is SERVER-SIDE (no CORS issues).
  */
 
 import { readFileSync } from 'fs';

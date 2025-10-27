@@ -1,7 +1,18 @@
 /**
  * Improved Postal Code Service
- * Uses Open North Represent API for postal code → riding lookup
- * Then uses bundled MP data for accurate MP information
+ *
+ * HYBRID POSTAL CODE LOOKUP
+ * Combines Represent API (postal code→riding) with House of Commons XML (MP data)
+ *
+ * Data Flow:
+ * 1. Postal code → Riding name (via Represent API, server-side)
+ * 2. Riding name → MP data (via bundled House of Commons XML)
+ * 3. Enrich with Represent API contact info if available
+ *
+ * Why this approach:
+ * - Represent API: Best for postal code to riding mapping
+ * - House of Commons XML: Official source of truth for MP data (DB Primary)
+ * - Server-side fetching: No CORS issues
  */
 
 import { getMPByRiding } from './bundledDataLoader';

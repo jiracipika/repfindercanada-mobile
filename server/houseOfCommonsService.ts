@@ -1,6 +1,25 @@
 /**
  * House of Commons Data Service
+ *
+ * PRIMARY DATA SOURCE (DB Primary)
  * Fetches official MP data from ourcommons.ca XML feeds
+ *
+ * Data Flow:
+ * 1. PRIMARY: House of Commons XML (server-side fetch, no CORS)
+ *    - Source: https://www.ourcommons.ca/Members/en/search/xml
+ *    - Contains: MP names, ridings, parties, provinces, email, photos
+ *    - Cached for 24 hours
+ *
+ * 2. SECONDARY: Represent API (used for postal code→riding lookup only)
+ *    - Source: https://represent.opennorth.ca
+ *    - Used for: Postal code to riding mapping
+ *    - Falls back for: Missing contact information
+ *
+ * 3. TERTIARY: Web scraping (for detailed contact info)
+ *    - Source: ourcommons.ca MP profile pages
+ *    - Used for: Constituency offices, phone numbers
+ *
+ * All data fetching is SERVER-SIDE to avoid CORS issues.
  */
 
 import { parseStringPromise } from 'xml2js';
