@@ -64,14 +64,21 @@ async function lookupRidingFromRepresentAPI(postalCode: string): Promise<{
   try {
     console.log(`[PostalCodeService] Looking up postal code ${postalCode} via Represent API...`);
 
+    // Add abort controller with 8 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     const response = await fetch(
       `https://represent.opennorth.ca/postcodes/${encodeURIComponent(postalCode)}/`,
       {
         headers: {
           'Accept': 'application/json',
         },
+        signal: controller.signal,
       }
     );
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`[PostalCodeService] Represent API returned ${response.status}`);
@@ -104,7 +111,11 @@ async function lookupRidingFromRepresentAPI(postalCode: string): Promise<{
     };
 
   } catch (error: any) {
-    console.error('[PostalCodeService] Represent API error:', error?.message || String(error));
+    if (error.name === 'AbortError') {
+      console.error('[PostalCodeService] Represent API timed out after 8 seconds');
+    } else {
+      console.error('[PostalCodeService] Represent API error:', error?.message || String(error));
+    }
     return null;
   }
 }

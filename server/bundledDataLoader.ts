@@ -110,17 +110,25 @@ async function loadFromBundle(): Promise<HouseOfCommonsMP[]> {
 
 /**
  * Check for updated MP data from House of Commons website
+ * With timeout to prevent hanging
  */
 async function checkForUpdates(): Promise<HouseOfCommonsMP[] | null> {
   try {
     console.log('[BundledDataLoader] Checking House of Commons website for updates...');
+
+    // Add abort controller with 10 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch('https://www.ourcommons.ca/Members/en/search/xml', {
       headers: {
         'User-Agent': 'CanadianRepFinder/2.0',
         'Accept': 'application/xml, text/xml',
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`[BundledDataLoader] Update check failed: ${response.status} ${response.statusText}`);
@@ -146,31 +154,44 @@ async function checkForUpdates(): Promise<HouseOfCommonsMP[] | null> {
     return null;
 
   } catch (error: any) {
-    console.warn('[BundledDataLoader] Update check failed:', error?.message || String(error));
+    if (error.name === 'AbortError') {
+      console.warn('[BundledDataLoader] Update check timed out after 10 seconds');
+    } else {
+      console.warn('[BundledDataLoader] Update check failed:', error?.message || String(error));
+    }
     return null;
   }
 }
 
 /**
  * Initialize the bundled data loader
- * Loads from bundle and optionally checks for updates
+ * Loads from bundle and optionally checks for updates IN BACKGROUND
  */
 export async function initializeBundledData(checkUpdates = true): Promise<void> {
   try {
-    // First load: always load from bundle
+    // First load: always load from bundle (FAST, synchronous)
     if (allMPs.length === 0) {
       allMPs = await loadFromBundle();
     }
 
-    // Check for updates if requested and enough time has passed
+    // Check for updates IN BACKGROUND (non-blocking)
+    // This allows the server to start immediately
     if (checkUpdates && (Date.now() - lastUpdateCheck) > UPDATE_CHECK_INTERVAL) {
       lastUpdateCheck = Date.now();
 
-      const updatedMPs = await checkForUpdates();
-      if (updatedMPs) {
-        allMPs = updatedMPs;
-        console.log('[BundledDataLoader] ✓ MP data updated from House of Commons website');
-      }
+      // Run update check in background without awaiting
+      checkForUpdates()
+        .then(updatedMPs => {
+          if (updatedMPs) {
+            allMPs = updatedMPs;
+            console.log('[BundledDataLoader] ✓ MP data updated from House of Commons website (background)');
+          }
+        })
+        .catch(error => {
+          console.warn('[BundledDataLoader] Background update check failed:', error?.message || String(error));
+        });
+
+      console.log('[BundledDataLoader] Background update check started (non-blocking)');
     }
 
   } catch (error: any) {
