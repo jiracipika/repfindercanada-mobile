@@ -31,27 +31,54 @@ export interface FederalMP {
 }
 
 /**
- * Fetches all current MPs from House of Commons XML feed
- * Source: https://www.ourcommons.ca/Members/en/search/xml
+ * Fetches all current MPs from the v3 API (uses bundled House of Commons data)
+ * This avoids CORS issues and uses the server's bundled MP data
  */
 export async function fetchHouseOfCommonsMPs(): Promise<FederalMP[]> {
   try {
-    console.log('[FederalDataSource] Fetching MPs from House of Commons...');
+    console.log('[FederalDataSource] Fetching MPs from v3 API...');
 
-    const response = await fetch('https://www.ourcommons.ca/Members/en/search/xml', {
+    const response = await fetch('/api/v3/representatives/all', {
       headers: {
-        'Accept': 'application/xml, text/xml',
+        'Accept': 'application/json',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`House of Commons fetch failed: ${response.status}`);
+      throw new Error(`v3 API fetch failed: ${response.status}`);
     }
 
-    const xmlText = await response.text();
-    const mps = parseHouseOfCommonsXML(xmlText);
+    const data = await response.json();
 
-    console.log(`[FederalDataSource] Successfully fetched ${mps.length} MPs`);
+    if (!data.success || !data.representatives) {
+      throw new Error('Invalid v3 API response');
+    }
+
+    // Convert v3 API format to FederalMP format
+    const mps: FederalMP[] = data.representatives.map((rep: any) => ({
+      id: rep.id,
+      firstName: rep.firstName,
+      lastName: rep.lastName,
+      name: rep.name,
+      honorific: rep.honorific,
+      riding: rep.constituency,
+      province: rep.province,
+      party: rep.party,
+      startDate: rep.fromDate || '',
+      endDate: rep.toDate,
+      email: rep.email,
+      photoUrl: rep.photoUrl,
+      profileUrl: rep.profileUrl,
+      phone: rep.phone,
+      offices: rep.offices?.map((office: any) => ({
+        type: office.type === 'Hill' ? 'hill' : 'constituency',
+        address: office.address,
+        phone: office.phone,
+        fax: office.fax,
+      })),
+    }));
+
+    console.log(`[FederalDataSource] Successfully fetched ${mps.length} MPs from v3 API`);
     return mps;
   } catch (error) {
     console.error('[FederalDataSource] Failed to fetch MPs:', error);
@@ -59,60 +86,12 @@ export async function fetchHouseOfCommonsMPs(): Promise<FederalMP[]> {
   }
 }
 
-/**
- * Parse House of Commons XML into structured MP data
- */
-function parseHouseOfCommonsXML(xmlText: string): FederalMP[] {
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-
-  const memberNodes = xmlDoc.querySelectorAll('MemberOfParliament');
-  const mps: FederalMP[] = [];
-
-  memberNodes.forEach((node) => {
-    const personId = getTextContent(node, 'PersonId');
-    const firstName = getTextContent(node, 'PersonOfficialFirstName');
-    const lastName = getTextContent(node, 'PersonOfficialLastName');
-
-    if (!personId || !firstName || !lastName) {
-      console.warn('[FederalDataSource] Skipping MP with missing required fields');
-      return;
-    }
-
-    const mp: FederalMP = {
-      id: personId,
-      firstName,
-      lastName,
-      name: `${firstName} ${lastName}`.trim(),
-      honorific: getTextContent(node, 'PersonShortHonorific') || undefined,
-      riding: getTextContent(node, 'ConstituencyName') || '',
-      province: getTextContent(node, 'ConstituencyProvinceTerritoryName') || '',
-      party: getTextContent(node, 'CaucusShortName') || '',
-      startDate: getTextContent(node, 'FromDateTime') || '',
-      endDate: getTextContent(node, 'ToDateTime') || undefined,
-      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@parl.gc.ca`,
-      profileUrl: `https://www.ourcommons.ca/members/en/${firstName}-${lastName}(${personId})`,
-    };
-
-    mps.push(mp);
-  });
-
-  return mps;
-}
 
 /**
- * Helper to get text content from XML node
+ * Fetch detailed contact info for a specific MP by ID
+ * Uses the v3 API which scrapes contact info on the server side
  */
-function getTextContent(node: Element, tagName: string): string | null {
-  const element = node.querySelector(tagName);
-  return element?.textContent?.trim() || null;
-}
-
-/**
- * Fetch detailed contact info for a specific MP from their profile page
- * This scrapes the ourcommons.ca MP profile page
- */
-export async function fetchMPContactInfo(profileUrl: string): Promise<{
+export async function fetchMPContactInfo(mpId: string): Promise<{
   phone?: string;
   offices?: Array<{
     type: 'constituency' | 'hill';
@@ -125,50 +104,30 @@ export async function fetchMPContactInfo(profileUrl: string): Promise<{
   }>;
 } | null> {
   try {
-    console.log(`[FederalDataSource] Fetching contact info from ${profileUrl}`);
+    console.log(`[FederalDataSource] Fetching contact info for MP ID: ${mpId}`);
 
-    const response = await fetch(profileUrl);
+    const response = await fetch(`/api/v3/representatives/${mpId}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch profile: ${response.status}`);
+      throw new Error(`Failed to fetch MP details: ${response.status}`);
     }
 
-    const html = await response.text();
+    const data = await response.json();
 
-    // Create a temporary DOM to parse HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
+    if (!data.success || !data.representative) {
+      return null;
+    }
 
-    // Extract office information
-    // Note: This is a basic implementation - the actual selectors will depend on the HTML structure
-    const offices: Array<{
-      type: 'constituency' | 'hill';
-      address?: string;
-      city?: string;
-      province?: string;
-      postalCode?: string;
-      phone?: string;
-      fax?: string;
-    }> = [];
+    const rep = data.representative;
 
-    // Look for office divs (you'll need to inspect the actual HTML and adjust selectors)
-    const officeElements = tempDiv.querySelectorAll('.ce-mip-mp-description');
-
-    officeElements.forEach((element) => {
-      const text = element.textContent || '';
-
-      // Try to identify office type
-      const isHill = text.toLowerCase().includes('parliament') || text.toLowerCase().includes('hill');
-
-      // Extract phone numbers (basic pattern)
-      const phoneMatch = text.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/);
-
-      offices.push({
-        type: isHill ? 'hill' : 'constituency',
-        phone: phoneMatch ? phoneMatch[0] : undefined,
-      });
-    });
-
-    return offices.length > 0 ? { offices } : null;
+    return {
+      phone: rep.phone,
+      offices: rep.offices?.map((office: any) => ({
+        type: office.type === 'Hill' ? 'hill' : 'constituency',
+        address: office.address,
+        phone: office.phone,
+        fax: office.fax,
+      })),
+    };
   } catch (error) {
     console.error(`[FederalDataSource] Failed to fetch contact info:`, error);
     return null;
