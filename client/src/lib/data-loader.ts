@@ -16,6 +16,8 @@ import {
   needsDataRefresh,
   searchFederalMPsByRiding,
   searchFederalMPsByName,
+  getDataMetadata,
+  clearAllData,
 } from './storage/representativeDatabase';
 
 export interface DataLoadProgress {
@@ -202,7 +204,6 @@ export async function getDataStats() {
 }
 
 async function getLastUpdated(key: 'federal' | 'provincial' | 'municipal'): Promise<string | null> {
-  const { getDataMetadata } = await import('./storage/representativeDatabase');
   const metadata = await getDataMetadata(key);
   return metadata?.lastUpdated || null;
 }
@@ -214,7 +215,6 @@ export async function forceRefreshAllData(onProgress?: ProgressCallback): Promis
   console.log('[DataLoader] Force refreshing all data...');
 
   // Clear cache first
-  const { clearAllData } = await import('./storage/representativeDatabase');
   await clearAllData();
 
   // Load fresh data

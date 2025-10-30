@@ -27,16 +27,11 @@ function canonicalString(input: IdInput): string {
 }
 
 async function sha256Hex(msg: string): Promise<string> {
-  if (typeof window !== "undefined" && window.crypto?.subtle) {
-    const enc = new TextEncoder().encode(msg);
-    const buf = await window.crypto.subtle.digest("SHA-256", enc);
-    const bytes = Array.from(new Uint8Array(buf));
-    return bytes.map(b => b.toString(16).padStart(2, "0")).join("");
-  } else {
-    // Node / SSR fallback
-    const { createHash } = await import("crypto");
-    return createHash("sha256").update(msg).digest("hex");
-  }
+  // Use Web Crypto API (available in all modern browsers and Capacitor)
+  const enc = new TextEncoder().encode(msg);
+  const buf = await window.crypto.subtle.digest("SHA-256", enc);
+  const bytes = Array.from(new Uint8Array(buf));
+  return bytes.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function makeRepresentativeId(input: IdInput): Promise<string> {

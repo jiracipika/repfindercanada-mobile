@@ -1,9 +1,8 @@
 /**
  * Postal Code Lookup Service
- * Combines Represent API for postal code → riding mapping with local IndexedDB for MP data
+ * Uses server API v2 with manual corrections for accurate riding lookups
  */
 
-import { searchFederalMPsByRiding } from './storage/representativeDatabase';
 import type { FederalMP } from './data-sources/federalDataSource';
 
 interface PostalCodeLookupResult {
@@ -11,22 +10,15 @@ interface PostalCodeLookupResult {
   riding: string;
   province: string;
   confidence: 'high' | 'medium' | 'low';
-  source: 'cache_manual' | 'represent_verified' | 'represent_unverified';
+  source: 'cache_manual' | 'represent_verified' | 'represent_unverified' | 'house_of_commons';
   warnings?: string[];
 }
 
 /**
- * Known postal code corrections
- * These override Represent API for known incorrect mappings
+ * NOTE: Postal code corrections are now managed server-side
+ * Use the server API endpoint /api/v2/admin/postal-code-correction
+ * to add new corrections
  */
-const POSTAL_CODE_CORRECTIONS: Record<string, { riding: string; province: string; notes: string }> = {
-  'M1C5E9': {
-    riding: 'Scarborough—Guildwood—Rouge Park',
-    province: 'Ontario',
-    notes: 'User reported - Represent API incorrectly returns Scarborough—Woburn',
-  },
-  // Add more corrections here as they are reported
-};
 
 /**
  * Normalize postal code to standard format (uppercase, no spaces)
@@ -48,207 +40,187 @@ function normalizeRidingName(ridingName: string): string {
 }
 
 /**
- * Lookup riding name from postal code using Represent API
+ * NOTE: Direct Represent API calls removed
+ * Server API now handles all postal code lookups with corrections
  */
-async function lookupRidingFromRepresentAPI(postalCode: string): Promise<{
-  riding: string;
-  province: string;
-  boundaryUrl?: string;
-} | null> {
-  try {
-    const response = await fetch(
-      `https://represent.opennorth.ca/postcodes/${postalCode}/?sets=federal-electoral-districts-2023-representation-order`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Represent API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Find the federal electoral district representative
-    const federalRep = data.representatives_centroid?.find(
-      (rep: any) => rep.elected_office === 'MP'
-    );
-
-    if (!federalRep) {
-      return null;
-    }
-
-    return {
-      riding: federalRep.district_name,
-      province: data.province || 'Unknown',
-      boundaryUrl: federalRep.related?.boundary_url,
-    };
-  } catch (error) {
-    console.error('[PostalCodeLookup] Represent API error:', error);
-    return null;
-  }
-}
 
 /**
  * Main postal code lookup function
- * 1. Check manual corrections first
- * 2. Use Represent API for postal code → riding
- * 3. Search local IndexedDB for MP
- * 4. Verify MP exists and return with confidence level
+ * Uses server API v2 which has:
+ * 1. Manual corrections for known inaccurate postal codes
+ * 2. House of Commons XML as source of truth
+ * 3. Represent API for postal code → riding mapping with verification
  */
 export async function lookupByPostalCode(
   postalCode: string
 ): Promise<PostalCodeLookupResult | null> {
   const normalized = normalizePostalCode(postalCode);
 
-  console.log(`[PostalCodeLookup] Looking up postal code: ${normalized}`);
+  console.log(`[PostalCodeLookup] Looking up postal code via server API: ${normalized}`);
 
-  // Step 1: Check manual corrections
-  const correction = POSTAL_CODE_CORRECTIONS[normalized];
-  if (correction) {
-    console.log(`[PostalCodeLookup] Using manual correction for ${normalized}`);
+  try {
+    const response = await fetch('/api/v2/representatives/postal-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ postalCode: normalized }),
+    });
 
-    const mps = await searchFederalMPsByRiding(correction.riding);
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn(`[PostalCodeLookup] No representative found for ${normalized}`);
+        return null;
+      }
+      throw new Error(`Server API failed: ${response.status}`);
+    }
 
-    if (mps.length === 0) {
-      console.warn(
-        `[PostalCodeLookup] Manual correction riding not found: ${correction.riding}`
-      );
+    const data = await response.json();
+    const rep = data.representative;
+    const lookup = data.lookup;
+
+    if (!rep) {
       return null;
     }
 
-    return {
-      mp: mps[0],
-      riding: correction.riding,
-      province: correction.province,
-      confidence: 'high',
-      source: 'cache_manual',
-      warnings: [],
+    // Convert server response to FederalMP format
+    const mp: FederalMP = {
+      id: rep.parliamentId || rep.id || 'unknown',
+      name: rep.name,
+      firstName: rep.name.split(' ')[0] || '',
+      lastName: rep.name.split(' ').slice(1).join(' ') || '',
+      riding: rep.constituency,
+      province: rep.province,
+      party: rep.party,
+      email: rep.email,
+      phone: rep.phone,
+      photoUrl: rep.photo,
+      profileUrl: rep.profileUrl,
+      offices: rep.offices,
+      startDate: '',
+      dataQuality: {
+        source: lookup.source === 'cache_manual' ? 'house_of_commons+scraped' : 'house_of_commons',
+        hasContactInfo: !!(rep.email || rep.phone),
+        hasOfficeInfo: !!(rep.offices && rep.offices.length > 0),
+        lastUpdated: new Date().toISOString(),
+      },
     };
-  }
 
-  // Step 2: Use Represent API for postal code → riding lookup
-  const representResult = await lookupRidingFromRepresentAPI(normalized);
-
-  if (!representResult) {
-    console.warn(`[PostalCodeLookup] Represent API returned no results for ${normalized}`);
-    return null;
-  }
-
-  console.log(
-    `[PostalCodeLookup] Represent API returned: ${representResult.riding}`
-  );
-
-  // Step 3: Search local IndexedDB for MP by riding name
-  let mps = await searchFederalMPsByRiding(representResult.riding);
-
-  // If exact match fails, try fuzzy matching
-  if (mps.length === 0) {
-    console.log(`[PostalCodeLookup] Exact match failed, trying fuzzy match...`);
-
-    // Get all MPs and do fuzzy matching
-    const { getAllFederalMPs } = await import('./storage/representativeDatabase');
-    const allMPs = await getAllFederalMPs();
-
-    const normalizedSearch = normalizeRidingName(representResult.riding);
-
-    mps = allMPs.filter((mp) => {
-      const normalizedRiding = normalizeRidingName(mp.riding);
-      return (
-        normalizedRiding === normalizedSearch ||
-        normalizedRiding.includes(normalizedSearch) ||
-        normalizedSearch.includes(normalizedRiding)
-      );
-    });
-  }
-
-  if (mps.length === 0) {
-    console.warn(
-      `[PostalCodeLookup] No MP found for riding: ${representResult.riding}`
+    console.log(
+      `[PostalCodeLookup] ✓ Found MP: ${mp.name} (${mp.riding}) - ` +
+      `Source: ${lookup.source}, Confidence: ${lookup.confidence}`
     );
 
     return {
-      mp: {
-        id: 'unknown',
-        name: 'Unknown',
-        firstName: '',
-        lastName: '',
-        riding: representResult.riding,
-        province: representResult.province,
-        party: 'Unknown',
-        startDate: '',
-      },
-      riding: representResult.riding,
-      province: representResult.province,
-      confidence: 'low',
-      source: 'represent_unverified',
-      warnings: [
-        `Riding "${representResult.riding}" not found in official House of Commons data. ` +
-        `This may be due to redistribution or API data mismatch. ` +
-        `Please verify with Elections Canada.`,
-      ],
+      mp,
+      riding: rep.constituency,
+      province: rep.province,
+      confidence: lookup.confidence,
+      source: lookup.source,
+      warnings: rep.dataQuality?.warnings || [],
     };
+
+  } catch (error) {
+    console.error(`[PostalCodeLookup] Server API lookup failed:`, error);
+    return null;
   }
-
-  // Step 4: Return verified result
-  const mp = mps[0];
-
-  console.log(`[PostalCodeLookup] ✓ Found MP: ${mp.name} (${mp.riding})`);
-
-  return {
-    mp,
-    riding: mp.riding, // Use official HoC riding name
-    province: mp.province,
-    confidence: 'high',
-    source: 'represent_verified',
-    warnings: [],
-  };
 }
 
 /**
  * Add a postal code correction
- * Useful for reporting incorrect mappings
+ * Submits correction to server for persistence
  */
-export function addPostalCodeCorrection(
+export async function addPostalCodeCorrection(
   postalCode: string,
   riding: string,
   province: string,
   notes?: string
-): void {
+): Promise<boolean> {
   const normalized = normalizePostalCode(postalCode);
 
-  POSTAL_CODE_CORRECTIONS[normalized] = {
-    riding,
-    province,
-    notes: notes || 'User correction',
-  };
+  try {
+    const response = await fetch('/api/v2/admin/postal-code-correction', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        postalCode: normalized,
+        ridingName: riding,
+        province,
+        notes: notes || 'User-reported correction',
+      }),
+    });
 
-  console.log(`[PostalCodeLookup] Added correction: ${normalized} → ${riding}`);
+    if (!response.ok) {
+      throw new Error(`Failed to save correction: ${response.status}`);
+    }
 
-  // TODO: Save to IndexedDB or Capacitor Preferences for persistence
+    console.log(`[PostalCodeLookup] ✓ Correction saved: ${normalized} → ${riding}`);
+    return true;
+  } catch (error) {
+    console.error('[PostalCodeLookup] Failed to save correction:', error);
+    return false;
+  }
 }
 
 /**
- * Get all postal code corrections
+ * Get all postal code corrections from server
  */
-export function getPostalCodeCorrections(): typeof POSTAL_CODE_CORRECTIONS {
-  return { ...POSTAL_CODE_CORRECTIONS };
+export async function getPostalCodeCorrections(): Promise<any[]> {
+  try {
+    const response = await fetch('/api/v2/admin/postal-code-cache');
+    if (!response.ok) {
+      throw new Error(`Failed to get corrections: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.cache || [];
+  } catch (error) {
+    console.error('[PostalCodeLookup] Failed to get corrections:', error);
+    return [];
+  }
 }
 
 /**
  * Export corrections for sharing/backup
  */
-export function exportCorrections(): string {
-  return JSON.stringify(POSTAL_CODE_CORRECTIONS, null, 2);
+export async function exportCorrections(): Promise<string> {
+  try {
+    const response = await fetch('/api/v2/admin/export-corrections');
+    if (!response.ok) {
+      throw new Error(`Failed to export corrections: ${response.status}`);
+    }
+    const data = await response.json();
+    return JSON.stringify(data, null, 2);
+  } catch (error) {
+    console.error('[PostalCodeLookup] Failed to export corrections:', error);
+    return JSON.stringify({ error: 'Failed to export' });
+  }
 }
 
 /**
  * Import corrections from JSON
  */
-export function importCorrections(json: string): void {
+export async function importCorrections(json: string): Promise<boolean> {
   try {
     const corrections = JSON.parse(json);
-    Object.assign(POSTAL_CODE_CORRECTIONS, corrections);
-    console.log(`[PostalCodeLookup] Imported ${Object.keys(corrections).length} corrections`);
+    const response = await fetch('/api/v2/admin/import-corrections', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ corrections: corrections.corrections || corrections }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to import corrections: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log(`[PostalCodeLookup] ✓ Imported ${result.imported} corrections`);
+    return true;
   } catch (error) {
     console.error('[PostalCodeLookup] Failed to import corrections:', error);
-    throw error;
+    return false;
   }
 }

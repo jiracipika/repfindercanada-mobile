@@ -2,126 +2,113 @@
  * Hybrid Federal Data Source
  *
  * Strategy:
- * 1. PRIMARY: OpenParliament API - Detailed MP information from official sources
- * 2. SECONDARY: Represent API (Open North) - Fill in missing contact/office info
+ * 1. PRIMARY: House of Commons XML (via server API) - Official MP data, no CORS issues
+ * 2. SECONDARY: Server enriches with scraped contact info as needed
  *
- * This provides the best of both worlds:
- * - OpenParliament: More detailed, official data
- * - Represent API: Better office/contact information
+ * This provides:
+ * - Official House of Commons data (343 MPs as of 2023 Representation Order)
+ * - Server-side fetching avoids CORS
+ * - 24-hour caching for performance
  */
 
-import {
-  fetchOpenParliamentMPs,
-  fetchMPDetails,
-  type FederalMP as OpenParliamentMP,
-} from './openParliamentAPI';
+import type { HouseOfCommonsMP } from '../../../../server/houseOfCommonsService';
 
-import {
-  fetchHouseOfCommonsMPs as fetchRepresentMPs,
-  type FederalMP as RepresentMP,
-} from './representAPI';
-
-export type FederalMP = OpenParliamentMP;
+// Client-side FederalMP type (compatible with HouseOfCommonsMP)
+export interface FederalMP {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  riding: string;
+  province: string;
+  party: string;
+  email?: string;
+  photoUrl?: string;
+  profileUrl?: string;
+  personalUrl?: string;
+  phone?: string;
+  fax?: string;
+  gender?: string;
+  startDate?: string;
+  endDate?: string;
+  offices?: Array<{
+    type: 'constituency' | 'hill' | 'legislature';
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    phone?: string;
+    fax?: string;
+  }>;
+  social?: {
+    twitter?: string;
+    facebook?: string;
+    website?: string;
+  };
+  // Data quality metadata
+  dataQuality: {
+    source: 'house_of_commons' | 'house_of_commons+scraped';
+    hasContactInfo: boolean;
+    hasOfficeInfo: boolean;
+    lastUpdated: string;
+  };
+}
 
 /**
- * Fetches all current federal MPs using hybrid approach
+ * Fetches all current federal MPs from server
  *
  * Process:
- * 1. Fetch from OpenParliament (primary source)
- * 2. For MPs missing contact info, enrich with Represent API data
- * 3. Return merged dataset with quality indicators
+ * 1. Call server API /api/v2/representatives/all
+ * 2. Server fetches from House of Commons XML (no CORS)
+ * 3. Server caches for 24 hours
+ * 4. Transform to client format
  */
 export async function fetchHouseOfCommonsMPs(): Promise<FederalMP[]> {
   try {
-    console.log('[HybridDataSource] Starting hybrid MP data fetch...');
-    console.log('[HybridDataSource] Step 1/3: Fetching from OpenParliament (primary)...');
+    console.log('[HybridDataSource] Fetching MPs from server API...');
 
-    // Step 1: Get MPs from OpenParliament
-    const openParliamentMPs = await fetchOpenParliamentMPs();
-    console.log(`[HybridDataSource] ✓ OpenParliament returned ${openParliamentMPs.length} MPs`);
+    const response = await fetch('/api/v2/representatives/all');
 
-    // Step 2: Check data quality and identify gaps
-    const mpsWithGaps = openParliamentMPs.filter(mp =>
-      !mp.dataQuality.hasContactInfo || !mp.dataQuality.hasOfficeInfo
-    );
-
-    console.log(`[HybridDataSource] Found ${mpsWithGaps.length} MPs with missing contact/office info`);
-
-    if (mpsWithGaps.length === 0) {
-      console.log('[HybridDataSource] ✓ All MPs have complete data from OpenParliament');
-      return openParliamentMPs;
+    if (!response.ok) {
+      throw new Error(`Server API failed: ${response.status} ${response.statusText}`);
     }
 
-    // Step 3: Fetch from Represent API as fallback
-    console.log('[HybridDataSource] Step 2/3: Fetching from Represent API (secondary)...');
+    const data = await response.json();
 
-    let representMPs: RepresentMP[] = [];
-    try {
-      representMPs = await fetchRepresentMPs();
-      console.log(`[HybridDataSource] ✓ Represent API returned ${representMPs.length} MPs`);
-    } catch (error) {
-      console.warn('[HybridDataSource] Represent API fetch failed, using OpenParliament data only:', error);
-      return openParliamentMPs;
+    if (!data.representatives || !Array.isArray(data.representatives)) {
+      throw new Error('Invalid response format from server');
     }
 
-    // Step 4: Merge data - enrich OpenParliament with Represent API
-    console.log('[HybridDataSource] Step 3/3: Merging data sources...');
+    console.log(`[HybridDataSource] ✓ Received ${data.count} MPs from server (source: ${data.source})`);
 
-    const enrichedMPs = openParliamentMPs.map(opMP => {
-      // Find matching MP in Represent API data
-      const representMP = representMPs.find(rMP =>
-        normalizeRidingName(rMP.riding) === normalizeRidingName(opMP.riding) ||
-        normalizeName(rMP.name) === normalizeName(opMP.name)
-      );
+    // Convert HouseOfCommonsMP format to FederalMP format
+    const federalMPs: FederalMP[] = data.representatives.map((mp: HouseOfCommonsMP) => ({
+      id: mp.id,
+      name: mp.name,
+      firstName: mp.firstName,
+      lastName: mp.lastName,
+      riding: mp.constituency, // HouseOfCommons uses "constituency"
+      province: mp.province,
+      party: mp.party,
+      email: mp.email,
+      photoUrl: mp.photoUrl,
+      profileUrl: mp.profileUrl,
+      startDate: mp.fromDate,
+      endDate: mp.toDate,
+      dataQuality: {
+        source: 'house_of_commons',
+        hasContactInfo: !!mp.email,
+        hasOfficeInfo: false, // Office info requires scraping
+        lastUpdated: new Date().toISOString(),
+      },
+    }));
 
-      if (!representMP) {
-        return opMP; // No match, return as-is
-      }
+    console.log(`[HybridDataSource] ✓ Transformed ${federalMPs.length} MPs to client format`);
 
-      // Check if OpenParliament MP needs enrichment
-      const needsEnrichment = !opMP.dataQuality.hasContactInfo || !opMP.dataQuality.hasOfficeInfo;
-
-      if (!needsEnrichment) {
-        return opMP; // Already has complete data
-      }
-
-      // Merge data, preferring OpenParliament but filling gaps with Represent
-      const enriched: FederalMP = {
-        ...opMP,
-        // Fill missing contact info
-        email: opMP.email || representMP.email,
-        phone: opMP.phone || representMP.phone,
-        // Fill missing office info
-        offices: opMP.offices && opMP.offices.length > 0
-          ? opMP.offices
-          : representMP.offices,
-        // Fill missing social media
-        social: {
-          twitter: opMP.social?.twitter || representMP.social?.twitter,
-          facebook: opMP.social?.facebook || representMP.social?.facebook,
-          website: opMP.social?.website || representMP.personalUrl,
-        },
-        // Update data quality
-        dataQuality: {
-          source: 'openparliament+represent',
-          hasContactInfo: !!(opMP.email || representMP.email || opMP.phone || representMP.phone),
-          hasOfficeInfo: !!((opMP.offices && opMP.offices.length > 0) || (representMP.offices && representMP.offices.length > 0)),
-          lastUpdated: new Date().toISOString(),
-        },
-      };
-
-      console.log(`[HybridDataSource] ✓ Enriched ${opMP.name} with Represent API data`);
-      return enriched;
-    });
-
-    const enrichedCount = enrichedMPs.filter(mp => mp.dataQuality.source === 'openparliament+represent').length;
-    console.log(`[HybridDataSource] ✓ Enriched ${enrichedCount} MPs with Represent API data`);
-    console.log(`[HybridDataSource] ✓ Final dataset: ${enrichedMPs.length} MPs`);
-
-    return enrichedMPs;
+    return federalMPs;
 
   } catch (error) {
-    console.error('[HybridDataSource] Hybrid fetch failed:', error);
+    console.error('[HybridDataSource] Failed to fetch MPs from server:', error);
     throw error;
   }
 }
@@ -149,17 +136,44 @@ function normalizeName(name: string): string {
 }
 
 /**
- * Search MPs by name (uses OpenParliament primarily)
+ * Search MPs by name using server API
  */
 export async function searchMPsByName(name: string): Promise<FederalMP[]> {
   try {
     console.log(`[HybridDataSource] Searching for: ${name}`);
 
-    // Import search function from OpenParliament
-    const { searchMPsByName: opSearch } = await import('./openParliamentAPI');
-    const results = await opSearch(name);
+    const response = await fetch('/api/v2/representatives/search-name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
 
-    console.log(`[HybridDataSource] ✓ Found ${results.length} results from OpenParliament`);
+    if (!response.ok) {
+      throw new Error(`Server API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Convert to FederalMP format
+    const results: FederalMP[] = (data.representatives || []).map((mp: any) => ({
+      id: mp.parliamentId || mp.id,
+      name: mp.name,
+      firstName: mp.name.split(' ')[0] || '',
+      lastName: mp.name.split(' ').slice(1).join(' ') || '',
+      riding: mp.constituency,
+      province: mp.province,
+      party: mp.party,
+      email: mp.email,
+      profileUrl: mp.profileUrl,
+      dataQuality: {
+        source: 'house_of_commons',
+        hasContactInfo: !!mp.email,
+        hasOfficeInfo: false,
+        lastUpdated: new Date().toISOString(),
+      },
+    }));
+
+    console.log(`[HybridDataSource] ✓ Found ${results.length} results`);
     return results;
 
   } catch (error) {
@@ -169,48 +183,55 @@ export async function searchMPsByName(name: string): Promise<FederalMP[]> {
 }
 
 /**
- * Find MP by riding (uses OpenParliament primarily)
+ * Find MP by riding using server API
  */
 export async function fetchMPByRiding(ridingName: string): Promise<FederalMP | null> {
   try {
     console.log(`[HybridDataSource] Looking up riding: ${ridingName}`);
 
-    // Import function from OpenParliament
-    const { fetchMPByRiding: opFetch } = await import('./openParliamentAPI');
-    const mp = await opFetch(ridingName);
+    const response = await fetch(`/api/v2/representatives/riding/${encodeURIComponent(ridingName)}`);
 
-    if (mp) {
-      console.log(`[HybridDataSource] ✓ Found ${mp.name} from OpenParliament`);
-
-      // If missing contact info, try to enrich with Represent API
-      if (!mp.dataQuality.hasContactInfo || !mp.dataQuality.hasOfficeInfo) {
-        console.log(`[HybridDataSource] Attempting to enrich ${mp.name} with Represent API...`);
-
-        try {
-          const { fetchMPByRiding: representFetch } = await import('./representAPI');
-          const representMP = await representFetch(ridingName);
-
-          if (representMP) {
-            return {
-              ...mp,
-              email: mp.email || representMP.email,
-              phone: mp.phone || representMP.phone,
-              offices: mp.offices && mp.offices.length > 0 ? mp.offices : representMP.offices,
-              dataQuality: {
-                source: 'openparliament+represent',
-                hasContactInfo: !!(mp.email || representMP.email || mp.phone || representMP.phone),
-                hasOfficeInfo: !!((mp.offices && mp.offices.length > 0) || (representMP.offices && representMP.offices.length > 0)),
-                lastUpdated: new Date().toISOString(),
-              },
-            };
-          }
-        } catch (error) {
-          console.warn('[HybridDataSource] Represent API enrichment failed, using OpenParliament data only');
-        }
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.log(`[HybridDataSource] No MP found for riding: ${ridingName}`);
+        return null;
       }
+      throw new Error(`Server API failed: ${response.status}`);
     }
 
-    return mp;
+    const data = await response.json();
+    const mp = data.representative;
+
+    if (!mp) {
+      return null;
+    }
+
+    // Convert to FederalMP format
+    const federalMP: FederalMP = {
+      id: mp.id,
+      name: mp.name,
+      firstName: mp.firstName,
+      lastName: mp.lastName,
+      riding: mp.constituency,
+      province: mp.province,
+      party: mp.party,
+      email: mp.email,
+      phone: mp.phone,
+      photoUrl: mp.photoUrl,
+      profileUrl: mp.profileUrl,
+      offices: mp.offices || [],
+      startDate: mp.fromDate,
+      endDate: mp.toDate,
+      dataQuality: {
+        source: mp.offices?.length > 0 ? 'house_of_commons+scraped' : 'house_of_commons',
+        hasContactInfo: !!(mp.email || mp.phone),
+        hasOfficeInfo: !!(mp.offices && mp.offices.length > 0),
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+
+    console.log(`[HybridDataSource] ✓ Found ${federalMP.name}`);
+    return federalMP;
 
   } catch (error) {
     console.error('[HybridDataSource] Riding lookup failed:', error);

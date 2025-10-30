@@ -23,7 +23,10 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(set NODE_ENV=development)",
+      "Bash(tsx server/index.ts:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []
