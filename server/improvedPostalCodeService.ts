@@ -1,7 +1,18 @@
 /**
  * Improved Postal Code Service
- * Uses Open North Represent API for postal code → riding lookup
- * Then uses bundled MP data for accurate MP information
+ *
+ * HYBRID POSTAL CODE LOOKUP
+ * Combines Represent API (postal code→riding) with House of Commons XML (MP data)
+ *
+ * Data Flow:
+ * 1. Postal code → Riding name (via Represent API, server-side)
+ * 2. Riding name → MP data (via bundled House of Commons XML)
+ * 3. Enrich with Represent API contact info if available
+ *
+ * Why this approach:
+ * - Represent API: Best for postal code to riding mapping
+ * - House of Commons XML: Official source of truth for MP data (DB Primary)
+ * - Server-side fetching: No CORS issues
  */
 
 import { getMPByRiding } from './bundledDataLoader';
@@ -53,14 +64,21 @@ async function lookupRidingFromRepresentAPI(postalCode: string): Promise<{
   try {
     console.log(`[PostalCodeService] Looking up postal code ${postalCode} via Represent API...`);
 
+    // Add abort controller with 8 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     const response = await fetch(
       `https://represent.opennorth.ca/postcodes/${encodeURIComponent(postalCode)}/`,
       {
         headers: {
           'Accept': 'application/json',
         },
+        signal: controller.signal,
       }
     );
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`[PostalCodeService] Represent API returned ${response.status}`);
@@ -93,7 +111,11 @@ async function lookupRidingFromRepresentAPI(postalCode: string): Promise<{
     };
 
   } catch (error: any) {
-    console.error('[PostalCodeService] Represent API error:', error?.message || String(error));
+    if (error.name === 'AbortError') {
+      console.error('[PostalCodeService] Represent API timed out after 8 seconds');
+    } else {
+      console.error('[PostalCodeService] Represent API error:', error?.message || String(error));
+    }
     return null;
   }
 }

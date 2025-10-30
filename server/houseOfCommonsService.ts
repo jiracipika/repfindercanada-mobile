@@ -1,6 +1,25 @@
 /**
  * House of Commons Data Service
+ *
+ * PRIMARY DATA SOURCE (DB Primary)
  * Fetches official MP data from ourcommons.ca XML feeds
+ *
+ * Data Flow:
+ * 1. PRIMARY: House of Commons XML (server-side fetch, no CORS)
+ *    - Source: https://www.ourcommons.ca/Members/en/search/xml
+ *    - Contains: MP names, ridings, parties, provinces, email, photos
+ *    - Cached for 24 hours
+ *
+ * 2. SECONDARY: Represent API (used for postal code→riding lookup only)
+ *    - Source: https://represent.opennorth.ca
+ *    - Used for: Postal code to riding mapping
+ *    - Falls back for: Missing contact information
+ *
+ * 3. TERTIARY: Web scraping (for detailed contact info)
+ *    - Source: ourcommons.ca MP profile pages
+ *    - Used for: Constituency offices, phone numbers
+ *
+ * All data fetching is SERVER-SIDE to avoid CORS issues.
  */
 
 import { parseStringPromise } from 'xml2js';
@@ -46,6 +65,10 @@ export async function getAllMPsFromHouseOfCommons(): Promise<HouseOfCommonsMP[]>
   try {
     console.log('Fetching MPs from House of Commons XML feed...');
 
+    // Add abort controller with 10 second timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     // The House of Commons provides an XML feed with all current members
     // Format: https://www.ourcommons.ca/Members/en/search/xml
     const response = await fetch('https://www.ourcommons.ca/Members/en/search/xml', {
@@ -53,7 +76,10 @@ export async function getAllMPsFromHouseOfCommons(): Promise<HouseOfCommonsMP[]>
         'User-Agent': 'CanadianRepFinder/1.0',
         'Accept': 'application/xml, text/xml',
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`House of Commons XML feed error: ${response.status} ${response.statusText}`);
@@ -115,7 +141,11 @@ export async function getAllMPsFromHouseOfCommons(): Promise<HouseOfCommonsMP[]>
 
     return hocMPsCache;
   } catch (error: any) {
-    console.error('Error fetching House of Commons data:', error?.message || String(error));
+    if (error.name === 'AbortError') {
+      console.error('House of Commons XML fetch timed out after 10 seconds');
+    } else {
+      console.error('Error fetching House of Commons data:', error?.message || String(error));
+    }
 
     // If cache exists but is stale, return it anyway
     if (hocMPsCache.length > 0) {
