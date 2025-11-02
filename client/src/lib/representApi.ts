@@ -54,6 +54,75 @@ interface BoundaryData {
 }
 
 /**
+ * Prioritize boundary sets to ensure we get the most current electoral boundaries
+ * Federal: 2023 > 2013 > 2003 representation orders
+ * Provincial: 2015 > 2005 representation acts
+ * Municipal: Current city wards > older divisions
+ */
+function prioritizeBoundarySet(boundarySetName: string): number {
+  const lowerName = boundarySetName.toLowerCase();
+
+  // Federal boundaries - prioritize newest representation order
+  if (lowerName.includes('federal electoral district')) {
+    if (lowerName.includes('2023')) return 1;
+    if (lowerName.includes('2013')) return 2;
+    if (lowerName.includes('2003')) return 3;
+    return 4;
+  }
+
+  // Provincial boundaries - prioritize newest representation act
+  if (lowerName.includes('ontario electoral district')) {
+    if (lowerName.includes('2015')) return 5;
+    if (lowerName.includes('2005')) return 6;
+    return 7;
+  }
+
+  // Municipal boundaries
+  if (lowerName.includes('toronto wards') || lowerName.includes('mississauga wards') ||
+      lowerName.includes('peel wards')) {
+    return 8;
+  }
+
+  // Census subdivisions (current)
+  if (lowerName.includes('census subdivision')) {
+    return 9;
+  }
+
+  // Census divisions (regional)
+  if (lowerName.includes('census division')) {
+    return 10;
+  }
+
+  // School boards (lower priority)
+  if (lowerName.includes('school board')) {
+    return 11;
+  }
+
+  return 12; // Other
+}
+
+/**
+ * Get the most current boundary for a given district name from multiple boundary options
+ */
+function getBestBoundaryForDistrict(districtName: string, boundaries: OpenNorthBoundary[]): OpenNorthBoundary | undefined {
+  const matchingBoundaries = boundaries.filter(boundary =>
+    boundary.name.toLowerCase() === districtName.toLowerCase()
+  );
+
+  if (matchingBoundaries.length === 0) return undefined;
+  if (matchingBoundaries.length === 1) return matchingBoundaries[0];
+
+  // Sort by priority and return the best one
+  matchingBoundaries.sort((a, b) => {
+    const priorityA = prioritizeBoundarySet(a.boundary_set_name);
+    const priorityB = prioritizeBoundarySet(b.boundary_set_name);
+    return priorityA - priorityB;
+  });
+
+  return matchingBoundaries[0];
+}
+
+/**
  * Convert raw result from Represent API to our internal Representative shape.
  */
 async function toRepresentative(raw: OpenNorthRepresentative, boundaryUrl?: string): Promise<Representative> {
@@ -116,19 +185,22 @@ export async function fetchRepsByPostal(postal: string, useCache: boolean = true
     // Get boundary URLs from the boundaries_centroid array
     const boundaries: OpenNorthBoundary[] = data.boundaries_centroid || data.boundaries_concordance || [];
 
-    // Create a mapping of district names to boundary URLs
-    const boundaryMap = new Map<string, string>();
-    boundaries.forEach((boundary: OpenNorthBoundary) => {
-      boundaryMap.set(boundary.name.toLowerCase(), boundary.url);
+    // Sort boundaries by priority to get the most current ones
+    boundaries.sort((a, b) => {
+      const priorityA = prioritizeBoundarySet(a.boundary_set_name);
+      const priorityB = prioritizeBoundarySet(b.boundary_set_name);
+      return priorityA - priorityB;
     });
+
+    console.log(`[fetchRepsByPostal] Found ${boundaries.length} boundaries for ${clean}, prioritizing current ones`);
 
     // Include all levels of government: Federal (MP), Provincial (MPP/MLA/MNA), and Municipal
     const reps: OpenNorthRepresentative[] = (data.representatives_centroid || data.representatives_concordance || []);
 
     const representatives = await Promise.all(reps.map((rep) => {
-      // Try to find matching boundary URL for this representative's district
-      const boundaryUrl = boundaryMap.get(rep.district_name.toLowerCase());
-      return toRepresentative(rep, boundaryUrl);
+      // Use the best boundary for this representative's district
+      const bestBoundary = getBestBoundaryForDistrict(rep.district_name, boundaries);
+      return toRepresentative(rep, bestBoundary?.url);
     }));
 
     // Cache the results

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
 import { fetchRepsByPostalEnhanced, fetchRepsByPostal } from "@/lib/representApi";
+import { searchWithOfficialData } from "@/lib/houseOfCommonsApi";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -94,8 +95,16 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
       const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
 
-      // Use the enhanced coordinate-based search for better accuracy
-      const results = await fetchRepsByPostalEnhanced(trimmedQuery);
+      // Use official House of Commons data sources first, with multiple fallbacks
+      let results: Representative[];
+      try {
+        results = await searchWithOfficialData(trimmedQuery);
+        console.log('[SearchForm] Using official House of Commons data sources');
+      } catch (officialError) {
+        console.warn('[SearchForm] Official House of Commons sources failed, falling back to enhanced search:', officialError);
+        results = await fetchRepsByPostalEnhanced(trimmedQuery);
+        console.log('[SearchForm] Using enhanced coordinate-based search');
+      }
       onSearchComplete(results);
 
       // Log the search activity with representatives
@@ -121,7 +130,8 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       } else {
         toast({
           title: "No representatives found",
-          description: "Please check your postal code and try again.",
+          description: "We couldn't find any representatives for this postal code. Please check the format and try again.",
+          variant: "default",
         });
       }
     } catch (error) {
@@ -136,14 +146,34 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         onSearchComplete(cachedResults);
         toast({
           title: "Using cached data",
-          description: "Unable to reach the server. Showing previously downloaded results.",
+          description: "Unable to reach representative data services. Showing previously downloaded results.",
           variant: "default",
         });
       } else {
-        // No cached data available
-        const errorMessage = "Could not retrieve representatives. Please check your connection and try again.";
+        // No cached data available - provide more specific error messages
+        let errorMessage = "Could not retrieve representatives. Please check your connection and try again.";
+        let errorTitle = "Search failed";
+
+        // Check for specific error patterns
+        if (error instanceof Error) {
+          const errorString = error.message.toLowerCase();
+          if (errorString.includes('could not geocode')) {
+            errorMessage = `Unable to locate postal code "${trimmedQuery}". Please verify the postal code is correct and try again.`;
+            errorTitle = "Invalid postal code";
+          } else if (errorString.includes('no representatives found')) {
+            errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in our database.`;
+            errorTitle = "No representatives found";
+          } else if (errorString.includes('network') || errorString.includes('fetch')) {
+            errorMessage = "Network connection error. Please check your internet connection and try again.";
+            errorTitle = "Connection error";
+          } else if (errorString.includes('all data sources failed')) {
+            errorMessage = "All representative data sources are temporarily unavailable. Please try again in a few minutes.";
+            errorTitle = "Service unavailable";
+          }
+        }
+
         toast({
-          title: "Search failed",
+          title: errorTitle,
           description: errorMessage,
           variant: "destructive",
         });

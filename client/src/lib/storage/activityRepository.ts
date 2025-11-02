@@ -8,7 +8,7 @@ export type ActivityItem = {
   id: string;
   type: "search";
   query: string;
-  searchType: "postalCode" | "name" | "location" | "locationComplete";
+  searchType: "postalCode" | "name" | "location" | "locationComplete" | "official";
   ts: number;
   representatives?: Representative[]; // Store representatives found in this search
 };
