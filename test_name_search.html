@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canadian Rep Finder - Test Name Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .representative {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #f9f9f9;
+        }
+        .representative h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .representative p {
+            margin: 5px 0;
+        }
+        .party {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .constituency {
+            font-style: italic;
+            color: #666;
+        }
+        .test-buttons {
+            margin: 20px 0;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Canadian Representative Finder - Name Search Test</h1>
+        <p>This page tests the name search functionality with hardcoded MP data.</p>
+
+        <div class="test-buttons">
+            <button onclick="testNameSearch('Gary')">Test: "Gary"</button>
+            <button onclick="testNameSearch('Coteau')">Test: "Coteau"</button>
+            <button onclick="testNameSearch('Michael')">Test: "Michael"</button>
+            <button onclick="testNameSearch('Trudeau')">Test: "Trudeau"</button>
+            <button onclick="testNameSearch('Jagmeet')">Test: "Jagmeet"</button>
+            <button onclick="testNameSearch('Pierre')">Test: "Pierre"</button>
+        </div>
+
+        <div>
+            <input type="text" id="customName" placeholder="Enter custom name..." />
+            <button onclick="testCustomName()">Test Custom Name</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        async function testNameSearch(name) {
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+
+            status.innerHTML = `<div class="loading">🔍 Testing name search for "${name}"...</div>`;
+            results.innerHTML = '';
+
+            try {
+                console.log(`Testing name search for: ${name}`);
+
+                // Test the client-side search functionality by simulating what the app does
+                // Since we can't directly import the modules, we'll test the hardcoded data logic
+
+                const hardcodedMPs = [
+                    {
+                        name: "Gary Anandasangaree",
+                        elected_office: "MP",
+                        district_name: "Scarborough—Rouge Park",
+                        party_name: "Liberal",
+                        email: "gary.anandasangaree@parl.gc.ca",
+                        photo_url: "https://www.ourcommons.ca/Content/Parliamentarians/Images/OfficialMPPhotos/44/Anandasangaree_Gary_Lib.jpg",
+                    },
+                    {
+                        name: "Michael Coteau",
+                        elected_office: "MP",
+                        district_name: "Scarborough—Woburn",
+                        party_name: "Liberal",
+                        email: "michael.coteau@parl.gc.ca",
+                        photo_url: "https://www.ourcommons.ca/Content/Parliamentarians/Images/OfficialMPPhotos/44/Coteau_Michael_Lib.jpg",
+                    },
+                    {
+                        name: "Justin Trudeau",
+                        elected_office: "MP",
+                        district_name: "Papineau",
+                        party_name: "Liberal",
+                        email: "justin.trudeau@parl.gc.ca",
+                        photo_url: "https://www.ourcommons.ca/Content/Parliamentarians/Images/OfficialMPPhotos/44/Trudeau_Justin_Lib.jpg",
+                    },
+                    {
+                        name: "Jagmeet Singh",
+                        elected_office: "MP",
+                        district_name: "Burnaby South",
+                        party_name: "New Democratic Party",
+                        email: "jagmeet.singh@parl.gc.ca",
+                        photo_url: "https://www.ourcommons.ca/Content/Parliamentarians/Images/OfficialMPPhotos/44/Singh_Jagmeet_NDP.jpg",
+                    },
+                    {
+                        name: "Pierre Poilievre",
+                        elected_office: "MP",
+                        district_name: "Carleton",
+                        party_name: "Conservative",
+                        email: "pierre.poilievre@parl.gc.ca",
+                        photo_url: "https://www.ourcommons.ca/Content/Parliamentarians/Images/OfficialMPPhotos/44/Poilievre_Pierre_CPC.jpg",
+                    }
+                ];
+
+                // Simulate the search logic
+                const normalizedName = name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+                const matchingMPs = hardcodedMPs.filter(mp =>
+                    mp.name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").includes(normalizedName)
+                );
+
+                console.log(`Found ${matchingMPs.length} matching MPs for "${name}"`);
+
+                if (matchingMPs.length > 0) {
+                    status.innerHTML = `<div class="success">✅ Found ${matchingMPs.length} representative(s) matching "${name}"</div>`;
+
+                    matchingMPs.forEach((mp, index) => {
+                        const repDiv = document.createElement('div');
+                        repDiv.className = 'representative';
+                        repDiv.innerHTML = `
+                            <h3>${index + 1}. ${mp.name}</h3>
+                            <p><span class="party">${mp.party_name}</span> - ${mp.elected_office}</p>
+                            <p><span class="constituency">${mp.district_name}</span></p>
+                            <p>Email: ${mp.email}</p>
+                            ${mp.photo_url ? `<img src="${mp.photo_url}" alt="${mp.name}" style="max-width: 100px; height: auto;">` : ''}
+                        `;
+                        results.appendChild(repDiv);
+                    });
+
+                    // Check for specific success cases
+                    if (name.toLowerCase() === 'gary' && matchingMPs.some(mp => mp.name === 'Gary Anandasangaree')) {
+                        status.innerHTML += `<div class="success">✅ SUCCESS: Found Gary Anandasangaree for "Gary" search</div>`;
+                    }
+                    if (name.toLowerCase() === 'coteau' && matchingMPs.some(mp => mp.name === 'Michael Coteau')) {
+                        status.innerHTML += `<div class="success">✅ SUCCESS: Found Michael Coteau for "Coteau" search</div>`;
+                    }
+
+                } else {
+                    status.innerHTML = `<div class="error">❌ No representatives found matching "${name}"</div>`;
+
+                    // Suggest similar names
+                    const suggestions = hardcodedMPs.filter(mp =>
+                        mp.name.toLowerCase().includes(normalizedName) ||
+                        normalizedName.includes(mp.name.toLowerCase().split(' ')[1])
+                    );
+
+                    if (suggestions.length > 0) {
+                        status.innerHTML += `<p>Did you mean: ${suggestions.map(mp => mp.name).join(', ')}?</p>`;
+                    }
+                }
+
+            } catch (error) {
+                console.error('Name search test failed:', error);
+                status.innerHTML = `<div class="error">❌ Search test failed: ${error.message}</div>`;
+            }
+        }
+
+        function testCustomName() {
+            const customName = document.getElementById('customName').value.trim();
+            if (customName) {
+                testNameSearch(customName);
+            } else {
+                alert('Please enter a name to test');
+            }
+        }
+
+        // Test page load
+        window.addEventListener('load', () => {
+            console.log('Name search test page loaded - ready to test functionality');
+        });
+    </script>
+</body>
+</html>

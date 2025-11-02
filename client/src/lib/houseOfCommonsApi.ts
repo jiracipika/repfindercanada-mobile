@@ -534,7 +534,7 @@ async function convertMPToRepresentative(mp: HouseOfCommonsMP): Promise<Represen
 }
 
 /**
- * Main search function using official House of Commons data with robust fallback logic
+ * Main search function using coordinate-based lookup for accurate results
  */
 export async function searchWithOfficialData(postal: string, useCache: boolean = true): Promise<Representative[]> {
   const clean = postal.replace(/\s+/g, "").toUpperCase();
@@ -548,146 +548,61 @@ export async function searchWithOfficialData(postal: string, useCache: boolean =
     }
   }
 
-  const results: Representative[] = [];
-  let officialDataSuccess = false;
-
   try {
-    console.log(`[searchWithOfficialData] Searching with official House of Commons data for ${clean}`);
+    console.log(`[searchWithOfficialData] Searching with accurate coordinate-based lookup for ${clean}`);
 
-    // 1. Geocode the postal code to get coordinates and location
-    const coords = await geocodeCanadianPostalCode(clean);
-    if (!coords) {
-      console.warn('[searchWithOfficialData] Could not geocode postal code, will use fallback');
-      throw new Error('Could not geocode postal code');
-    }
+    // Use the enhanced coordinate-based search for accurate results
+    const { fetchRepsByPostalEnhanced } = await import('./representApi');
+    const results = await fetchRepsByPostalEnhanced(clean, false); // Don't use internal cache since we manage our own
 
-    console.log(`[searchWithOfficialData] Geocoded to: ${coords.city}, ${coords.province} (${coords.lat}, ${coords.lng})`);
-
-    // 2. For now, we'll use a simplified approach to determine the riding
-    // In production, this would use Elections Canada boundary files
-    const possibleRidings = getPossibleRidingsForLocation(coords.city, coords.province);
-
-    if (possibleRidings.length === 0) {
-      console.warn('[searchWithOfficialData] No ridings found for location, will use fallback');
-      throw new Error('No ridings found for location');
-    }
-
-    // 3. Search for MP using House of Commons data
-    let mpFound = false;
-    for (const riding of possibleRidings) {
-      const mpData = await findMPByRiding(riding);
-      if (mpData) {
-        const mp = await convertMPToRepresentative(mpData);
-        results.push(mp);
-        console.log(`[searchWithOfficialData] Found MP: ${mpData.name} (${mpData.party_name}) - ${riding}`);
-        mpFound = true;
-        officialDataSuccess = true;
-
-        // 4. Get provincial representative for the same riding
-        const provincialRep = getProvincialRepresentative(riding, coords.province || 'ON');
-        if (provincialRep) {
-          // Convert to proper format with ID
-          const provId = await makeRepresentativeId({
-            source: "provincial-official",
-            elected_office: provincialRep.electedOffice!,
-            name: provincialRep.name,
-            district_name: provincialRep.constituency,
-            province: provincialRep.province,
-            party_name: provincialRep.party,
-            email: provincialRep.email,
-          });
-
-          const provincialRepWithId = {
-            ...provincialRep,
-            id: provId as any
-          } as Representative;
-
-          results.push(provincialRepWithId);
-          console.log(`[searchWithOfficialData] Found Provincial: ${provincialRep.name} (${provincialRep.party}) - ${riding}`);
-        }
-
-        break; // Found representatives for this location
-      }
-    }
-
-    // 5. Always try to get municipal representatives from Represent API
-    try {
-      console.log('[searchWithOfficialData] Fetching municipal representatives from Represent API');
-      const { fetchRepsByPostal } = await import('./representApi');
-      const municipalReps = await fetchRepsByPostal(clean, false);
-
-      const municipalOnly = municipalReps.filter(rep =>
-        rep.electedOffice === 'Mayor' ||
-        rep.electedOffice === 'Councillor' ||
-        rep.electedOffice === 'Regional Chair'
-      );
-
-      results.push(...municipalOnly);
-      console.log(`[searchWithOfficialData] Added ${municipalOnly.length} municipal representatives from Represent API`);
-
-      if (municipalOnly.length > 0) {
-        officialDataSuccess = true;
-      }
-    } catch (municipalError) {
-      console.warn('[searchWithOfficialData] Municipal API failed:', municipalError);
-    }
-
-    // If we got any results, cache and return them
     if (results.length > 0) {
-      officialDataSuccess = true;
+      // Sort results by government level (Federal -> Provincial -> Municipal)
+      const sortedResults = results.sort((a, b) => {
+        const getLevel = (office: string | null | undefined): number => {
+          if (!office) return 999;
+          const o = office.toLowerCase();
+          if (o === 'mp') return 1;
+          if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
+          if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
+          return 999;
+        };
+        return getLevel(a.electedOffice) - getLevel(b.electedOffice);
+      });
 
       // Cache the results
       if (useCache) {
-        await searchCacheRepository.cacheSearch(`official_${clean}`, results);
-        console.log(`[searchWithOfficialData] Cached ${results.length} official representatives for ${clean}`);
+        await searchCacheRepository.cacheSearch(`official_${clean}`, sortedResults);
+        console.log(`[searchWithOfficialData] Cached ${sortedResults.length} official representatives for ${clean}`);
       }
 
       // Log activity
       await logActivity({
         type: "search",
         query: clean,
-        searchType: "official",
+        searchType: "postalCode",
         ts: Date.now(),
-        representatives: results,
+        representatives: sortedResults,
       });
 
-      console.log(`[searchWithOfficialData] Official data search successful with ${results.length} representatives`);
-      return results;
+      console.log(`[searchWithOfficialData] Official data search successful with ${sortedResults.length} representatives`);
+      return sortedResults;
     }
 
-    // If we got here, official data search failed to find any representatives
-    console.warn('[searchWithOfficialData] No representatives found with official data');
-    throw new Error('No representatives found with official data');
+    // If no results found, throw error to trigger fallback
+    console.warn('[searchWithOfficialData] No representatives found with coordinate-based search');
+    throw new Error('No representatives found with coordinate-based search');
 
   } catch (error) {
-    console.error('[searchWithOfficialData] Official data search error:', error);
+    console.error('[searchWithOfficialData] Coordinate-based search failed:', error);
 
-    // Always fallback to enhanced Represent API search
-    console.log('[searchWithOfficialData] Falling back to enhanced Represent API search');
-    try {
-      const { fetchRepsByPostalEnhanced } = await import('./representApi');
-      const fallbackResults = await fetchRepsByPostalEnhanced(clean, useCache);
-
-      console.log(`[searchWithOfficialData] Enhanced Represent API returned ${fallbackResults.length} representatives`);
-
-      // Cache fallback results as well
-      if (useCache && fallbackResults.length > 0) {
-        await searchCacheRepository.cacheSearch(`official_${clean}`, fallbackResults);
-      }
-
-      return fallbackResults;
-    } catch (fallbackError) {
-      console.error('[searchWithOfficialData] All methods failed:', fallbackError);
-
-      // Last resort - try to get cached data even if cache was disabled
-      const cachedResults = await searchCacheRepository.getCachedSearch(clean);
-      if (cachedResults && cachedResults.length > 0) {
-        console.log(`[searchWithOfficialData] Returning ${cachedResults.length} cached representatives as last resort`);
-        return cachedResults;
-      }
-
-      throw new Error(`Could not find any representatives for postal code ${clean}. All data sources failed.`);
+    // Last resort - try to get cached data even if cache was disabled
+    const cachedResults = await searchCacheRepository.getCachedSearch(clean);
+    if (cachedResults && cachedResults.length > 0) {
+      console.log(`[searchWithOfficialData] Returning ${cachedResults.length} cached representatives as last resort`);
+      return cachedResults;
     }
+
+    throw new Error(`Could not find any representatives for postal code ${clean}. All data sources failed.`);
   }
 }
 
@@ -775,6 +690,24 @@ function getPossibleRidingsForLocation(city?: string, province?: string): string
 export function clearHouseOfCommonsCache(): void {
   localStorage.removeItem('commons_mps_cache');
   console.log('[clearHouseOfCommonsCache] Cache cleared');
+}
+
+/**
+ * Clear all search caches (both official and regular searches)
+ * This should be called after fixing search logic to ensure fresh results
+ */
+export async function clearAllSearchCaches(): Promise<void> {
+  try {
+    // Clear House of Commons cache
+    localStorage.removeItem('commons_mps_cache');
+
+    // Clear all search cache entries
+    await searchCacheRepository.clearCache();
+
+    console.log('[clearAllSearchCaches] All search caches cleared');
+  } catch (error) {
+    console.error('[clearAllSearchCaches] Error clearing caches:', error);
+  }
 }
 
 /**
