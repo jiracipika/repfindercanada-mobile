@@ -1,26 +1,21 @@
 /**
  * React Hook for Loading Federal MP Data
- * Uses HYBRID approach: OpenParliament (primary) + Represent API (secondary)
+ * Uses Represent API only approach with enhanced best practices
  */
 
 import { useState, useEffect } from 'react';
-import {
-  fetchHouseOfCommonsMPs,
-  getDataQualityStats,
-  type FederalMP,
-} from '@/lib/data-sources/federalDataSource';
+import type { Representative } from '@shared/types';
 
 interface DataQualityStats {
   total: number;
-  fromOpenParliament: number;
-  enrichedWithRepresent: number;
-  withContactInfo: number;
-  withOfficeInfo: number;
-  completionRate: number;
+  source: string;
+  confidence: string;
+  lastUpdated: string;
+  totalRecords: number;
 }
 
 interface DataLoaderState {
-  mps: FederalMP[];
+  mps: Representative[];
   loading: boolean;
   error: string | null;
   loadedAt: Date | null;
@@ -67,20 +62,43 @@ export function useDataLoader(options: UseDataLoaderOptions = {}) {
   });
 
   /**
-   * Load MP data from Represent API
+   * Load MP data from enhanced Represent API
    */
   const load = async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      console.log('[useDataLoader] Starting hybrid MP data load...');
-      console.log('[useDataLoader] Primary: OpenParliament API');
-      console.log('[useDataLoader] Secondary: Represent API (for missing data)');
+      console.log('[useDataLoader] Starting enhanced Represent API data load...');
+      console.log('[useDataLoader] Using Represent API with best practices');
 
-      const mps = await fetchHouseOfCommonsMPs();
+      // Use the enhanced search endpoint to get all federal MPs
+      const response = await fetch('/api/representatives/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: '',
+          type: 'name',
+          limit: 1000 // Get a large sample
+        })
+      });
 
-      // Calculate data quality statistics
-      const qualityStats = await getDataQualityStats(mps);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const mps = data.representatives || [];
+
+      // Get data quality stats from the API response
+      const qualityStats: DataQualityStats = {
+        total: mps.length,
+        source: data.dataSource || 'represent_api_enhanced',
+        confidence: data.confidence || 'medium',
+        lastUpdated: new Date().toISOString(),
+        totalRecords: mps.length
+      };
 
       setState({
         mps,
@@ -92,11 +110,9 @@ export function useDataLoader(options: UseDataLoaderOptions = {}) {
 
       console.log(`[useDataLoader] ✓ Loaded ${mps.length} MPs successfully`);
       console.log(`[useDataLoader] Data Quality:`);
-      console.log(`  - OpenParliament only: ${qualityStats.fromOpenParliament}`);
-      console.log(`  - Enriched with Represent: ${qualityStats.enrichedWithRepresent}`);
-      console.log(`  - With contact info: ${qualityStats.withContactInfo}`);
-      console.log(`  - With office info: ${qualityStats.withOfficeInfo}`);
-      console.log(`  - Completion rate: ${qualityStats.completionRate.toFixed(1)}%`);
+      console.log(`  - Source: ${qualityStats.source}`);
+      console.log(`  - Confidence: ${qualityStats.confidence}`);
+      console.log(`  - Total records: ${qualityStats.totalRecords}`);
 
     } catch (error: any) {
       console.error('[useDataLoader] Failed to load MP data:', error);
@@ -147,8 +163,8 @@ export function useDataLoader(options: UseDataLoaderOptions = {}) {
 /**
  * Search MPs by name (local filtering)
  */
-export function useSearchMPs(searchQuery: string, allMPs: FederalMP[]) {
-  const [results, setResults] = useState<FederalMP[]>([]);
+export function useSearchMPs(searchQuery: string, allMPs: Representative[]) {
+  const [results, setResults] = useState<Representative[]>([]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -159,7 +175,7 @@ export function useSearchMPs(searchQuery: string, allMPs: FederalMP[]) {
     const query = searchQuery.toLowerCase().trim();
     const filtered = allMPs.filter(mp =>
       mp.name.toLowerCase().includes(query) ||
-      mp.riding.toLowerCase().includes(query) ||
+      mp.constituency.toLowerCase().includes(query) ||
       mp.party.toLowerCase().includes(query)
     );
 
