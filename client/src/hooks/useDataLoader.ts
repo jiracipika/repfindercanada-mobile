@@ -1,170 +1,142 @@
 /**
- * React Hook for Loading Federal MP Data
- * Uses HYBRID approach: OpenParliament (primary) + Represent API (secondary)
+ * React Hook for Representative Searches
+ * Uses Represent API only for postal code, name, and coordinate searches
  */
 
-import { useState, useEffect } from 'react';
-import {
-  fetchHouseOfCommonsMPs,
-  getDataQualityStats,
-  type FederalMP,
-} from '@/lib/data-sources/federalDataSource';
+import { useState } from 'react';
+import type { Representative } from '@shared/types';
 
-interface DataQualityStats {
-  total: number;
-  fromOpenParliament: number;
-  enrichedWithRepresent: number;
-  withContactInfo: number;
-  withOfficeInfo: number;
-  completionRate: number;
-}
-
-interface DataLoaderState {
-  mps: FederalMP[];
+interface SearchState {
   loading: boolean;
   error: string | null;
-  loadedAt: Date | null;
-  dataQuality: DataQualityStats | null;
-}
-
-interface UseDataLoaderOptions {
-  autoLoad?: boolean; // Auto-load on mount (default: true)
-  staleTime?: number; // Consider data stale after this many ms (default: 24 hours)
 }
 
 /**
- * Hook to load and cache federal MP data
+ * Hook to search representatives using Represent API
+ * Supports postal code (via coordinates), name, and riding searches
  *
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { mps, loading, error, reload } = useDataLoader();
+ *   const { searchRepresentatives, loading, error } = useDataLoader();
+ *   const [results, setResults] = useState<Representative[]>([]);
  *
- *   if (loading) return <div>Loading MPs...</div>;
- *   if (error) return <div>Error: {error}</div>;
+ *   const handleSearch = async (query: string) => {
+ *     const searchResults = await searchRepresentatives(query, 'postal_code');
+ *     setResults(searchResults);
+ *   };
  *
  *   return (
  *     <div>
- *       <h2>Found {mps.length} MPs</h2>
- *       <button onClick={reload}>Refresh</button>
- *       {mps.map(mp => (
- *         <div key={mp.id}>{mp.name} - {mp.party}</div>
+ *       <button onClick={() => handleSearch('K1A 0A6')}>Search Ottawa</button>
+ *       {results.map(mp => (
+ *         <div key={mp.id}>{mp.name} - {mp.constituency}</div>
  *       ))}
  *     </div>
  *   );
  * }
  * ```
  */
-export function useDataLoader(options: UseDataLoaderOptions = {}) {
-  const { autoLoad = true, staleTime = 24 * 60 * 60 * 1000 } = options;
-
-  const [state, setState] = useState<DataLoaderState>({
-    mps: [],
+export function useDataLoader() {
+  const [state, setState] = useState<SearchState>({
     loading: false,
     error: null,
-    loadedAt: null,
-    dataQuality: null,
   });
 
   /**
-   * Load MP data from Represent API
+   * Search representatives using Represent API
    */
-  const load = async () => {
+  const searchRepresentatives = async (
+    query: string,
+    type: 'postal_code' | 'name' | 'riding' | 'coordinates',
+    options?: { lat?: number; lng?: number; limit?: number }
+  ): Promise<Representative[]> => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      console.log('[useDataLoader] Starting hybrid MP data load...');
-      console.log('[useDataLoader] Primary: OpenParliament API');
-      console.log('[useDataLoader] Secondary: Represent API (for missing data)');
+      console.log(`[useDataLoader] Searching representatives: ${type} - ${query || 'coordinates'}`);
 
-      const mps = await fetchHouseOfCommonsMPs();
+      const requestBody: any = {
+        type,
+        limit: options?.limit || 20
+      };
 
-      // Calculate data quality statistics
-      const qualityStats = await getDataQualityStats(mps);
+      if (type === 'coordinates') {
+        if (!options?.lat || !options?.lng) {
+          throw new Error('Latitude and longitude required for coordinate search');
+        }
+        requestBody.lat = options.lat;
+        requestBody.lng = options.lng;
+      } else if (query) {
+        requestBody.query = query;
+      }
 
-      setState({
-        mps,
-        loading: false,
-        error: null,
-        loadedAt: new Date(),
-        dataQuality: qualityStats,
+      const response = await fetch('/api/representatives/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      console.log(`[useDataLoader] ✓ Loaded ${mps.length} MPs successfully`);
-      console.log(`[useDataLoader] Data Quality:`);
-      console.log(`  - OpenParliament only: ${qualityStats.fromOpenParliament}`);
-      console.log(`  - Enriched with Represent: ${qualityStats.enrichedWithRepresent}`);
-      console.log(`  - With contact info: ${qualityStats.withContactInfo}`);
-      console.log(`  - With office info: ${qualityStats.withOfficeInfo}`);
-      console.log(`  - Completion rate: ${qualityStats.completionRate.toFixed(1)}%`);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const representatives = data.representatives || [];
+
+      console.log(`[useDataLoader] ✓ Found ${representatives.length} representatives`);
+      setState({ loading: false, error: null });
+      return representatives;
 
     } catch (error: any) {
-      console.error('[useDataLoader] Failed to load MP data:', error);
-
+      console.error('[useDataLoader] Search failed:', error);
       setState(prev => ({
         ...prev,
         loading: false,
-        error: error?.message || 'Failed to load MP data',
+        error: error?.message || 'Search failed',
       }));
+      return [];
     }
   };
 
   /**
-   * Check if data is stale and needs refresh
+   * Search by postal code (converted to coordinates internally)
    */
-  const isStale = () => {
-    if (!state.loadedAt) return true;
-    const age = Date.now() - state.loadedAt.getTime();
-    return age > staleTime;
+  const searchByPostalCode = async (postalCode: string): Promise<Representative[]> => {
+    return searchRepresentatives(postalCode, 'postal_code');
   };
 
   /**
-   * Force reload data
+   * Search by representative name
    */
-  const reload = () => {
-    console.log('[useDataLoader] Manual reload requested');
-    load();
+  const searchByName = async (name: string): Promise<Representative[]> => {
+    return searchRepresentatives(name, 'name');
   };
 
-  // Auto-load on mount
-  useEffect(() => {
-    if (autoLoad && state.mps.length === 0 && !state.loading) {
-      load();
-    }
-  }, [autoLoad]); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * Search by riding/electoral district
+   */
+  const searchByRiding = async (riding: string): Promise<Representative[]> => {
+    return searchRepresentatives(riding, 'riding');
+  };
+
+  /**
+   * Search by coordinates (most accurate)
+   */
+  const searchByCoordinates = async (lat: number, lng: number): Promise<Representative[]> => {
+    return searchRepresentatives('', 'coordinates', { lat, lng });
+  };
 
   return {
-    mps: state.mps,
+    searchRepresentatives,
+    searchByPostalCode,
+    searchByName,
+    searchByRiding,
+    searchByCoordinates,
     loading: state.loading,
     error: state.error,
-    loadedAt: state.loadedAt,
-    isStale: isStale(),
-    reload,
-    dataQuality: state.dataQuality,
   };
 }
 
-/**
- * Search MPs by name (local filtering)
- */
-export function useSearchMPs(searchQuery: string, allMPs: FederalMP[]) {
-  const [results, setResults] = useState<FederalMP[]>([]);
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setResults([]);
-      return;
-    }
-
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = allMPs.filter(mp =>
-      mp.name.toLowerCase().includes(query) ||
-      mp.riding.toLowerCase().includes(query) ||
-      mp.party.toLowerCase().includes(query)
-    );
-
-    setResults(filtered);
-  }, [searchQuery, allMPs]);
-
-  return results;
-}

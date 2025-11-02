@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Preferences } from '@capacitor/preferences';
-import type { Representative } from '@shared/schema';
+import type { Representative } from '@shared/types';
 
 // Define the shape of the user data
 export interface UserData {

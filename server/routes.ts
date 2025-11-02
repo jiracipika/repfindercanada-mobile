@@ -1,844 +1,555 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertRepresentativeSchema, insertSearchSchema, insertSavedRepresentativeSchema } from "@shared/schema";
+import type { InsertRepresentative, InsertSearch, InsertSavedRepresentative } from "@shared/types";
 import { z } from "zod";
-import { registerHybridRoutes } from "./hybridRoutes";
-import { registerBundledRoutes } from "./bundledRoutes";
+import { representApi } from "./representApiService";
+import { enhancedPostalCodeService } from "./enhancedPostalCodeService";
+import type { Representative, Boundary, ApiResponse, Election, Candidate } from "./representApiService";
 
-interface OpenParliamentRepresentative {
-  name: string;
-  current_party: {
-    short_name: {
-      en: string;
-    };
-  };
-  current_riding: {
-    name: {
-      en: string;
-    };
-    province: string;
-  };
-  image?: string;
-  url?: string;
-}
+// Basic Zod schemas for validation
+const insertRepresentativeSchema = z.object({
+  name: z.string(),
+  party: z.string(),
+  constituency: z.string(),
+  province: z.string(),
+  electedOffice: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  photo: z.string().nullable(),
+  website: z.string().nullable(),
+  personalWebsite: z.string().nullable(),
+  socialMedia: z.any().nullable(),
+  biography: z.string().nullable(),
+  offices: z.any().nullable(),
+  fax: z.string().nullable(),
+  parliamentId: z.string().nullable()
+});
 
-// Postal code to riding mapping for major Canadian postal codes
-const POSTAL_CODE_TO_RIDING: Record<string, string[]> = {
-  'K1A': ['Ottawa—Vanier', 'Ottawa Centre'],
-  'K1B': ['Ottawa—Vanier'],
-  'K1C': ['Ottawa—Vanier'],
-  'K1G': ['Ottawa South'],
-  'K1H': ['Ottawa South'],
-  'K1J': ['Ottawa—Vanier'],
-  'K1K': ['Ottawa—Vanier'],
-  'K1L': ['Ottawa—Vanier'],
-  'K1M': ['Ottawa South'],
-  'K1N': ['Ottawa Centre'],
-  'K1P': ['Ottawa Centre'],
-  'K1R': ['Ottawa Centre'],
-  'K1S': ['Ottawa South'],
-  'K1T': ['Ottawa South'],
-  'K1V': ['Ottawa South'],
-  'K1W': ['Ottawa West—Nepean'],
-  'K1Y': ['Ottawa Centre'],
-  'K1Z': ['Ottawa West—Nepean'],
-  'K2A': ['Ottawa West—Nepean'],
-  'K2B': ['Ottawa West—Nepean'],
-  'K2C': ['Ottawa West—Nepean'],
-  'K2E': ['Ottawa West—Nepean'],
-  'K2G': ['Ottawa West—Nepean'],
-  'K2H': ['Ottawa West—Nepean'],
-  'K2J': ['Ottawa West—Nepean'],
-  'K2K': ['Ottawa West—Nepean'],
-  'K2L': ['Ottawa West—Nepean'],
-  'K2M': ['Ottawa West—Nepean'],
-  'K2P': ['Ottawa West—Nepean'],
-  'K2R': ['Ottawa West—Nepean'],
-  'K2S': ['Ottawa West—Nepean'],
-  'K2T': ['Ottawa West—Nepean'],
-  'K2V': ['Ottawa West—Nepean'],
-  'K2W': ['Ottawa West—Nepean'],
-  'M5V': ['Toronto Centre'],
-  'M5G': ['University—Rosedale'],
-  'M4W': ['Toronto Centre'],
-  'M4Y': ['Toronto Centre'],
-  'M5A': ['Toronto—Danforth'],
-  'M5B': ['Toronto Centre'],
-  'M5C': ['Toronto Centre'],
-  'M5E': ['Toronto Centre'],
-  'M5H': ['Toronto Centre'],
-  'M5J': ['Toronto Centre'],
-  'M5K': ['University—Rosedale'],
-  'M5L': ['University—Rosedale'],
-  'M5M': ['Willowdale'],
-  'M5N': ['University—Rosedale'],
-  'M5P': ['University—Rosedale'],
-  'M5R': ['University—Rosedale'],
-  'M5S': ['University—Rosedale'],
-  'M5T': ['University—Rosedale'],
-  'M5W': ['Toronto Centre'],
-  'M5X': ['Toronto Centre'],
-  'H2Y': ['Ville-Marie—Le Sud-Ouest—Île-des-Sœurs'],
-  'H3A': ['Ville-Marie—Le Sud-Ouest—Île-des-Sœurs'],
-  'H3B': ['Ville-Marie—Le Sud-Ouest—Île-des-Sœurs'],
-  'H3C': ['Ville-Marie—Le Sud-Ouest—Île-des-Sœurs'],
-  'H3G': ['Ville-Marie—Le Sud-Ouest—Île-des-Sœurs'],
-  'H3H': ['Ville-Marie—Le Sud-Ouest—Île-des-Sœurs'],
-  'V6B': ['Vancouver Centre'],
-  'V6C': ['Vancouver Centre'],
-  'V6E': ['Vancouver Centre'],
-  'V6G': ['Vancouver Centre'],
-  'V6H': ['Vancouver Centre'],
-  'V6J': ['Vancouver Centre'],
-  'V6K': ['Vancouver Centre'],
-  'V6L': ['Vancouver Centre'],
-  'V6M': ['Vancouver Centre'],
-  'V6P': ['Vancouver South'],
-  'V6R': ['Vancouver Centre'],
-  'V6S': ['Vancouver Centre'],
-  'V6T': ['Vancouver Centre'],
-  'V6Z': ['Vancouver Centre'],
-  'T2P': ['Calgary Centre'],
-  'T2R': ['Calgary Centre'],
-  'T2S': ['Calgary Centre'],
-  'T3A': ['Calgary Skyview'],
-  'T3B': ['Calgary Skyview'],
-  'T3C': ['Calgary Skyview'],
-  'T3E': ['Calgary Skyview'],
-  'T3G': ['Calgary Skyview'],
-  'T3H': ['Calgary Rocky Ridge'],
-  'T3J': ['Calgary Rocky Ridge'],
-  'T3K': ['Calgary Rocky Ridge'],
-  'T3L': ['Calgary Rocky Ridge'],
-  'T3M': ['Calgary Rocky Ridge'],
-  'T3N': ['Calgary Rocky Ridge'],
-  'T3P': ['Calgary Rocky Ridge'],
-  'T3R': ['Calgary Rocky Ridge'],
-  'T3Z': ['Calgary Rocky Ridge']
-};
+const insertSearchSchema = z.object({
+  query: z.string(),
+  location: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  results: z.any()
+});
 
-// Cache for politician data
-let politiciansCache: OpenParliamentRepresentative[] = [];
-let cacheTimestamp = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for faster updates
-
-// Sample data that matches real Canadian MPs structure
-const SAMPLE_POLITICIANS: OpenParliamentRepresentative[] = [
-  {
-    name: "Justin Trudeau",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Papineau" }, province: "QC" },
-    image: "/media/polpics/justin-trudeau.jpg",
-    url: "/politicians/justin-trudeau/"
-  },
-  {
-    name: "Chrystia Freeland",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "University—Rosedale" }, province: "ON" },
-    image: "/media/polpics/chrystia-freeland.jpg",
-    url: "/politicians/chrystia-freeland/"
-  },
-  {
-    name: "Pierre Poilievre",
-    current_party: { short_name: { en: "Conservative" } },
-    current_riding: { name: { en: "Carleton" }, province: "ON" },
-    image: "/media/polpics/pierre-poilievre.jpg",
-    url: "/politicians/pierre-poilievre/"
-  },
-  {
-    name: "Jagmeet Singh",
-    current_party: { short_name: { en: "NDP" } },
-    current_riding: { name: { en: "Burnaby South" }, province: "BC" },
-    image: "/media/polpics/jagmeet-singh.jpg",
-    url: "/politicians/jagmeet-singh/"
-  },
-  {
-    name: "Yves-François Blanchet",
-    current_party: { short_name: { en: "Bloc Québécois" } },
-    current_riding: { name: { en: "Beloeil—Chambly" }, province: "QC" },
-    image: "/media/polpics/yves-francois-blanchet.jpg",
-    url: "/politicians/yves-francois-blanchet/"
-  },
-  {
-    name: "Elizabeth May",
-    current_party: { short_name: { en: "Green" } },
-    current_riding: { name: { en: "Saanich—Gulf Islands" }, province: "BC" },
-    image: "/media/polpics/elizabeth-may.jpg",
-    url: "/politicians/elizabeth-may/"
-  },
-  {
-    name: "Mona Fortier",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Ottawa—Vanier" }, province: "ON" },
-    image: "/media/polpics/mona-fortier.jpg",
-    url: "/politicians/mona-fortier/"
-  },
-  {
-    name: "Yasir Naqvi",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Ottawa Centre" }, province: "ON" },
-    image: "/media/polpics/yasir-naqvi.jpg",
-    url: "/politicians/yasir-naqvi/"
-  },
-  {
-    name: "David McGuinty",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Ottawa South" }, province: "ON" },
-    image: "/media/polpics/david-mcguinty.jpg",
-    url: "/politicians/david-mcguinty/"
-  },
-  {
-    name: "Anita Vandenbeld",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Ottawa West—Nepean" }, province: "ON" },
-    image: "/media/polpics/anita-vandenbeld.jpg",
-    url: "/politicians/anita-vandenbeld/"
-  },
-  {
-    name: "Chrystia Freeland",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "University—Rosedale" }, province: "ON" },
-    image: "/media/polpics/chrystia-freeland.jpg",
-    url: "/politicians/chrystia-freeland/"
-  },
-  {
-    name: "Julie Dabrusin",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Toronto—Danforth" }, province: "ON" },
-    image: "/media/polpics/julie-dabrusin.jpg",
-    url: "/politicians/julie-dabrusin/"
-  },
-  {
-    name: "Marci Ien",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Toronto Centre" }, province: "ON" },
-    image: "/media/polpics/marci-ien.jpg",
-    url: "/politicians/marci-ien/"
-  },
-  {
-    name: "Hedy Fry",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Vancouver Centre" }, province: "BC" },
-    image: "/media/polpics/hedy-fry.jpg",
-    url: "/politicians/hedy-fry/"
-  },
-  {
-    name: "Harjit Sajjan",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Vancouver South" }, province: "BC" },
-    image: "/media/polpics/harjit-sajjan.jpg",
-    url: "/politicians/harjit-sajjan/"
-  },
-  {
-    name: "George Chahal",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "Calgary Skyview" }, province: "AB" },
-    image: "/media/polpics/george-chahal.jpg",
-    url: "/politicians/george-chahal/"
-  },
-  {
-    name: "Greg McLean",
-    current_party: { short_name: { en: "Conservative" } },
-    current_riding: { name: { en: "Calgary Centre" }, province: "AB" },
-    image: "/media/polpics/greg-mclean.jpg",
-    url: "/politicians/greg-mclean/"
-  },
-  {
-    name: "Pat Kelly",
-    current_party: { short_name: { en: "Conservative" } },
-    current_riding: { name: { en: "Calgary Rocky Ridge" }, province: "AB" },
-    image: "/media/polpics/pat-kelly.jpg",
-    url: "/politicians/pat-kelly/"
-  }
-];
-
-async function getAllPoliticians(): Promise<OpenParliamentRepresentative[]> {
-  const now = Date.now();
-  
-  // Return cached data if still valid
-  if (politiciansCache.length > 0 && (now - cacheTimestamp) < CACHE_DURATION) {
-    return politiciansCache;
-  }
-  
-  try {
-    console.log('Attempting to fetch from Represent API...');
-    const response = await fetch('https://represent.opennorth.ca/representatives/house-of-commons/', {
-      headers: {
-        'User-Agent': 'FindMyRep/1.0',
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Represent API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const representatives = data.objects || [];
-    
-    if (Array.isArray(representatives) && representatives.length > 0) {
-      // Transform Represent API data to our format
-      politiciansCache = representatives.map(rep => ({
-        name: rep.name,
-        current_party: { 
-          short_name: { 
-            en: rep.party_name || 'Independent' 
-          } 
-        },
-        current_riding: { 
-          name: { 
-            en: rep.district_name || 'Unknown' 
-          }, 
-          province: rep.offices?.[0]?.postal_code?.substring(0, 2) || 'Unknown'
-        },
-        image: rep.photo_url || null,
-        url: `/politicians/${rep.name.toLowerCase().replace(/\s+/g, '-')}/`,
-        email: rep.email || null,
-        phone: rep.offices?.[0]?.tel || null
-      }));
-      
-      cacheTimestamp = now;
-      console.log(`Successfully fetched ${politiciansCache.length} politicians from Represent API`);
-      return politiciansCache;
-    }
-  } catch (error: any) {
-    console.log('Represent API unavailable, using sample data:', error?.message || String(error));
-  }
-  
-  // Use sample data when API is unavailable
-  if (politiciansCache.length === 0) {
-    console.log('Loading sample politician data for demonstration');
-    politiciansCache = SAMPLE_POLITICIANS;
-    cacheTimestamp = now;
-  }
-  
-  return politiciansCache;
-}
-
-async function fetchDetailedMPInfo(mpName: string): Promise<any> {
-  try {
-    const nameSlug = mpName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-    console.log(`Fetching detailed info for: ${mpName} (slug: ${nameSlug})`);
-    
-    const response = await fetch(`https://openparliament.ca/politicians/${nameSlug}/?format=json`, {
-      headers: {
-        'User-Agent': 'FindMyRep/1.0',
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (response.ok) {
-      const detailedData = await response.json();
-      console.log(`Successfully fetched detailed info for ${mpName}:`, {
-        hasImage: !!detailedData.image,
-        hasEmail: !!detailedData.email,
-        imageUrl: detailedData.image
-      });
-      return detailedData;
-    } else {
-      console.log(`Failed to fetch detailed info for ${mpName}: ${response.status}`);
-    }
-  } catch (error) {
-    console.log(`Error fetching detailed info for ${mpName}:`, error);
-  }
-  return null;
-}
-
-async function searchByPostalCode(postalCode: string): Promise<OpenParliamentRepresentative[]> {
-  try {
-    const cleanPostalCode = postalCode.replace(/\s+/g, '').toUpperCase();
-    console.log(`Searching for postal code: ${cleanPostalCode}`);
-    
-    const response = await fetch(`https://represent.opennorth.ca/postcodes/${cleanPostalCode}/`, {
-      headers: {
-        'User-Agent': 'FindMyRep/1.0',
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Postal code lookup failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const representatives = data.representatives_centroid || data.representatives_concordance || [];
-    
-    // Filter for current MPs (incumbents) only - exclude candidates
-    const currentMPs = representatives.filter((rep: any) => 
-      rep.elected_office === 'MP' && rep.incumbent === true
-    );
-    
-    console.log(`Found ${currentMPs.length} current MPs for postal code ${cleanPostalCode}`);
-    
-    if (currentMPs.length === 0) {
-      console.log('No current MPs found, checking all representatives...');
-      // Fallback: look for any representative with MP office
-      const allMPs = representatives.filter((rep: any) => 
-        rep.elected_office === 'MP' || rep.district_name
-      );
-      console.log(`Found ${allMPs.length} total MPs/representatives`);
-    }
-    
-    const repsToTransform = currentMPs.length > 0 ? currentMPs : representatives.filter((rep: any) => rep.elected_office === 'MP');
-    
-    // Enhance data with detailed MP information
-    const enhancedReps = await Promise.all(repsToTransform.map(async (rep: any) => {
-      const detailedInfo = await fetchDetailedMPInfo(rep.name);
-      
-      // Extract office information - only use real data from APIs
-      const offices = [];
-
-      // Legislature office from detailed info (only if we have real contact data)
-      if (detailedInfo?.voice || detailedInfo?.email) {
-        offices.push({
-          type: 'Legislature Office',
-          address: 'House of Commons Ottawa ON K1A 0A6',
-          phone: detailedInfo.voice || null,
-          fax: detailedInfo.other_info?.fax || null,
-          email: detailedInfo.email || null
-        });
-      }
-
-      // Constituency office from Represent API or OpenParliament data
-      // Only include if we have actual office data with real contact information
-      if (rep.offices && rep.offices.length > 0) {
-        rep.offices.forEach((office: any) => {
-          // Only add office if it has meaningful data (not just placeholders)
-          if (office.postal_address || office.tel || office.fax) {
-            offices.push({
-              type: 'Constituency Office',
-              address: office.postal_address || null,
-              phone: office.tel || null,
-              fax: office.fax || null
-            });
-          }
-        });
-      }
-      
-      // Clean up URLs to prevent duplication and ensure proper photo display
-      let photoUrl = null;
-      if (detailedInfo?.image) {
-        photoUrl = detailedInfo.image.startsWith('http') ? 
-          detailedInfo.image : 
-          `https://openparliament.ca${detailedInfo.image}`;
-        console.log(`Using detailed info photo for ${rep.name}:`, photoUrl);
-      } else if (rep.photo_url) {
-        // Fix duplicate domain issue in cached data
-        if (rep.photo_url.includes('openparliament.cahttps://')) {
-          photoUrl = rep.photo_url.replace('openparliament.cahttps://', 'https://');
-        } else if (rep.photo_url.startsWith('http')) {
-          photoUrl = rep.photo_url;
-        } else {
-          photoUrl = `https://openparliament.ca${rep.photo_url}`;
-        }
-        console.log(`Using fallback photo for ${rep.name}:`, photoUrl);
-      }
-      
-      let profileUrl = rep.url || null;
-      if (detailedInfo?.url) {
-        profileUrl = detailedInfo.url.startsWith('http') ? 
-          detailedInfo.url : 
-          `https://openparliament.ca${detailedInfo.url}`;
-      }
-
-      // Enhanced biography information from API
-      let biography = null;
-      if (detailedInfo) {
-        const party = detailedInfo.memberships?.[0]?.party?.name?.en || rep.party_name;
-        const riding = detailedInfo.memberships?.[0]?.riding?.name?.en || rep.district_name;
-        const startDate = detailedInfo.memberships?.[0]?.start_date;
-        
-        biography = `${rep.name} is the Member of Parliament for ${riding}, representing the ${party}`;
-        if (startDate) {
-          const year = new Date(startDate).getFullYear();
-          biography += ` since ${year}`;
-        }
-        biography += '.';
-        
-        // Add any additional bio info if available
-        if (detailedInfo.other_info?.biography) {
-          biography += `\n\n${detailedInfo.other_info.biography}`;
-        }
-      } else {
-        biography = `${rep.name} is the Member of Parliament for ${rep.district_name}, representing the ${rep.party_name} party.`;
-      }
-
-      return {
-        name: rep.name,
-        current_party: { 
-          short_name: { 
-            en: rep.party_name || 'Independent' 
-          } 
-        },
-        current_riding: { 
-          name: { 
-            en: rep.district_name || 'Unknown' 
-          }, 
-          province: data.province || 'Unknown'
-        },
-        image: photoUrl?.replace('openparliament.cahttps://', 'https://') || null,
-        url: profileUrl?.replace('openparliament.cahttps://', 'https://') || null,
-        email: detailedInfo?.email || rep.email || null,
-        phone: detailedInfo?.voice || rep.offices?.[0]?.tel || null,
-        personalWebsite: rep.personal_url || null,
-        website: detailedInfo?.links?.[0]?.url || profileUrl,
-        socialMedia: {
-          twitter: detailedInfo?.other_info?.twitter?.[0] || rep.extra?.twitter,
-          ...rep.extra
-        },
-        biography: biography,
-        offices: offices,
-        fax: detailedInfo?.other_info?.fax || null,
-        parliamentId: detailedInfo?.other_info?.parl_mp_id?.[0] || rep.name.toLowerCase().replace(/\s+/g, '-')
-      };
-    }));
-    
-    return enhancedReps;
-    
-  } catch (error: any) {
-    console.error('Postal code search error:', error?.message || String(error));
-    return [];
-  }
-}
-
-async function searchOpenParliament(query: string, type: 'postal_code' | 'name' | 'riding' = 'postal_code'): Promise<OpenParliamentRepresentative[]> {
-  try {
-    if (type === 'postal_code') {
-      // Use direct postal code API lookup
-      return await searchByPostalCode(query);
-    }
-    
-    // For name and riding searches, use cached politician data
-    const allPoliticians = await getAllPoliticians();
-    
-    if (allPoliticians.length === 0) {
-      console.log('No politicians data available');
-      return [];
-    }
-    
-    if (type === 'name') {
-      const searchName = query.toLowerCase();
-      return allPoliticians.filter((politician: OpenParliamentRepresentative) => {
-        return politician.name.toLowerCase().includes(searchName);
-      });
-    } else if (type === 'riding') {
-      const searchRiding = query.toLowerCase();
-      return allPoliticians.filter((politician: OpenParliamentRepresentative) => {
-        const ridingName = politician.current_riding?.name?.en || '';
-        return ridingName.toLowerCase().includes(searchRiding);
-      });
-    }
-    
-    return [];
-  } catch (error) {
-    console.error('Search error:', error);
-    return [];
-  }
-}
-
-function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any {
-  const baseUrl = 'https://openparliament.ca';
-  
-  // Ensure clean URL construction
-  const cleanImageUrl = apiRep.image ? 
-    (apiRep.image.startsWith('http') ? apiRep.image : `${baseUrl}${apiRep.image}`) : null;
-  const cleanProfileUrl = apiRep.url ? 
-    (apiRep.url.startsWith('http') ? apiRep.url : `${baseUrl}${apiRep.url}`) : null;
-  
-  return {
-    name: apiRep.name,
-    party: apiRep.current_party?.short_name?.en || 'Unknown',
-    constituency: apiRep.current_riding?.name?.en || 'Unknown',
-    province: apiRep.current_riding?.province || 'Unknown',
-    email: null,
-    phone: null,
-    photo: cleanImageUrl,
-    website: cleanProfileUrl,
-    personalWebsite: null,
-    socialMedia: {},
-    biography: null,
-    offices: [],
-    fax: null,
-    parliamentId: apiRep.url ? apiRep.url.split('/').slice(-2, -1)[0] : null,
-  };
-}
+const insertSavedRepresentativeSchema = z.object({
+  representativeId: z.number().nullable(),
+  userId: z.string()
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Search representatives by postal code or location
-  // UPDATED: Uses House of Commons XML as primary, Represent API for postal code lookup
+  // Enhanced search using best practices from Represent API documentation
   app.post("/api/representatives/search", async (req, res) => {
     try {
-      const { query, type = 'postal_code' } = req.body;
+      const { query, type = 'postal_code', limit = 20, offset = 0 } = req.body;
 
-      if (!query) {
+      if (!query && type !== 'coordinates') {
         return res.status(400).json({ message: "Query is required" });
       }
 
-      let representatives = [];
+      console.log(`[Enhanced Search] ${type} search for: ${query || 'coordinates'}`);
 
-      if (type === 'postal_code') {
-        // Use improved postal code service (Represent API for postal code→riding, then House of Commons XML for MP data)
-        const { lookupMPByPostalCode } = await import('./improvedPostalCodeService');
-        const result = await lookupMPByPostalCode(query);
+      let searchResults: {
+        representatives: Representative[];
+        metadata?: any;
+        warnings?: string[];
+        confidence?: string;
+      } = { representatives: [] };
 
-        if (result && result.mp) {
-          // Transform House of Commons data to representative format
-          const transformedData = {
-            name: result.mp.name,
-            party: result.mp.party,
-            constituency: result.mp.constituency,
-            province: result.mp.province,
-            email: result.mp.email,
-            phone: null,
-            photo: result.mp.photoUrl,
-            website: result.mp.profileUrl,
-            personalWebsite: null,
-            socialMedia: {},
-            biography: `${result.mp.name} is the Member of Parliament for ${result.mp.constituency}, representing the ${result.mp.party} party.`,
-            offices: [],
-            fax: null,
-            parliamentId: result.mp.id,
+      switch (type) {
+        case 'postal_code':
+          // Use enhanced postal code service with coordinate conversion
+          const postalResult = await enhancedPostalCodeService.lookupPostalCode(query);
+          searchResults = {
+            representatives: postalResult.representatives,
+            metadata: {
+              coordinates: postalResult.coordinates,
+              boundaries: postalResult.boundaries,
+              dataSource: postalResult.dataSource
+            },
+            warnings: postalResult.warnings,
+            confidence: postalResult.confidence
           };
+          break;
 
-          // Enhance with Represent API data if available
-          if (result.representApiData) {
-            const repData = result.representApiData;
-            if (repData.offices && repData.offices.length > 0) {
-              transformedData.offices = repData.offices.map((office: any) => ({
-                type: office.type || 'Constituency Office',
-                phone: office.tel || null,
-                fax: office.fax || null,
-              }));
-              transformedData.phone = repData.offices[0].tel || null;
+        case 'name':
+          // Use enhanced name search with proper filtering
+          const nameResult = await representApi.searchAllRepresentatives({
+            name: query,
+            limit,
+            offset
+          });
+          searchResults = {
+            representatives: nameResult.objects,
+            metadata: {
+              totalCount: nameResult.meta.total_count,
+              hasMore: !!nameResult.meta.next
             }
-            if (repData.email) {
-              transformedData.email = repData.email;
-            }
-          }
-
-          // Check if representative already exists
-          let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
-
-          if (!representative) {
-            representative = await storage.createRepresentative(transformedData);
-          }
-
-          representatives.push(representative);
-        }
-      } else {
-        // For name/riding searches, use House of Commons XML directly
-        const { getAllMPsFromHouseOfCommons, searchMPsByName } = await import('./houseOfCommonsService');
-
-        let hocResults = [];
-        if (type === 'name') {
-          hocResults = await searchMPsByName(query);
-        } else if (type === 'riding') {
-          const allMPs = await getAllMPsFromHouseOfCommons();
-          const searchRiding = query.toLowerCase();
-          hocResults = allMPs.filter(mp =>
-            mp.constituency.toLowerCase().includes(searchRiding)
-          );
-        }
-
-        // Transform House of Commons data
-        for (const mp of hocResults) {
-          const transformedData = {
-            name: mp.name,
-            party: mp.party,
-            constituency: mp.constituency,
-            province: mp.province,
-            email: mp.email,
-            phone: null,
-            photo: mp.photoUrl,
-            website: mp.profileUrl,
-            personalWebsite: null,
-            socialMedia: {},
-            biography: `${mp.name} is the Member of Parliament for ${mp.constituency}, representing the ${mp.party} party.`,
-            offices: [],
-            fax: null,
-            parliamentId: mp.id,
           };
+          break;
 
-          let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
+        case 'riding':
+          // Search by electoral district name
+          const ridingResult = await representApi.searchAllRepresentatives({
+            district_name: query,
+            limit,
+            offset
+          });
+          searchResults = {
+            representatives: ridingResult.objects,
+            metadata: {
+              totalCount: ridingResult.meta.total_count,
+              hasMore: !!ridingResult.meta.next
+            }
+          };
+          break;
 
-          if (!representative) {
-            representative = await storage.createRepresentative(transformedData);
+        case 'coordinates':
+          // Search by lat/lng coordinates (most accurate method)
+          const { lat, lng } = req.body;
+          if (!lat || !lng) {
+            return res.status(400).json({ message: "Latitude and longitude required for coordinate search" });
           }
+          const coordResult = await representApi.findRepresentativesByCoordinates(parseFloat(lat), parseFloat(lng));
+          searchResults = {
+            representatives: coordResult,
+            metadata: {
+              coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+              searchType: 'coordinate'
+            }
+          };
+          break;
 
-          representatives.push(representative);
+        default:
+          return res.status(400).json({ message: "Invalid search type. Use: postal_code, name, riding, or coordinates" });
+      }
+
+      // Transform and store representatives
+      const transformedRepresentatives = [];
+      for (const apiRep of searchResults.representatives) {
+        const transformedData = transformRepresentativeData(apiRep);
+
+        // Check if representative already exists
+        let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
+
+        if (!representative) {
+          representative = await storage.createRepresentative(transformedData);
         }
+
+        transformedRepresentatives.push(representative);
       }
 
       // Save search query
       await storage.createSearch({
-        query,
+        query: query || `${lat},${lng}`,
         location: type === 'postal_code' ? query : undefined,
         postalCode: type === 'postal_code' ? query : undefined,
-        results: representatives,
+        results: transformedRepresentatives,
       });
 
       res.json({
-        representatives,
-        dataSource: 'house_of_commons',
-        note: 'Data from House of Commons XML (primary) with Represent API for postal code lookup'
+        representatives: transformedRepresentatives,
+        metadata: searchResults.metadata,
+        warnings: searchResults.warnings || [],
+        confidence: searchResults.confidence || 'medium',
+        dataSource: 'represent_api_enhanced',
+        note: `Enhanced search using Represent API best practices. Method: ${type}`
       });
     } catch (error) {
-      console.error('Search error:', error);
-      res.status(500).json({ message: "Failed to search representatives" });
+      console.error('Enhanced search error:', error);
+      res.status(500).json({
+        message: "Failed to search representatives",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
-  // Get representative by ID
+  // Transform Representative API data to our format
+  function transformRepresentativeData(apiRep: Representative): InsertRepresentative {
+    return {
+      name: apiRep.name,
+      party: apiRep.party_name || 'Independent',
+      constituency: apiRep.district_name || 'Unknown',
+      province: extractProvinceFromDistrict(apiRep.district_name) || 'Unknown',
+      electedOffice: apiRep.elected_office,
+      email: apiRep.email || null,
+      phone: apiRep.offices?.[0]?.tel || null,
+      photo: apiRep.photo_url || null,
+      website: apiRep.url || null,
+      personalWebsite: null,
+      socialMedia: null,
+      biography: generateBiography(apiRep),
+      offices: apiRep.offices || null,
+      fax: apiRep.offices?.[0]?.fax || null,
+      parliamentId: generateParliamentId(apiRep)
+    };
+  }
+
+  function extractProvinceFromDistrict(districtName?: string): string | null {
+    if (!districtName) return null;
+
+    // Map common district patterns to provinces
+    const provincePatterns = [
+      { pattern: /\b(Alberta|AB)\b/i, province: 'Alberta' },
+      { pattern: /\b(British Columbia|BC|B\.C\.)\b/i, province: 'British Columbia' },
+      { pattern: /\b(Manitoba|MB)\b/i, province: 'Manitoba' },
+      { pattern: /\b(New Brunswick|NB|N\.B\.)\b/i, province: 'New Brunswick' },
+      { pattern: /\b(Newfoundland and Labrador|NL|N\.L\.)\b/i, province: 'Newfoundland and Labrador' },
+      { pattern: /\b(Nova Scotia|NS|N\.S\.)\b/i, province: 'Nova Scotia' },
+      { pattern: /\b(Ontario|ON)\b/i, province: 'Ontario' },
+      { pattern: /\b(Prince Edward Island|PEI|P\.E\.I\.)\b/i, province: 'Prince Edward Island' },
+      { pattern: /\b(Quebec|QC|PQ)\b/i, province: 'Quebec' },
+      { pattern: /\b(Saskatchewan|SK)\b/i, province: 'Saskatchewan' },
+      { pattern: /\b(Northwest Territories|NT|N\.W\.T\.)\b/i, province: 'Northwest Territories' },
+      { pattern: /\b(Yukon|YT)\b/i, province: 'Yukon' },
+      { pattern: /\b(Nunavut|NU)\b/i, province: 'Nunavut' }
+    ];
+
+    for (const { pattern, province } of provincePatterns) {
+      if (pattern.test(districtName)) {
+        return province;
+      }
+    }
+
+    return null;
+  }
+
+  function generateBiography(rep: Representative): string {
+    const position = getElectedOfficeTitle(rep.elected_office);
+    return `${rep.name} serves as the ${position} for ${rep.district_name}, representing the ${rep.party_name || 'Independent'}.`;
+  }
+
+  function getElectedOfficeTitle(office?: string): string {
+    if (!office) return 'Representative';
+
+    const officeTitles: Record<string, string> = {
+      'MP': 'Member of Parliament',
+      'MPP': 'Member of Provincial Parliament',
+      'MLA': 'Member of Legislative Assembly',
+      'MNA': 'Member of National Assembly',
+      'Mayor': 'Mayor',
+      'Councillor': 'City Councillor'
+    };
+
+    return officeTitles[office] || office || 'Representative';
+  }
+
+  function generateParliamentId(apiRep: Representative): string {
+    // Use the Represent API URL as a unique identifier
+    if (apiRep.url) {
+      return apiRep.url.split('/').filter(Boolean).pop() || apiRep.name;
+    }
+    return apiRep.name;
+  }
+
+  // Additional Represent API endpoints
+
+  // Get all boundary sets
+  app.get("/api/boundary-sets", async (req, res) => {
+    try {
+      const { name, domain, limit = 20, offset = 0 } = req.query;
+      const result = await representApi.getBoundarySets({
+        name: name as string,
+        domain: domain as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Boundary sets error:', error);
+      res.status(500).json({ message: "Failed to fetch boundary sets" });
+    }
+  });
+
+  // Search boundaries within a boundary set
+  app.get("/api/boundaries/:boundarySetName/search", async (req, res) => {
+    try {
+      const { boundarySetName } = req.params;
+      const { name, contains, touches, intersects, limit = 20, offset = 0 } = req.query;
+
+      const result = await representApi.getBoundaries(boundarySetName, {
+        name: name as string,
+        contains: contains as string,
+        touches: touches as string,
+        intersects: intersects as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Boundary search error:', error);
+      res.status(500).json({ message: "Failed to search boundaries" });
+    }
+  });
+
+  // Get specific boundary with shape data
+  app.get("/api/boundaries/:boundaryUrl(*)", async (req, res) => {
+    try {
+      const { boundaryUrl } = req.params;
+      const boundary = await representApi.getBoundary(`/${boundaryUrl}`);
+
+      // Include shape data for map display
+      let shapeData = null;
+      if (boundary.simple_shape_url) {
+        try {
+          shapeData = await representApi.getBoundarySimpleShape(boundary.url);
+        } catch (shapeError) {
+          console.warn('Failed to fetch boundary shape:', shapeError);
+        }
+      }
+
+      res.json({
+        boundary,
+        shapeData,
+        metadata: {
+          dataSource: 'represent_api',
+          hasShapeData: !!shapeData
+        }
+      });
+    } catch (error) {
+      console.error('Boundary details error:', error);
+      res.status(500).json({ message: "Failed to fetch boundary details" });
+    }
+  });
+
+  // Coordinate-based search (most accurate method)
+  app.post("/api/search/coordinates", async (req, res) => {
+    try {
+      const { lat, lng, boundarySetName } = req.body;
+
+      if (!lat || !lng) {
+        return res.status(400).json({ message: "Latitude and longitude are required" });
+      }
+
+      const representatives = await representApi.findRepresentativesByCoordinates(
+        parseFloat(lat),
+        parseFloat(lng)
+      );
+
+      const boundaries = await representApi.findBoundariesByCoordinates(
+        parseFloat(lat),
+        parseFloat(lng),
+        boundarySetName
+      );
+
+      res.json({
+        representatives,
+        boundaries,
+        coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        metadata: {
+          representativeCount: representatives.length,
+          boundaryCount: boundaries.length,
+          searchType: 'coordinate',
+          dataSource: 'represent_api'
+        }
+      });
+    } catch (error) {
+      console.error('Coordinate search error:', error);
+      res.status(500).json({ message: "Failed to search by coordinates" });
+    }
+  });
+
+  // Get representative sets
+  app.get("/api/representative-sets", async (req, res) => {
+    try {
+      const { name, limit = 20, offset = 0 } = req.query;
+      const result = await representApi.getRepresentativeSets({
+        name: name as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Representative sets error:', error);
+      res.status(500).json({ message: "Failed to fetch representative sets" });
+    }
+  });
+
+  // Get elections
+  app.get("/api/elections", async (req, res) => {
+    try {
+      const { name, limit = 20, offset = 0 } = req.query;
+      const result = await representApi.getElections({
+        name: name as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Elections error:', error);
+      res.status(500).json({ message: "Failed to fetch elections" });
+    }
+  });
+
+  // Get election candidates
+  app.get("/api/elections/:electionUrl/candidates", async (req, res) => {
+    try {
+      const { electionUrl } = req.params;
+      const { name, first_name, last_name, gender, district_name, party_name, elected_office, limit = 20, offset = 0 } = req.query;
+
+      const result = await representApi.getCandidates(`/${electionUrl}`, {
+        name: name as string,
+        first_name: first_name as string,
+        last_name: last_name as string,
+        gender: gender as string,
+        district_name: district_name as string,
+        party_name: party_name as string,
+        elected_office: elected_office as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Candidates error:', error);
+      res.status(500).json({ message: "Failed to fetch candidates" });
+    }
+  });
+
+  // Bulk download representatives
+  app.get("/api/bulk/representatives/:representativeSetName", async (req, res) => {
+    try {
+      const { representativeSetName } = req.params;
+      const representatives = await representApi.getAllRepresentativesBulk(representativeSetName);
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${representativeSetName}.json"`);
+      res.json(representatives);
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      res.status(500).json({ message: "Failed to download representatives" });
+    }
+  });
+
+  // Postal code validation
+  app.post("/api/postal-code/validate", async (req, res) => {
+    try {
+      const { postalCode } = req.body;
+
+      if (!postalCode) {
+        return res.status(400).json({ message: "Postal code is required" });
+      }
+
+      const isValid = enhancedPostalCodeService.isValidCanadianPostalCode(postalCode);
+      const formatted = enhancedPostalCodeService.formatPostalCode(postalCode);
+      const clean = formatted.replace(/\s+/g, '');
+
+      res.json({
+        original: postalCode,
+        isValid,
+        formatted: isValid ? formatted : postalCode,
+        clean: isValid ? clean : postalCode
+      });
+    } catch (error) {
+      console.error('Postal code validation error:', error);
+      res.status(500).json({ message: "Failed to validate postal code" });
+    }
+  });
+
+  // Get all representatives (for initial app load)
+  app.post("/api/representatives", async (req, res) => {
+    try {
+      const { limit = 1000 } = req.body;
+
+      // Get all federal MPs
+      const result = await representApi.getRepresentatives('house-of-commons', {
+        elected_office: 'MP',
+        limit: parseInt(limit)
+      });
+
+      // Transform and store representatives
+      const transformedRepresentatives = [];
+      for (const apiRep of result.objects) {
+        const transformedData = transformRepresentativeData(apiRep);
+
+        // Check if representative already exists
+        let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
+
+        if (!representative) {
+          representative = await storage.createRepresentative(transformedData);
+        }
+
+        transformedRepresentatives.push(representative);
+      }
+
+      res.json({
+        representatives: transformedRepresentatives,
+        metadata: {
+          totalCount: result.meta.total_count,
+          dataSource: 'represent_api_enhanced',
+          note: 'Federal MPs loaded from Represent API'
+        }
+      });
+    } catch (error) {
+      console.error('Get representatives error:', error);
+      res.status(500).json({ message: "Failed to fetch representatives" });
+    }
+  });
+
+  // Get single representative by ID
   app.get("/api/representatives/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const representative = await storage.getRepresentative(id);
-      
+      const { id } = req.params;
+      const representative = await storage.getRepresentative(parseInt(id));
+
       if (!representative) {
         return res.status(404).json({ message: "Representative not found" });
       }
 
       res.json(representative);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get representative" });
-    }
-  });
-
-  // Get recent searches
-  app.get("/api/searches/recent", async (req, res) => {
-    try {
-      const searches = await storage.getRecentSearches(5);
-      res.json(searches);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get recent searches" });
+      console.error('Get representative error:', error);
+      res.status(500).json({ message: "Failed to fetch representative" });
     }
   });
 
   // Save representative
-  app.post("/api/representatives/:id/save", async (req, res) => {
+  app.post("/api/saved-representatives", async (req, res) => {
     try {
-      const representativeId = parseInt(req.params.id);
-      const { userId } = req.body;
-
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
-      }
-
-      // Check if already saved
-      const alreadySaved = await storage.isSaved(userId, representativeId);
-      if (alreadySaved) {
-        return res.status(409).json({ message: "Representative already saved" });
-      }
-
-      const saved = await storage.saveRepresentative({
-        representativeId,
-        userId,
-      });
-
-      res.json(saved);
+      const data = insertSavedRepresentativeSchema.parse(req.body);
+      const savedRep = await storage.createSavedRepresentative(data);
+      res.json(savedRep);
     } catch (error) {
+      console.error('Save representative error:', error);
       res.status(500).json({ message: "Failed to save representative" });
     }
   });
 
-  // Remove saved representative
-  app.delete("/api/representatives/:id/save", async (req, res) => {
+  // Get saved representatives for user
+  app.get("/api/saved-representatives/:userId", async (req, res) => {
     try {
-      const representativeId = parseInt(req.params.id);
-      const { userId } = req.body;
-
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
-      }
-
-      const removed = await storage.removeSavedRepresentative(userId, representativeId);
-      
-      if (!removed) {
-        return res.status(404).json({ message: "Saved representative not found" });
-      }
-
-      res.json({ message: "Representative removed from saved list" });
+      const { userId } = req.params;
+      const savedReps = await storage.getSavedRepresentatives(userId);
+      res.json(savedReps);
     } catch (error) {
+      console.error('Get saved representatives error:', error);
+      res.status(500).json({ message: "Failed to fetch saved representatives" });
+    }
+  });
+
+  // Remove saved representative
+  app.delete("/api/saved-representatives/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSavedRepresentative(parseInt(id));
+      res.json({ message: "Saved representative removed successfully" });
+    } catch (error) {
+      console.error('Remove saved representative error:', error);
       res.status(500).json({ message: "Failed to remove saved representative" });
     }
   });
 
-  // Get saved representatives
-  app.get("/api/saved/:userId", async (req, res) => {
+  // Get search history for user
+  app.get("/api/searches/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
-      const saved = await storage.getSavedRepresentatives(userId);
-      res.json(saved);
+      const searches = await storage.getSearches(userId);
+      res.json(searches);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get saved representatives" });
+      console.error('Get searches error:', error);
+      res.status(500).json({ message: "Failed to fetch searches" });
     }
   });
-
-  // Geocoding endpoint for address to postal code conversion
-  app.post("/api/geocode", async (req, res) => {
-    try {
-      const { address } = req.body;
-
-      if (!address) {
-        return res.status(400).json({ message: "Address is required" });
-      }
-
-      // Simple geocoding - in a real app, you'd use a service like Google Maps API
-      // For now, we'll just return the address as-is and let the frontend handle it
-      res.json({
-        postalCode: null,
-        address,
-        message: "Please use postal code for more accurate results"
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to geocode address" });
-    }
-  });
-
-  // Get boundary GeoJSON for a representative's riding
-  app.get("/api/boundaries/:boundaryUrl(*)", async (req, res) => {
-    try {
-      let boundaryUrl = req.params.boundaryUrl;
-
-      if (!boundaryUrl) {
-        return res.status(400).json({ message: "Boundary URL is required" });
-      }
-
-      // Decode the URL-encoded boundary path
-      boundaryUrl = decodeURIComponent(boundaryUrl);
-
-      // Ensure boundaryUrl starts with /
-      if (!boundaryUrl.startsWith('/')) {
-        boundaryUrl = '/' + boundaryUrl;
-      }
-
-      // Fetch simplified shape from Represent API
-      const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
-      console.log('Fetching boundary from:', shapeUrl);
-
-      const response = await fetch(shapeUrl);
-
-      if (!response.ok) {
-        console.error(`Represent API error: ${response.status} for ${shapeUrl}`);
-        throw new Error(`Represent API error: ${response.status}`);
-      }
-
-      const geoJson = await response.json();
-      res.json(geoJson);
-    } catch (error) {
-      console.error('Boundary fetch error:', error);
-      res.status(500).json({ message: "Failed to fetch boundary data" });
-    }
-  });
-
-  // Register new hybrid API routes (v2)
-  // These use multiple data sources for improved accuracy
-  registerHybridRoutes(app);
-
-  // Register bundled data routes (v3)
-  // These use offline-first architecture with bundled MP XML data
-  registerBundledRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

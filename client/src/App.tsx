@@ -22,8 +22,6 @@ import NonAffiliationModal from "@/components/non-affiliation-modal";
 import { UserDataProvider, useUserData } from "@/hooks/use-user-data";
 import { SwipePager } from "@/components/SwipePager";
 import AppHeader from "@/components/app-header";
-import { useDataLoader } from "@/hooks/use-data-loader";
-import { DataLoadProgressComponent } from "@/components/data-load-progress";
 
 import { SourcesDisclaimer } from "@/pages/sources-disclaimer";
 import NameSearch from "@/pages/name-search";
@@ -97,12 +95,9 @@ function Router() {
 const TERMS_KEY = 'termsAcceptedVersion';
 
 function AppContent() {
-  const [appStatus, setAppStatus] = useState('initializing'); // 'initializing', 'needsTerms', 'needsDisclaimer', 'loadingData', 'ready'
+  const [appStatus, setAppStatus] = useState('initializing'); // 'initializing', 'needsTerms', 'needsDisclaimer', 'ready'
   const [appVersion, setAppVersion] = useState<string>('0.0.0');
   const { initializeUserData } = useUserData();
-
-  // Load representative data (only when app status is 'loadingData')
-  const { isLoading: dataLoading, isComplete: dataComplete, error: dataError, progress } = useDataLoader(appStatus === 'loadingData');
 
   useEffect(() => {
     const startup = async () => {
@@ -176,17 +171,9 @@ function AppContent() {
 
   const handleAcknowledgeDisclaimer = async () => {
     console.log('[Startup] === User Acknowledged Disclaimer ===');
-    console.log('[Startup] Loading representative data...');
-    setAppStatus('loadingData');
+    console.log('[Startup] App is ready to use');
+    setAppStatus('ready');
   };
-
-  // When data loading completes, transition to ready
-  useEffect(() => {
-    if (appStatus === 'loadingData' && dataComplete) {
-      console.log('[Startup] Data loading complete, app is ready');
-      setAppStatus('ready');
-    }
-  }, [appStatus, dataComplete]);
 
   if (appStatus === 'initializing') {
     return <LoadingScreen />;
@@ -198,10 +185,6 @@ function AppContent() {
 
   if (appStatus === 'needsDisclaimer') {
     return <NonAffiliationModal onAcknowledge={handleAcknowledgeDisclaimer} />;
-  }
-
-  if (appStatus === 'loadingData') {
-    return <DataLoadProgressComponent progress={progress} isComplete={dataComplete} />;
   }
 
   return <Router />;

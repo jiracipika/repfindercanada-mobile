@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { initializeBundledData } from "./bundledDataLoader";
 
 const app = express();
 app.use(express.json());
@@ -38,16 +37,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize bundled MP data on startup
-  log("Initializing bundled MP data...");
-  try {
-    await initializeBundledData(true); // Load from bundle and check for updates
-    log("✓ Bundled MP data initialized successfully");
-  } catch (error: any) {
-    log(`✗ Failed to initialize bundled data: ${error?.message || String(error)}`);
-    log("⚠️  Server will start but MP searches may fail");
-  }
-
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -67,10 +56,10 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
+  // ALWAYS serve the app on port 5000 (temporary: 5001 for testing)
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = 5001;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
