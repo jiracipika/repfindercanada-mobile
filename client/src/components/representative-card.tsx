@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink, Trash2, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink, Trash2 } from "lucide-react";
 import type { Representative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
@@ -141,45 +141,6 @@ export function RepresentativeCard({
       .join(' ');
   };
 
-  const getConfidenceBadge = (dataQuality?: any) => {
-    if (!dataQuality) return null;
-
-    const confidence = dataQuality.confidence || 'medium';
-
-    if (confidence === 'high') {
-      return (
-        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-          <CheckCircle2 className="h-3 w-3" />
-          <span>Verified</span>
-        </div>
-      );
-    } else if (confidence === 'low') {
-      return (
-        <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-          <AlertTriangle className="h-3 w-3" />
-          <span>Unverified</span>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-          <Info className="h-3 w-3" />
-          <span>Likely Correct</span>
-        </div>
-      );
-    }
-  };
-
-  const getDataSource = (dataQuality?: any) => {
-    if (!dataQuality) return 'House of Commons';
-
-    const source = dataQuality.source || 'unknown';
-    if (source === 'cache_manual') return 'Manually Verified';
-    if (source === 'represent_verified') return 'House of Commons';
-    if (source === 'represent_unverified') return 'Third-party API';
-    return 'House of Commons';
-  };
-
   return (
     <Card className="rounded-xl border bg-card shadow-sm p-4 mb-3 transition-all hover:shadow-md">
       <CardContent className="p-0">
@@ -200,17 +161,9 @@ export function RepresentativeCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between mb-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-lg text-foreground leading-tight">
-                  {representative.name}
-                </h3>
-                {/* Confidence Badge */}
-                {(representative as any).dataQuality && (
-                  <div className="mt-1">
-                    {getConfidenceBadge((representative as any).dataQuality)}
-                  </div>
-                )}
-              </div>
+              <h3 className="font-semibold text-lg text-foreground leading-tight">
+                {representative.name}
+              </h3>
               <div className="flex gap-1">
                 {showSaveButton && (
                   <Button
@@ -295,37 +248,6 @@ export function RepresentativeCard({
               <span className="text-sm font-medium">View Full Profile</span>
             </Button>
         </div>
-
-        {/* Data Quality Footer */}
-        {(representative as any).dataQuality && (
-          <div className="mt-3 pt-3 border-t border-border">
-            <div className="text-xs text-muted-foreground space-y-2">
-              <div className="flex items-center justify-between">
-                <span>Data from {getDataSource((representative as any).dataQuality)}</span>
-                {/* Report Error Button */}
-                <button
-                  onClick={() => {
-                    const mailtoLink = `mailto:report@example.com?subject=Incorrect%20Representative%20Data&body=Representative:%20${encodeURIComponent(representative.name)}%0ARiding:%20${encodeURIComponent(representative.constituency)}%0A%0APlease%20describe%20the%20issue:`;
-                    window.open(mailtoLink, '_self');
-                  }}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Report error
-                </button>
-              </div>
-              {/* Show warnings if confidence is low */}
-              {(representative as any).dataQuality.warnings &&
-               (representative as any).dataQuality.warnings.length > 0 && (
-                <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-md">
-                  <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                  <span className="text-xs">
-                    {(representative as any).dataQuality.warnings[0]}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

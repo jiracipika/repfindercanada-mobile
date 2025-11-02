@@ -9,7 +9,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fetchRepsByNameV2 } from "@/lib/api/v2";
+import { fetchRepsByName } from "@/lib/representApi";
 import { logActivity } from "@/lib/storage/activityRepository";
 
 // Helper function to sort representatives by government level
@@ -37,8 +37,6 @@ const sortRepresentatives = (representatives: Representative[]): Representative[
 };
 
 export default function NameSearch() {
-  console.log('[NameSearch] Component mounted/rendered');
-
   const [, setLocation] = useLocation();
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
@@ -48,40 +46,27 @@ export default function NameSearch() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[NameSearch] === handleSearch called ===');
-    console.log('[NameSearch] Form submitted with query:', query);
 
     const trimmedQuery = query.trim();
-    console.log('[NameSearch] Trimmed query:', trimmedQuery);
-
     if (!trimmedQuery) {
-      console.log('[NameSearch] Empty query, showing error');
       setSearchError("Please enter a name to search");
       return;
     }
 
-    console.log('[NameSearch] Starting search, setting isSearching=true');
     setIsSearching(true);
     setSearchError(null);
     setSearchResults([]);
 
     try {
-      console.log('[NameSearch] Calling fetchRepsByNameV2 with:', trimmedQuery);
-      const results = await fetchRepsByNameV2(trimmedQuery);
-      console.log('[NameSearch] V2 API returned:', results.length, 'results');
+      const results = await fetchRepsByName(trimmedQuery);
 
       if (results.length === 0) {
-        console.log('[NameSearch] No results found, showing error');
         setSearchError(`No representatives found matching "${trimmedQuery}"`);
       } else {
-        console.log('[NameSearch] Sorting', results.length, 'results');
         const sortedResults = sortRepresentatives(results);
-        console.log('[NameSearch] After sorting:', sortedResults.length, 'results');
-        console.log('[NameSearch] First result:', sortedResults[0]?.name, '/', sortedResults[0]?.electedOffice);
         setSearchResults(sortedResults);
 
         // Log the search activity
-        console.log('[NameSearch] Logging activity to storage');
         await logActivity({
           type: "search",
           query: trimmedQuery,
@@ -89,14 +74,11 @@ export default function NameSearch() {
           ts: Date.now(),
           representatives: sortedResults,
         });
-        console.log('[NameSearch] Activity logged successfully');
       }
     } catch (error) {
-      console.error('[NameSearch] !!! V2 API name search error:', error);
-      console.error('[NameSearch] !!! Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.error("Name search error:", error);
       setSearchError("Failed to search. Please check your connection and try again.");
     } finally {
-      console.log('[NameSearch] Search complete, setting isSearching=false');
       setIsSearching(false);
     }
   };

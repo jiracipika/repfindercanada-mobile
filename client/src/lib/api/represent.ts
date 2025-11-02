@@ -30,7 +30,6 @@ const normalizeRepresentative = async (rep: OpenNorthRepresentative): Promise<Re
     party: rep.party_name || "Independent",
     constituency: rep.district_name,
     province: "", // Not provided by this OpenNorth endpoint
-    electedOffice: rep.elected_office || undefined,
     email: rep.email || undefined,
     phone: rep.offices?.[0]?.tel || undefined,
     photo: rep.photo_url || undefined,
@@ -49,47 +48,30 @@ const normalizeRepresentative = async (rep: OpenNorthRepresentative): Promise<Re
 };
 
 export const searchByName = async (name: string): Promise<Representative[]> => {
-  console.log('[searchByName] === Starting name search ===');
-  console.log('[searchByName] Query:', name);
-
   if (!name.trim()) {
-    console.log('[searchByName] Empty query, returning empty array');
     return [];
   }
 
   try {
-    const url = `https://represent.opennorth.ca/representatives/?q=${encodeURIComponent(name)}`;
-    console.log('[searchByName] Fetching from URL:', url);
-
-    const response = await fetch(url);
-    console.log('[searchByName] Response status:', response.status);
-    console.log('[searchByName] Response ok:', response.ok);
-
+    const response = await fetch(`https://represent.opennorth.ca/representatives/?q=${encodeURIComponent(name)}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
     const data = await response.json();
-    console.log('[searchByName] Raw API response:', JSON.stringify(data).substring(0, 500) + '...');
-    console.log('[searchByName] Number of objects returned:', data?.objects?.length || 0);
 
     // OpenNorth API returns a 'objects' array
     if (data && Array.isArray(data.objects)) {
-      // Trust the API's filtering - it already filtered by the 'q' parameter
-      // The API searches across multiple fields (name, district, office, etc.)
-      console.log('[searchByName] Using API results directly (trusting API filtering)');
-
-      const representatives = await Promise.all(data.objects.map((rep: OpenNorthRepresentative) => normalizeRepresentative(rep)));
-      console.log('[searchByName] After normalization:', representatives.length, 'representatives');
-      console.log('[searchByName] First result (if any):', representatives[0] ? JSON.stringify(representatives[0]).substring(0, 300) : 'none');
-
-      return representatives;
+      // Client-side filtering for robustness (case/diacritic-insensitive)
+      const normalizedName = name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+      const filtered = data.objects
+        .filter((rep: OpenNorthRepresentative) =>
+          rep.name.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").includes(normalizedName)
+        );
+      return Promise.all(filtered.map((rep: OpenNorthRepresentative) => normalizeRepresentative(rep)));
     }
-    console.log('[searchByName] No objects array in response, returning empty array');
     return [];
   } catch (error) {
-    console.error('[searchByName] !!! Error searching by name:', error);
-    console.error('[searchByName] !!! Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error("Error searching by name:", error);
     // In a real app, you might want to throw a more specific error or return a Result type
     return [];
   }
