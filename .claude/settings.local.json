@@ -31,7 +31,11 @@
       "Bash(npm run db:push:*)",
       "Bash(npm uninstall:*)",
       "Bash(xargs sed:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm start)",
+      "Bash(netstat:*)",
+      "Bash(kill:*)",
+      "Bash(sudo kill:*)"
     ],
     "deny": [],
     "ask": []
