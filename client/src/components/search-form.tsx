@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostal } from "@/lib/representApi";
+import { fetchRepsByPostalEnhanced, fetchRepsByPostal } from "@/lib/representApi";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -94,7 +94,8 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
       const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
 
-      const results = await fetchRepsByPostal(trimmedQuery);
+      // Use the enhanced coordinate-based search for better accuracy
+      const results = await fetchRepsByPostalEnhanced(trimmedQuery);
       onSearchComplete(results);
 
       // Log the search activity with representatives
