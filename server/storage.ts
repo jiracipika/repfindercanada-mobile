@@ -1,4 +1,4 @@
-import { representatives, searches, savedRepresentatives, type Representative, type InsertRepresentative, type Search, type InsertSearch, type SavedRepresentative, type InsertSavedRepresentative } from "@shared/schema";
+import { type Representative, type InsertRepresentative, type Search, type InsertSearch, type SavedRepresentative, type InsertSavedRepresentative } from "@shared/types";
 
 export interface IStorage {
   // Representatives

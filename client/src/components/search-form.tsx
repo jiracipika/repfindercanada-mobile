@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { lookupByPostalCode } from "@/lib/postal-code-lookup";
-import type { Representative } from "@shared/schema";
+import type { Representative } from "@shared/types";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
 import { searchCacheRepository } from "@/lib/storage/searchCacheRepository";
@@ -90,12 +89,28 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      console.log('[SearchForm] Looking up postal code:', trimmedQuery);
+      console.log('[SearchForm] Searching for:', trimmedQuery);
 
-      // Use new hybrid lookup: Represent API + local IndexedDB
-      const lookupResult = await lookupByPostalCode(trimmedQuery);
+      // Use the main API search endpoint
+      const response = await fetch('/api/representatives/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: trimmedQuery,
+          type: 'postal_code'
+        })
+      });
 
-      if (!lookupResult) {
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const representatives = data.representatives || [];
+
+      if (representatives.length === 0) {
         toast({
           title: "No representative found",
           description: "Please check your postal code and try again.",
@@ -105,40 +120,14 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         return;
       }
 
-      // Convert FederalMP to Representative format
-      const representative: Representative = {
-        id: parseInt(lookupResult.mp.id) || 0,
-        name: lookupResult.mp.name,
-        party: lookupResult.mp.party,
-        constituency: lookupResult.mp.riding,
-        province: lookupResult.mp.province,
-        electedOffice: 'MP',
-        email: lookupResult.mp.email,
-        phone: lookupResult.mp.phone,
-        photo: lookupResult.mp.photoUrl,
-        website: lookupResult.mp.profileUrl,
-        personalWebsite: null,
-        socialMedia: null,
-        biography: null,
-        offices: lookupResult.mp.offices ? JSON.parse(JSON.stringify(lookupResult.mp.offices)) : null,
-        fax: null,
-        parliamentId: lookupResult.mp.id,
-        boundaryUrl: null,
-        boundaryData: null,
-        dataQuality: {
-          source: lookupResult.source,
-          confidence: lookupResult.confidence,
-          warnings: lookupResult.warnings || [],
-        },
-        createdAt: new Date(),
-      };
+      const representative = representatives[0];
 
       const results = [representative];
 
       // Cache the results for offline use
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
       await searchCacheRepository.cacheSearch(cleanQuery, results);
-      console.log('[SearchForm] Cached representative with confidence:', lookupResult.confidence);
+      console.log('[SearchForm] Cached representative from Represent API');
 
       onSearchComplete(results);
 
@@ -154,52 +143,19 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       incrementSearchCount();
       updateLastSearch(trimmedQuery, 'postalCode');
 
-      // Show confidence indicator
-      if (lookupResult.confidence === 'high' && lookupResult.source === 'cache_manual') {
-        toast({
-          title: "Verified Result",
-          description: `Found ${representative.name} (manually verified correction)`,
-        });
-      } else if (lookupResult.confidence === 'low') {
-        toast({
-          title: "Unverified Result",
-          description: "This result could not be verified. Please double-check with Elections Canada.",
-          variant: "default",
-        });
-      }
-
-      // Show warnings if present
-      if (lookupResult.warnings && lookupResult.warnings.length > 0) {
-        console.warn('[SearchForm] Lookup warnings:', lookupResult.warnings);
-      }
-    } catch (error) {
-      console.error('[SearchForm] Postal code lookup error:', error);
-
-      // Try to get cached data as a last resort
-      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
-      const cachedResults = await searchCacheRepository.getCachedSearch(cleanQuery);
-
-      if (cachedResults && cachedResults.length > 0) {
-        // We have cached data, use it!
-        onSearchComplete(cachedResults);
-        toast({
-          title: "Using cached data",
-          description: "Unable to look up postal code. Showing previously downloaded results.",
-          variant: "default",
-        });
-      } else {
-        // No cached data available
-        const errorMessage = "Could not retrieve representative. Please check your connection and try again.";
-        toast({
-          title: "Search failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        onSearchComplete([]);
-        if (onSearchError) {
-          onSearchError(errorMessage);
-        }
-      }
+      // Show success message
+      toast({
+        title: "Found your representative",
+        description: `${representative.name} - ${representative.party} MP for ${representative.constituency}`,
+      });
+    } catch (error: any) {
+      console.error('[SearchForm] Search error:', error);
+      toast({
+        title: "Search failed",
+        description: error?.message || "Failed to search for representative",
+        variant: "destructive",
+      });
+      onSearchError?.(error?.message || "Search failed");
     } finally {
       setIsSearching(false);
     }

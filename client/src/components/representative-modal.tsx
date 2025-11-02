@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart, Share2, Map, Loader2 } from "lucide-react";
-import type { Representative } from "@shared/schema";
+import type { Representative } from "@shared/types";
 import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -269,7 +269,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                     <Button
                       variant="outline"
                       size="default"
-                      onClick={() => handleCall(representative.phone)}
+                      onClick={() => handleCall(representative.phone!)}
                       className="w-full h-10 sm:h-11 text-sm sm:text-base"
                     >
                       <Phone className="h-4 w-4 mr-1.5 sm:mr-2" />
@@ -280,7 +280,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                     <Button
                       variant="outline"
                       size="default"
-                      onClick={() => handleEmail(representative.email)}
+                      onClick={() => handleEmail(representative.email!)}
                       className="w-full h-10 sm:h-11 text-sm sm:text-base"
                     >
                       <Mail className="h-4 w-4 mr-1.5 sm:mr-2" />
@@ -342,35 +342,33 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
             </Card>
 
             {/* Electoral District Boundary Map */}
-            {representative.boundaryUrl && (
-              <Card>
-                <CardHeader className="p-4 sm:p-5">
-                  <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                    <Map className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Electoral District: {representative.constituency}
-                  </h3>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0">
-                  <RidingMap
-                    boundaryUrl={representative.boundaryUrl}
-                    ridingName={representative.constituency}
-                    province={representative.province}
-                    className="relative w-full h-64 sm:h-80 rounded-lg overflow-hidden border"
-                  />
-                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
-                      className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
-                    >
-                      <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      View on Google Maps
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardHeader className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                  <Map className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Electoral District: {representative.constituency}
+                </h3>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0">
+                <RidingMap
+                  boundaryUrl={`/boundaries/federal-electoral-districts/${encodeURIComponent(representative.constituency.toLowerCase().replace(/\s+/g, '-').replace(/—/g, '-').replace(/'/g, ''))}/`}
+                  ridingName={representative.constituency}
+                  province={representative.province}
+                  className="relative w-full h-64 sm:h-80 rounded-lg overflow-hidden border"
+                />
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
+                    className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
+                  >
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    View on Google Maps
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Offices Section - Only show if we have real office data */}
             {offices.length > 0 && (

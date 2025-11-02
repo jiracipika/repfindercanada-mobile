@@ -1,5 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
-import type { Representative } from "@shared/schema";
+import type { Representative } from "@shared/types";
 
 const KEY = 'SAVED_REPS_V2';
 const OLD_KEY_V1 = 'SAVED_REPS_V1';

@@ -1,10 +1,39 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertRepresentativeSchema, insertSearchSchema, insertSavedRepresentativeSchema } from "@shared/schema";
+import type { InsertRepresentative, InsertSearch, InsertSavedRepresentative } from "@shared/types";
 import { z } from "zod";
-import { registerHybridRoutes } from "./hybridRoutes";
-import { registerBundledRoutes } from "./bundledRoutes";
+
+// Basic Zod schemas for validation
+const insertRepresentativeSchema = z.object({
+  name: z.string(),
+  party: z.string(),
+  constituency: z.string(),
+  province: z.string(),
+  electedOffice: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  photo: z.string().nullable(),
+  website: z.string().nullable(),
+  personalWebsite: z.string().nullable(),
+  socialMedia: z.any().nullable(),
+  biography: z.string().nullable(),
+  offices: z.any().nullable(),
+  fax: z.string().nullable(),
+  parliamentId: z.string().nullable()
+});
+
+const insertSearchSchema = z.object({
+  query: z.string(),
+  location: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  results: z.any()
+});
+
+const insertSavedRepresentativeSchema = z.object({
+  representativeId: z.number().nullable(),
+  userId: z.string()
+});
 
 interface OpenParliamentRepresentative {
   name: string;
@@ -508,28 +537,165 @@ async function searchOpenParliament(query: string, type: 'postal_code' | 'name' 
       // Use direct postal code API lookup
       return await searchByPostalCode(query);
     }
-    
-    // For name and riding searches, use cached politician data
-    const allPoliticians = await getAllPoliticians();
-    
-    if (allPoliticians.length === 0) {
-      console.log('No politicians data available');
-      return [];
-    }
-    
+
     if (type === 'name') {
-      const searchName = query.toLowerCase();
+      // Enhanced name search using Represent API directly
+      const searchName = query.toLowerCase().trim();
+
+      try {
+        // First try Represent API name search with various filters
+        const apiSearchUrl = `https://represent.opennorth.ca/representatives/house-of-commons/?name=${encodeURIComponent(searchName)}&limit=20`;
+        console.log(`Searching Represent API for name: ${searchName}`);
+
+        const response = await fetch(apiSearchUrl, {
+          headers: {
+            'User-Agent': 'FindMyRep/1.0',
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const representatives = data.objects || [];
+
+          if (representatives.length > 0) {
+            console.log(`Found ${representatives.length} representatives via Represent API name search`);
+
+            // Transform to our format
+            return representatives.map((rep: any) => ({
+              name: rep.name,
+              current_party: {
+                short_name: {
+                  en: rep.party_name || 'Independent'
+                }
+              },
+              current_riding: {
+                name: {
+                  en: rep.district_name || 'Unknown'
+                },
+                province: rep.offices?.[0]?.postal_code?.substring(0, 2) || 'Unknown'
+              },
+              image: rep.photo_url || null,
+              url: rep.url || null,
+              email: rep.email || null,
+              phone: rep.offices?.[0]?.tel || null
+            }));
+          }
+        }
+      } catch (apiError) {
+        console.log(`Represent API name search failed: ${apiError}`);
+      }
+
+      // Fallback to cached politician data with enhanced matching
+      const allPoliticians = await getAllPoliticians();
+      if (allPoliticians.length === 0) {
+        console.log('No politicians data available for name search fallback');
+        return [];
+      }
+
+      // Enhanced name matching: check both first and last names
+      const searchTerms = searchName.split(' ');
       return allPoliticians.filter((politician: OpenParliamentRepresentative) => {
-        return politician.name.toLowerCase().includes(searchName);
+        const fullName = politician.name.toLowerCase();
+
+        // Check if full name contains the search query
+        if (fullName.includes(searchName)) {
+          return true;
+        }
+
+        // Check if all search terms are in the name
+        return searchTerms.every(term => term.length > 0 && fullName.includes(term));
       });
-    } else if (type === 'riding') {
-      const searchRiding = query.toLowerCase();
+    }
+
+    if (type === 'riding') {
+      // Enhanced riding search using Represent API
+      const searchRiding = query.toLowerCase().trim();
+
+      try {
+        // First try Represent API boundary search
+        const boundarySearchUrl = `https://represent.opennorth.ca/boundaries/federal-electoral-districts/?name=${encodeURIComponent(searchRiding)}`;
+        console.log(`Searching Represent API boundaries for riding: ${searchRiding}`);
+
+        const boundaryResponse = await fetch(boundarySearchUrl, {
+          headers: {
+            'User-Agent': 'FindMyRep/1.0',
+            'Accept': 'application/json'
+          }
+        });
+
+        if (boundaryResponse.ok) {
+          const boundaryData = await boundaryResponse.json();
+          const boundaries = boundaryData.objects || [];
+
+          if (boundaries.length > 0) {
+            console.log(`Found ${boundaries.length} boundaries, fetching representatives...`);
+
+            // Get representatives for these boundaries
+            const representativePromises = boundaries.map(async (boundary: any) => {
+              const repsUrl = `https://represent.opennorth.ca${boundary.related.representatives_url}`;
+              const repsResponse = await fetch(repsUrl, {
+                headers: {
+                  'User-Agent': 'FindMyRep/1.0',
+                  'Accept': 'application/json'
+                }
+              });
+
+              if (repsResponse.ok) {
+                const repsData = await repsResponse.json();
+                return repsData.objects || [];
+              }
+              return [];
+            });
+
+            const allReps = await Promise.all(representativePromises);
+            const flattenedReps = allReps.flat();
+
+            // Filter for current MPs and transform
+            const currentMPs = flattenedReps
+              .filter((rep: any) => rep.elected_office === 'MP' && rep.incumbent === true)
+              .map((rep: any) => ({
+                name: rep.name,
+                current_party: {
+                  short_name: {
+                    en: rep.party_name || 'Independent'
+                  }
+                },
+                current_riding: {
+                  name: {
+                    en: rep.district_name || 'Unknown'
+                  },
+                  province: 'Unknown'
+                },
+                image: rep.photo_url || null,
+                url: rep.url || null,
+                email: rep.email || null,
+                phone: rep.offices?.[0]?.tel || null
+              }));
+
+            if (currentMPs.length > 0) {
+              console.log(`Found ${currentMPs.length} representatives via boundary search`);
+              return currentMPs;
+            }
+          }
+        }
+      } catch (boundaryError) {
+        console.log(`Represent API boundary search failed: ${boundaryError}`);
+      }
+
+      // Fallback to cached politician data
+      const allPoliticians = await getAllPoliticians();
+      if (allPoliticians.length === 0) {
+        console.log('No politicians data available for riding search fallback');
+        return [];
+      }
+
       return allPoliticians.filter((politician: OpenParliamentRepresentative) => {
         const ridingName = politician.current_riding?.name?.en || '';
         return ridingName.toLowerCase().includes(searchRiding);
       });
     }
-    
+
     return [];
   } catch (error) {
     console.error('Search error:', error);
@@ -565,8 +731,7 @@ function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Search representatives by postal code or location
-  // UPDATED: Uses House of Commons XML as primary, Represent API for postal code lookup
+  // Search representatives by postal code, name, or riding using Represent API only
   app.post("/api/representatives/search", async (req, res) => {
     try {
       const { query, type = 'postal_code' } = req.body;
@@ -578,96 +743,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let representatives = [];
 
       if (type === 'postal_code') {
-        // Use improved postal code service (Represent API for postal code→riding, then House of Commons XML for MP data)
-        const { lookupMPByPostalCode } = await import('./improvedPostalCodeService');
-        const result = await lookupMPByPostalCode(query);
+        // Use Represent API for postal code lookup
+        representatives = await searchByPostalCode(query);
+      } else if (type === 'name') {
+        // Use Represent API for name search
+        representatives = await searchOpenParliament(query, 'name');
+      } else if (type === 'riding') {
+        // Use Represent API for riding search
+        representatives = await searchOpenParliament(query, 'riding');
+      }
 
-        if (result && result.mp) {
-          // Transform House of Commons data to representative format
-          const transformedData = {
-            name: result.mp.name,
-            party: result.mp.party,
-            constituency: result.mp.constituency,
-            province: result.mp.province,
-            email: result.mp.email,
-            phone: null,
-            photo: result.mp.photoUrl,
-            website: result.mp.profileUrl,
-            personalWebsite: null,
-            socialMedia: {},
-            biography: `${result.mp.name} is the Member of Parliament for ${result.mp.constituency}, representing the ${result.mp.party} party.`,
-            offices: [],
-            fax: null,
-            parliamentId: result.mp.id,
-          };
+      // Transform and store representatives
+      const transformedRepresentatives = [];
+      for (const apiRep of representatives) {
+        const transformedData = transformOpenParliamentData(apiRep);
 
-          // Enhance with Represent API data if available
-          if (result.representApiData) {
-            const repData = result.representApiData;
-            if (repData.offices && repData.offices.length > 0) {
-              transformedData.offices = repData.offices.map((office: any) => ({
-                type: office.type || 'Constituency Office',
-                phone: office.tel || null,
-                fax: office.fax || null,
-              }));
-              transformedData.phone = repData.offices[0].tel || null;
-            }
-            if (repData.email) {
-              transformedData.email = repData.email;
-            }
-          }
+        // Check if representative already exists
+        let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
 
-          // Check if representative already exists
-          let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
-
-          if (!representative) {
-            representative = await storage.createRepresentative(transformedData);
-          }
-
-          representatives.push(representative);
-        }
-      } else {
-        // For name/riding searches, use House of Commons XML directly
-        const { getAllMPsFromHouseOfCommons, searchMPsByName } = await import('./houseOfCommonsService');
-
-        let hocResults = [];
-        if (type === 'name') {
-          hocResults = await searchMPsByName(query);
-        } else if (type === 'riding') {
-          const allMPs = await getAllMPsFromHouseOfCommons();
-          const searchRiding = query.toLowerCase();
-          hocResults = allMPs.filter(mp =>
-            mp.constituency.toLowerCase().includes(searchRiding)
-          );
+        if (!representative) {
+          representative = await storage.createRepresentative(transformedData);
         }
 
-        // Transform House of Commons data
-        for (const mp of hocResults) {
-          const transformedData = {
-            name: mp.name,
-            party: mp.party,
-            constituency: mp.constituency,
-            province: mp.province,
-            email: mp.email,
-            phone: null,
-            photo: mp.photoUrl,
-            website: mp.profileUrl,
-            personalWebsite: null,
-            socialMedia: {},
-            biography: `${mp.name} is the Member of Parliament for ${mp.constituency}, representing the ${mp.party} party.`,
-            offices: [],
-            fax: null,
-            parliamentId: mp.id,
-          };
-
-          let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
-
-          if (!representative) {
-            representative = await storage.createRepresentative(transformedData);
-          }
-
-          representatives.push(representative);
-        }
+        transformedRepresentatives.push(representative);
       }
 
       // Save search query
@@ -675,13 +773,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query,
         location: type === 'postal_code' ? query : undefined,
         postalCode: type === 'postal_code' ? query : undefined,
-        results: representatives,
+        results: transformedRepresentatives,
       });
 
       res.json({
-        representatives,
-        dataSource: 'house_of_commons',
-        note: 'Data from House of Commons XML (primary) with Represent API for postal code lookup'
+        representatives: transformedRepresentatives,
+        dataSource: 'represent_api',
+        note: 'Data from Represent API only'
       });
     } catch (error) {
       console.error('Search error:', error);
@@ -832,14 +930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register new hybrid API routes (v2)
-  // These use multiple data sources for improved accuracy
-  registerHybridRoutes(app);
-
-  // Register bundled data routes (v3)
-  // These use offline-first architecture with bundled MP XML data
-  registerBundledRoutes(app);
-
+  
   const httpServer = createServer(app);
   return httpServer;
 }

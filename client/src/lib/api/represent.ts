@@ -1,4 +1,4 @@
-import type { Representative } from "@shared/schema";
+import type { Representative } from "@shared/types";
 import { makeRepresentativeId, __debugCheckRepId } from "../repId";
 
 interface OpenNorthRepresentative {
