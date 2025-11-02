@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import type { InsertRepresentative, InsertSearch, InsertSavedRepresentative } from "@shared/types";
 import { z } from "zod";
+import { representApi } from "./representApiService";
+import { enhancedPostalCodeService } from "./enhancedPostalCodeService";
+import type { Representative, Boundary, ApiResponse, Election, Candidate } from "./representApiService";
 
 // Basic Zod schemas for validation
 const insertRepresentativeSchema = z.object({
@@ -731,32 +734,96 @@ function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Search representatives by postal code, name, or riding using Represent API only
+  // Enhanced search using best practices from Represent API documentation
   app.post("/api/representatives/search", async (req, res) => {
     try {
-      const { query, type = 'postal_code' } = req.body;
+      const { query, type = 'postal_code', limit = 20, offset = 0 } = req.body;
 
       if (!query) {
         return res.status(400).json({ message: "Query is required" });
       }
 
-      let representatives = [];
+      console.log(`[Enhanced Search] ${type} search for: ${query}`);
 
-      if (type === 'postal_code') {
-        // Use Represent API for postal code lookup
-        representatives = await searchByPostalCode(query);
-      } else if (type === 'name') {
-        // Use Represent API for name search
-        representatives = await searchOpenParliament(query, 'name');
-      } else if (type === 'riding') {
-        // Use Represent API for riding search
-        representatives = await searchOpenParliament(query, 'riding');
+      let searchResults: {
+        representatives: Representative[];
+        metadata?: any;
+        warnings?: string[];
+        confidence?: string;
+      } = { representatives: [] };
+
+      switch (type) {
+        case 'postal_code':
+          // Use enhanced postal code service with coordinate conversion
+          const postalResult = await enhancedPostalCodeService.lookupPostalCode(query);
+          searchResults = {
+            representatives: postalResult.representatives,
+            metadata: {
+              coordinates: postalResult.coordinates,
+              boundaries: postalResult.boundaries,
+              dataSource: postalResult.dataSource
+            },
+            warnings: postalResult.warnings,
+            confidence: postalResult.confidence
+          };
+          break;
+
+        case 'name':
+          // Use enhanced name search with proper filtering
+          const nameResult = await representApi.searchAllRepresentatives({
+            name: query,
+            limit,
+            offset
+          });
+          searchResults = {
+            representatives: nameResult.objects,
+            metadata: {
+              totalCount: nameResult.meta.total_count,
+              hasMore: !!nameResult.meta.next
+            }
+          };
+          break;
+
+        case 'riding':
+          // Search by electoral district name
+          const ridingResult = await representApi.searchAllRepresentatives({
+            district_name: query,
+            limit,
+            offset
+          });
+          searchResults = {
+            representatives: ridingResult.objects,
+            metadata: {
+              totalCount: ridingResult.meta.total_count,
+              hasMore: !!ridingResult.meta.next
+            }
+          };
+          break;
+
+        case 'coordinates':
+          // Search by lat/lng coordinates (most accurate method)
+          const { lat, lng } = req.body;
+          if (!lat || !lng) {
+            return res.status(400).json({ message: "Latitude and longitude required for coordinate search" });
+          }
+          const coordResult = await representApi.findRepresentativesByCoordinates(parseFloat(lat), parseFloat(lng));
+          searchResults = {
+            representatives: coordResult,
+            metadata: {
+              coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+              searchType: 'coordinate'
+            }
+          };
+          break;
+
+        default:
+          return res.status(400).json({ message: "Invalid search type. Use: postal_code, name, riding, or coordinates" });
       }
 
       // Transform and store representatives
       const transformedRepresentatives = [];
-      for (const apiRep of representatives) {
-        const transformedData = transformOpenParliamentData(apiRep);
+      for (const apiRep of searchResults.representatives) {
+        const transformedData = this.transformRepresentativeData(apiRep);
 
         // Check if representative already exists
         let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
@@ -778,14 +845,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         representatives: transformedRepresentatives,
-        dataSource: 'represent_api',
-        note: 'Data from Represent API only'
+        metadata: searchResults.metadata,
+        warnings: searchResults.warnings || [],
+        confidence: searchResults.confidence || 'medium',
+        dataSource: 'represent_api_enhanced',
+        note: `Enhanced search using Represent API best practices. Method: ${type}`
       });
     } catch (error) {
-      console.error('Search error:', error);
-      res.status(500).json({ message: "Failed to search representatives" });
+      console.error('Enhanced search error:', error);
+      res.status(500).json({
+        message: "Failed to search representatives",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
+
+  // Transform Representative API data to our format
+  function transformRepresentativeData(apiRep: Representative): InsertRepresentative {
+    return {
+      name: apiRep.name,
+      party: apiRep.party_name || 'Independent',
+      constituency: apiRep.district_name || 'Unknown',
+      province: extractProvinceFromDistrict(apiRep.district_name) || 'Unknown',
+      electedOffice: apiRep.elected_office,
+      email: apiRep.email || null,
+      phone: apiRep.offices?.[0]?.tel || null,
+      photo: apiRep.photo_url || null,
+      website: apiRep.url || null,
+      personalWebsite: null,
+      socialMedia: null,
+      biography: generateBiography(apiRep),
+      offices: apiRep.offices || null,
+      fax: apiRep.offices?.[0]?.fax || null,
+      parliamentId: generateParliamentId(apiRep)
+    };
+  }
+
+  function extractProvinceFromDistrict(districtName?: string): string | null {
+    if (!districtName) return null;
+
+    // Map common district patterns to provinces
+    const provincePatterns = [
+      { pattern: /\b(Alberta|AB)\b/i, province: 'Alberta' },
+      { pattern: /\b(British Columbia|BC|B\.C\.)\b/i, province: 'British Columbia' },
+      { pattern: /\b(Manitoba|MB)\b/i, province: 'Manitoba' },
+      { pattern: /\b(New Brunswick|NB|N\.B\.)\b/i, province: 'New Brunswick' },
+      { pattern: /\b(Newfoundland and Labrador|NL|N\.L\.)\b/i, province: 'Newfoundland and Labrador' },
+      { pattern: /\b(Nova Scotia|NS|N\.S\.)\b/i, province: 'Nova Scotia' },
+      { pattern: /\b(Ontario|ON)\b/i, province: 'Ontario' },
+      { pattern: /\b(Prince Edward Island|PEI|P\.E\.I\.)\b/i, province: 'Prince Edward Island' },
+      { pattern: /\b(Quebec|QC|PQ)\b/i, province: 'Quebec' },
+      { pattern: /\b(Saskatchewan|SK)\b/i, province: 'Saskatchewan' },
+      { pattern: /\b(Northwest Territories|NT|N\.W\.T\.)\b/i, province: 'Northwest Territories' },
+      { pattern: /\b(Yukon|YT)\b/i, province: 'Yukon' },
+      { pattern: /\b(Nunavut|NU)\b/i, province: 'Nunavut' }
+    ];
+
+    for (const { pattern, province } of provincePatterns) {
+      if (pattern.test(districtName)) {
+        return province;
+      }
+    }
+
+    return null;
+  }
+
+  function generateBiography(rep: Representative): string {
+    const position = getElectedOfficeTitle(rep.elected_office);
+    return `${rep.name} serves as the ${position} for ${rep.district_name}, representing the ${rep.party_name || 'Independent'}.`;
+  }
+
+  function getElectedOfficeTitle(office?: string): string {
+    if (!office) return 'Representative';
+
+    const officeTitles: Record<string, string> = {
+      'MP': 'Member of Parliament',
+      'MPP': 'Member of Provincial Parliament',
+      'MLA': 'Member of Legislative Assembly',
+      'MNA': 'Member of National Assembly',
+      'Mayor': 'Mayor',
+      'Councillor': 'City Councillor'
+    };
+
+    return officeTitles[office] || office;
+  }
+
+  function generateParliamentId(rep: Representative): string {
+    // Create a consistent ID from the representative's name and district
+    return `${rep.name.toLowerCase().replace(/\s+/g, '-')}-${rep.district_name?.toLowerCase().replace(/\s+/g, '-')}`;
+  }
 
   // Get representative by ID
   app.get("/api/representatives/:id", async (req, res) => {
@@ -894,7 +1042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get boundary GeoJSON for a representative's riding
+  // Enhanced boundary endpoints following Represent API best practices
   app.get("/api/boundaries/:boundaryUrl(*)", async (req, res) => {
     try {
       let boundaryUrl = req.params.boundaryUrl;
@@ -911,22 +1059,235 @@ export async function registerRoutes(app: Express): Promise<Server> {
         boundaryUrl = '/' + boundaryUrl;
       }
 
-      // Fetch simplified shape from Represent API
-      const shapeUrl = `https://represent.opennorth.ca${boundaryUrl}simple_shape`;
-      console.log('Fetching boundary from:', shapeUrl);
+      // Use enhanced boundary service
+      const shapeData = await representApi.getBoundarySimpleShape(boundaryUrl);
+      console.log('Fetched enhanced boundary data for:', boundaryUrl);
 
-      const response = await fetch(shapeUrl);
+      res.json(shapeData);
+    } catch (error) {
+      console.error('Enhanced boundary fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch boundary data" });
+    }
+  });
 
-      if (!response.ok) {
-        console.error(`Represent API error: ${response.status} for ${shapeUrl}`);
-        throw new Error(`Represent API error: ${response.status}`);
+  // New endpoint: Get boundary sets
+  app.get("/api/boundary-sets", async (req, res) => {
+    try {
+      const { name, domain, limit = 20, offset = 0 } = req.query;
+
+      const boundarySets = await representApi.getBoundarySets({
+        name: name as string,
+        domain: domain as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+
+      res.json(boundarySets);
+    } catch (error) {
+      console.error('Boundary sets fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch boundary sets" });
+    }
+  });
+
+  // New endpoint: Get boundaries with geospatial queries
+  app.get("/api/boundaries/:boundarySetName/search", async (req, res) => {
+    try {
+      const { boundarySetName } = req.params;
+      const {
+        name,
+        contains,
+        touches,
+        intersects,
+        limit = 20,
+        offset = 0
+      } = req.query;
+
+      const boundaries = await representApi.getBoundaries(boundarySetName, {
+        name: name as string,
+        contains: contains as string,
+        touches: touches as string,
+        intersects: intersects as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+
+      res.json(boundaries);
+    } catch (error) {
+      console.error('Boundary search error:', error);
+      res.status(500).json({ message: "Failed to search boundaries" });
+    }
+  });
+
+  // New endpoint: Geospatial search by coordinates
+  app.post("/api/search/coordinates", async (req, res) => {
+    try {
+      const { lat, lng, boundarySetName } = req.body;
+
+      if (!lat || !lng) {
+        return res.status(400).json({ message: "Latitude and longitude are required" });
       }
 
-      const geoJson = await response.json();
-      res.json(geoJson);
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        return res.status(400).json({ message: "Invalid coordinates" });
+      }
+
+      console.log(`[Coordinate Search] lat: ${latitude}, lng: ${longitude}`);
+
+      // Find representatives by coordinates
+      const representatives = await representApi.findRepresentativesByCoordinates(latitude, longitude);
+
+      // Find boundaries by coordinates
+      const boundaries = boundarySetName
+        ? await representApi.findBoundariesByCoordinates(latitude, longitude, boundarySetName)
+        : await representApi.findBoundariesByCoordinates(latitude, longitude);
+
+      res.json({
+        representatives,
+        boundaries,
+        coordinates: { lat: latitude, lng: longitude },
+        metadata: {
+          representativeCount: representatives.length,
+          boundaryCount: boundaries.length,
+          searchType: 'coordinate'
+        }
+      });
     } catch (error) {
-      console.error('Boundary fetch error:', error);
-      res.status(500).json({ message: "Failed to fetch boundary data" });
+      console.error('Coordinate search error:', error);
+      res.status(500).json({ message: "Failed to search by coordinates" });
+    }
+  });
+
+  // New endpoint: Get representative sets
+  app.get("/api/representative-sets", async (req, res) => {
+    try {
+      const { name, limit = 20, offset = 0 } = req.query;
+
+      const representativeSets = await representApi.getRepresentativeSets({
+        name: name as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+
+      res.json(representativeSets);
+    } catch (error) {
+      console.error('Representative sets fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch representative sets" });
+    }
+  });
+
+  // New endpoint: Get elections
+  app.get("/api/elections", async (req, res) => {
+    try {
+      const { name, limit = 20, offset = 0 } = req.query;
+
+      const elections = await representApi.getElections({
+        name: name as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+
+      res.json(elections);
+    } catch (error) {
+      console.error('Elections fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch elections" });
+    }
+  });
+
+  // New endpoint: Get candidates for an election
+  app.get("/api/elections/:electionUrl/candidates", async (req, res) => {
+    try {
+      const { electionUrl } = req.params;
+      const {
+        name,
+        first_name,
+        last_name,
+        gender,
+        district_name,
+        party_name,
+        limit = 20,
+        offset = 0
+      } = req.query;
+
+      const candidates = await representApi.getCandidates(electionUrl, {
+        name: name as string,
+        first_name: first_name as string,
+        last_name: last_name as string,
+        gender: gender as string,
+        district_name: district_name as string,
+        party_name: party_name as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+
+      res.json(candidates);
+    } catch (error) {
+      console.error('Candidates fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch candidates" });
+    }
+  });
+
+  // New endpoint: Bulk data download
+  app.get("/api/bulk/representatives/:representativeSetName", async (req, res) => {
+    try {
+      const { representativeSetName } = req.params;
+      console.log(`[Bulk Download] Starting bulk download for: ${representativeSetName}`);
+
+      // This could be a long-running operation, so we'll stream the response
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked'
+      });
+
+      try {
+        const allRepresentatives = await representApi.getAllRepresentativesBulk(representativeSetName);
+
+        res.write(JSON.stringify({
+          representativeSet: representativeSetName,
+          totalCount: allRepresentatives.length,
+          data: allRepresentatives,
+          downloadTime: new Date().toISOString()
+        }, null, 2));
+
+        res.end();
+      } catch (error) {
+        res.write(JSON.stringify({
+          error: 'Bulk download failed',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }));
+        res.end();
+      }
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Failed to download bulk data" });
+      }
+    }
+  });
+
+  // New endpoint: Enhanced postal code validation and information
+  app.post("/api/postal-code/validate", async (req, res) => {
+    try {
+      const { postalCode } = req.body;
+
+      if (!postalCode) {
+        return res.status(400).json({ message: "Postal code is required" });
+      }
+
+      const isValid = enhancedPostalCodeService.isValidCanadianPostalCode(postalCode);
+      const formatted = enhancedPostalCodeService.formatPostalCode(postalCode);
+
+      res.json({
+        original: postalCode,
+        isValid,
+        formatted,
+        clean: formatted.replace(/\s+/g, '')
+      });
+    } catch (error) {
+      console.error('Postal code validation error:', error);
+      res.status(500).json({ message: "Failed to validate postal code" });
     }
   });
 
