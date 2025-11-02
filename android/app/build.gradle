@@ -11,13 +11,8 @@ android {
         applicationId "com.marcelsabas.canadarepfinder"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-<<<<<<< HEAD
         versionCode 500002
         versionName "2.3.0"
-=======
-        versionCode 500000
-        versionName "2.0.0"
->>>>>>> parent of d8c56a6 (2.1.0)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

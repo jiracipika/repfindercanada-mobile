@@ -1,10 +1,6 @@
 {
   "name": "rep-finder-for-canada",
-<<<<<<< HEAD
   "version": "2.3.0",
-=======
-  "version": "2.0.0",
->>>>>>> parent of d8c56a6 (2.1.0)
   "type": "module",
   "license": "MIT",
   "scripts": {
