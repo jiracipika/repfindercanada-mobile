@@ -1,5 +1,6 @@
 /**
  * React Hook for Loading Federal MP Data
+<<<<<<< HEAD
  * Uses HYBRID approach: OpenParliament (primary) + Represent API (secondary)
  */
 
@@ -21,6 +22,24 @@ interface DataQualityStats {
 
 interface DataLoaderState {
   mps: FederalMP[];
+=======
+ * Uses Represent API only approach with enhanced best practices
+ */
+
+import { useState, useEffect } from 'react';
+import type { Representative } from '@shared/types';
+
+interface DataQualityStats {
+  total: number;
+  source: string;
+  confidence: string;
+  lastUpdated: string;
+  totalRecords: number;
+}
+
+interface DataLoaderState {
+  mps: Representative[];
+>>>>>>> parent of 216aa7f (fixes)
   loading: boolean;
   error: string | null;
   loadedAt: Date | null;
@@ -67,12 +86,17 @@ export function useDataLoader(options: UseDataLoaderOptions = {}) {
   });
 
   /**
+<<<<<<< HEAD
    * Load MP data from Represent API
+=======
+   * Load MP data from enhanced Represent API
+>>>>>>> parent of 216aa7f (fixes)
    */
   const load = async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
+<<<<<<< HEAD
       console.log('[useDataLoader] Starting hybrid MP data load...');
       console.log('[useDataLoader] Primary: OpenParliament API');
       console.log('[useDataLoader] Secondary: Represent API (for missing data)');
@@ -97,6 +121,53 @@ export function useDataLoader(options: UseDataLoaderOptions = {}) {
       console.log(`  - With contact info: ${qualityStats.withContactInfo}`);
       console.log(`  - With office info: ${qualityStats.withOfficeInfo}`);
       console.log(`  - Completion rate: ${qualityStats.completionRate.toFixed(1)}%`);
+=======
+      console.log('[useDataLoader] Starting enhanced Represent API data load...');
+      console.log('[useDataLoader] Using Represent API with best practices');
+
+      // Use the enhanced search endpoint to get all federal MPs
+      const response = await fetch('/api/representatives/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: '',
+          type: 'name',
+          limit: 1000 // Get a large sample
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const mps = data.representatives || [];
+
+      // Get data quality stats from the API response
+      const qualityStats: DataQualityStats = {
+        total: mps.length,
+        source: data.dataSource || 'represent_api_enhanced',
+        confidence: data.confidence || 'medium',
+        lastUpdated: new Date().toISOString(),
+        totalRecords: mps.length
+      };
+
+      setState({
+        mps,
+        loading: false,
+        error: null,
+        loadedAt: new Date(),
+        dataQuality: qualityStats,
+      });
+
+      console.log(`[useDataLoader] ✓ Loaded ${mps.length} MPs successfully`);
+      console.log(`[useDataLoader] Data Quality:`);
+      console.log(`  - Source: ${qualityStats.source}`);
+      console.log(`  - Confidence: ${qualityStats.confidence}`);
+      console.log(`  - Total records: ${qualityStats.totalRecords}`);
+>>>>>>> parent of 216aa7f (fixes)
 
     } catch (error: any) {
       console.error('[useDataLoader] Failed to load MP data:', error);
@@ -147,8 +218,13 @@ export function useDataLoader(options: UseDataLoaderOptions = {}) {
 /**
  * Search MPs by name (local filtering)
  */
+<<<<<<< HEAD
 export function useSearchMPs(searchQuery: string, allMPs: FederalMP[]) {
   const [results, setResults] = useState<FederalMP[]>([]);
+=======
+export function useSearchMPs(searchQuery: string, allMPs: Representative[]) {
+  const [results, setResults] = useState<Representative[]>([]);
+>>>>>>> parent of 216aa7f (fixes)
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -159,7 +235,11 @@ export function useSearchMPs(searchQuery: string, allMPs: FederalMP[]) {
     const query = searchQuery.toLowerCase().trim();
     const filtered = allMPs.filter(mp =>
       mp.name.toLowerCase().includes(query) ||
+<<<<<<< HEAD
       mp.riding.toLowerCase().includes(query) ||
+=======
+      mp.constituency.toLowerCase().includes(query) ||
+>>>>>>> parent of 216aa7f (fixes)
       mp.party.toLowerCase().includes(query)
     );
 
