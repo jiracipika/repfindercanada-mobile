@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink, Trash2, CheckCircle2, AlertTriangle, Info } from "lucide-react";
-import type { Representative } from "@shared/types";
+import type { Representative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
 

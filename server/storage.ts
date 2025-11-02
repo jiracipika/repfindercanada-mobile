@@ -1,4 +1,4 @@
-import { type Representative, type InsertRepresentative, type Search, type InsertSearch, type SavedRepresentative, type InsertSavedRepresentative } from "@shared/types";
+import { representatives, searches, savedRepresentatives, type Representative, type InsertRepresentative, type Search, type InsertSearch, type SavedRepresentative, type InsertSavedRepresentative } from "@shared/schema";
 
 export interface IStorage {
   // Representatives
@@ -57,8 +57,15 @@ export class MemStorage implements IStorage {
   async createRepresentative(insertRepresentative: InsertRepresentative): Promise<Representative> {
     const id = this.currentRepId++;
     
-    const representative: Representative = {
+    // Fix URL duplication issues in storage
+    const cleanedRepresentative = {
       ...insertRepresentative,
+      photo: insertRepresentative.photo?.replace('openparliament.cahttps://', 'https://') || null,
+      website: insertRepresentative.website?.replace('openparliament.cahttps://', 'https://') || null
+    };
+    
+    const representative: Representative = { 
+      ...cleanedRepresentative, 
       id,
       createdAt: new Date()
     };

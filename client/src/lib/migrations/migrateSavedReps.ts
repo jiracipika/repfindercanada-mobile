@@ -1,6 +1,6 @@
 import { Preferences } from '@capacitor/preferences';
 import { makeRepresentativeId } from '../repId';
-import type { Representative } from '@shared/types';
+import type { Representative } from '@shared/schema';
 
 const KEY_V2 = 'SAVED_REPS_V2';
 const KEY_V1 = 'SAVED_REPS_V1';

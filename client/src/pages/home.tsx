@@ -4,7 +4,7 @@ import { SearchForm } from "@/components/search-form";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
 import { Building, Loader2, Terminal, UserSearch } from "lucide-react";
-import type { Representative } from "@shared/types";
+import type { Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

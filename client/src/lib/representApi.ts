@@ -1,4 +1,4 @@
-import type { Representative } from "@shared/types";
+import type { Representative } from "@shared/schema";
 import { searchByName } from "./api/represent";
 import { makeRepresentativeId, __debugCheckRepId } from "./repId";
 import { searchCacheRepository } from "./storage/searchCacheRepository";

@@ -6,15 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Canadian Rep Finder is a cross-platform mobile application (iOS and Android) built with Capacitor that helps Canadian citizens find their elected representatives by postal code, name, or riding.
 
-**Data Architecture (Represent API Only):**
-The app uses the Represent API exclusively for all Canadian federal representative data:
-1. **Represent API** (https://represent.opennorth.ca/api/) - Complete data source for:
-   - Postal code to riding lookups
-   - Representative information (names, parties, contact details)
-   - Electoral district boundaries
-   - Enhanced search capabilities
+**Data Architecture (Hybrid Multi-Source):**
+The app uses a hybrid approach combining multiple data sources for improved accuracy:
+1. **House of Commons XML** (primary) - Official MP data
+2. **Represent API** (postal code lookup) - With verification against House of Commons
+3. **Statistics Canada WMS** - Official riding boundaries
+4. **ourcommons.ca scraping** - Detailed contact information
+5. **Database caching** - With manual correction support for postal codes near riding boundaries
 
-The Represent API provides official Canadian government data with comprehensive coverage of all federal MPs and electoral districts.
+See `HYBRID_API_MIGRATION.md` for detailed architecture documentation.
 
 ## Development Commands
 
@@ -105,21 +105,24 @@ ios/                 - iOS native project (Capacitor)
 
 **Hybrid Development/Production Serving**: The Express server serves the Vite dev server in development mode and static files in production. All traffic flows through port 5000.
 
-**API Integration Strategy (Represent API Only)**: The app uses a single, comprehensive data source:
+**API Integration Strategy (Hybrid Multi-Source)**: The app uses multiple data sources with fallbacks:
 
-**Current API Architecture**:
-1. **Represent API** (`represent.opennorth.ca`) - Complete data source for:
-   - Postal code to riding lookups
-   - Current MP information and photos
-   - Electoral district boundaries (GeoJSON)
-   - Enhanced search by name, riding, or location
-   - Contact information and office details
+**New v2 API Architecture** (recommended):
+1. **House of Commons XML** (`ourcommons.ca/Members/en/search/xml`) - Official MP data (24-hour cache)
+2. **Represent API** (`represent.opennorth.ca`) - Postal code to riding lookup, verified against House of Commons
+3. **Statistics Canada WMS** - Official electoral district boundaries (GeoJSON)
+4. **ourcommons.ca scraping** - Detailed contact information (constituency offices, phone numbers)
+5. **Database cache** - Postal code lookups with manual correction support for boundary edge cases
 
-Data flows: Postal code/name/riding → Represent API → Transform → Client
-- Enhanced search capabilities support substring matching and filtering
-- Direct integration with OpenParliament API for detailed MP biographies and photos
-- Comprehensive boundary data with multiple GeoJSON formats (simple_shape, shape, centroid)
-- Robust error handling with fallback to cached data when Represent API is unavailable
+**Legacy v1 API** (still functional):
+1. **Represent API** (`represent.opennorth.ca`) - For postal code lookups and current MP data
+2. **OpenParliament API** (`openparliament.ca`) - For detailed MP information and photos
+
+Data flows (v2): Postal code → Cache check → Represent API → House of Commons verification → Contact scraping → Statistics Canada boundaries → Client
+
+Data flows (v1): External API → Transform → MemStorage cache → Client. Maintains 5-minute cache with sample/fallback data.
+
+**Key Improvement**: V2 API addresses accuracy issues with postal codes near riding boundaries by using official House of Commons data as the source of truth and supporting manual corrections.
 
 **Storage Layer**: `server/storage.ts` implements an in-memory storage (MemStorage) that can be swapped for a database implementation. Currently stores representatives, searches, and saved representatives in memory Maps.
 
@@ -137,16 +140,22 @@ Data flows: Postal code/name/riding → Represent API → Transform → Client
 
 **URL Handling Edge Case**: The codebase includes specific handling for URL duplication issues where `openparliament.cahttps://` can occur. These are cleaned in both routes.ts and storage.ts.
 
-## Storage
+## Database Schema
 
-Uses in-memory storage with Maps for data persistence:
+Uses Drizzle ORM with PostgreSQL. Main tables:
 
-**Storage Types:**
-- **representatives**: Stores MP data (name, party, constituency, contact info, biography, offices, photo)
+**Core Tables:**
+- **representatives**: Stores MP data (name, party, constituency, contact info, biography, offices, photo, boundary data)
 - **searches**: Logs search queries and results for activity tracking
 - **savedRepresentatives**: User's saved MPs (many-to-many via userId)
 
-No database required - all data is stored in memory Maps with optional client-side IndexedDB caching for offline access.
+**Hybrid API Tables (new):**
+- **postalCodeCache**: Caches postal code→riding lookups with manual correction support
+  - Fields: postalCode (unique), ridingName, province, source, confidence, manualOverride, boundaryUrl, lastVerified, notes
+- **officialMPData**: Caches House of Commons MP data with scraped contact details
+  - Fields: name, ridingName, party, parliamentId (unique), email, phone, constituencyOffice, hillOffice, photoUrl, profileUrl, lastScraped
+
+Configure via `DATABASE_URL` environment variable (required for migrations).
 
 ## Mobile Platform Notes
 
@@ -171,27 +180,17 @@ No database required - all data is stored in memory Maps with optional client-si
 
 **Postal Code Search** (`POST /api/representatives/search`):
 - Queries Represent API: `https://represent.opennorth.ca/postcodes/{POSTAL_CODE}/`
-- Uses `representatives_centroid` or `representatives_concordance` data
-- Filters for current MPs (elected_office === 'MP' && incumbent === true)
-- Enhances with OpenParliament detailed info for photos and biographies
+- Filters for current MPs (incumbent === true)
+- Enhances with OpenParliament detailed info
 - Returns representatives with full contact information and office locations
 
-**Name Search** (`POST /api/representatives/search` with type='name'):
-- Direct Represent API name search: `?name={query}` with filtering options
-- Enhanced matching for first/last name combinations
-- Falls back to cached politician data when API unavailable
-- Supports substring searches and multiple term matching
-
-**Riding Search** (`POST /api/representatives/search` with type='riding'):
-- Represent API boundary search: `/boundaries/federal-electoral-districts/?name={query}`
-- Gets representatives for matching boundaries via related API endpoints
-- Filters for current MPs and transforms data
-- Fallback to cached politician data for offline functionality
-
-**Boundary Data** (`GET /api/boundaries/:boundaryUrl(*)`):
+**Boundary Data** (`GET /api/boundaries/:boundaryUrl`):
 - Fetches GeoJSON from Represent API's simple_shape endpoint
-- Direct integration with Represent API boundary URLs
 - Used to display riding boundaries on Leaflet maps
+
+**Name/Riding Search**:
+- Uses cached politician data from `getAllPoliticians()`
+- Falls back to sample data when APIs unavailable
 
 ## Important Implementation Details
 
