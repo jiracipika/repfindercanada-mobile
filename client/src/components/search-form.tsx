@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostalEnhanced, fetchRepsByPostal } from "@/lib/representApi";
+import { fetchRepsByPostalR } from "@/lib/rSearchService";
 import { searchWithOfficialData } from "@/lib/houseOfCommonsApi";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
@@ -95,15 +95,15 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
       const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
 
-      // Use official House of Commons data sources first, with multiple fallbacks
+      // Use official House of Commons data sources first, with R-based fallback
       let results: Representative[];
       try {
         results = await searchWithOfficialData(trimmedQuery);
         console.log('[SearchForm] Using official House of Commons data sources');
       } catch (officialError) {
-        console.warn('[SearchForm] Official House of Commons sources failed, falling back to enhanced search:', officialError);
-        results = await fetchRepsByPostalEnhanced(trimmedQuery);
-        console.log('[SearchForm] Using enhanced coordinate-based search');
+        console.warn('[SearchForm] Official House of Commons sources failed, falling back to R-based search:', officialError);
+        results = await fetchRepsByPostalR(trimmedQuery);
+        console.log('[SearchForm] Using R-based geocoding and search (converted from R code)');
       }
       onSearchComplete(results);
 
