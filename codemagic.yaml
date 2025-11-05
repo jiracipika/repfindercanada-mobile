@@ -39,6 +39,7 @@ workflows:
       - name: Increment iOS build number
         script: |
           cd ios/App
+          agvtool new-marketing-version 2.2.0
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS .ipa
         script: |
@@ -106,6 +107,7 @@ workflows:
       - name: Increment build number
         script: |
           cd ios/App
+          agvtool new-marketing-version 2.2.0
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS
         script: |
@@ -157,7 +159,8 @@ workflows:
       - name: Build Android App Bundle
         script: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
+          ./gradlew bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
     artifacts:
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
