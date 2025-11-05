@@ -97,9 +97,15 @@ const TERMS_KEY = 'termsAcceptedVersion';
 function AppContent() {
   const [appStatus, setAppStatus] = useState('initializing'); // 'initializing', 'needsTerms', 'needsDisclaimer', 'ready'
   const [appVersion, setAppVersion] = useState<string>('0.0.0');
-  const { initializeUserData } = useUserData();
+  const { initializeUserData, isLoading: userDataLoading } = useUserData();
 
   useEffect(() => {
+    // Don't start startup sequence until user data is loaded
+    if (userDataLoading) {
+      console.log('[Startup] Waiting for user data to load...');
+      return;
+    }
+
     const startup = async () => {
       console.log('[Startup] === App Startup Sequence Started ===');
       try {
@@ -147,7 +153,7 @@ function AppContent() {
     };
 
     startup();
-  }, []);
+  }, [userDataLoading]);
 
   const handleAcceptPrivacyPolicy = async () => {
     console.log('[Startup] === User Accepted Privacy Policy ===');
