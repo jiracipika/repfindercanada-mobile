@@ -191,7 +191,7 @@ export async function geocodePostalCodeOSM(postal: string): Promise<NominatimCoo
 }
 
 /**
- * Simple retry wrapper for transient errors
+ * Simple retry wrapper for transient errors - Nominatim ONLY
  */
 export async function geocodeWithRetry(
   postal: string,
@@ -204,16 +204,17 @@ export async function geocodeWithRetry(
       return await geocodePostalCodeOSM(postal);
     } catch (error) {
       lastError = error as Error;
-      console.log(`[geocodeWithRetry] Attempt ${attempt} failed for ${postal}:`, error);
+      console.log(`[geocodeWithRetry] Nominatim attempt ${attempt} failed for ${postal}:`, error);
 
       if (attempt < maxRetries) {
         // Exponential backoff: 1 second, then 2 seconds
         const delay = Math.pow(2, attempt - 1) * 1000;
-        console.log(`[geocodeWithRetry] Retrying in ${delay}ms...`);
+        console.log(`[geocodeWithRetry] Retrying Nominatim in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
 
-  throw lastError!;
+  const cleanPostal = normalizePostalCode(postal);
+  throw new Error(`Unable to geocode postal code ${cleanPostal} via OpenStreetMap Nominatim after ${maxRetries} attempts. Please check the postal code format or try location-based search.`);
 }
