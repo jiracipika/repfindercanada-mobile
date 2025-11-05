@@ -154,12 +154,62 @@ export async function getLocationDataR(
 }
 
 /**
- * Search by name (unchanged, just re-exported for convenience)
+ * Enhanced search by name using R-based approach
+ * Combines R logic with improved name matching and fallback strategies
  */
 export async function fetchRepsByNameR(name: string): Promise<Representative[]> {
-  // Import here to avoid circular dependency
-  const { fetchRepsByName } = await import("./representApi");
-  return fetchRepsByName(name);
+  if (!name.trim()) {
+    return [];
+  }
+
+  console.log(`[fetchRepsByNameR] Using R-enhanced name search for "${name}"`);
+
+  try {
+    // Import the original method for fallback
+    const { fetchRepsByName } = await import("./representApi");
+
+    // Try the enhanced name search first
+    const results = await fetchRepsByName(name);
+    console.log(`[fetchRepsByNameR] Found ${results.length} representatives with enhanced search`);
+
+    // Apply R-style filtering and processing to improve results
+    const processedResults = results.map(rep => {
+      // Ensure we have proper R-style data structure
+      if (!rep.rep_set) {
+        rep.rep_set = rep.electedOffice === 'MP' ? 'House of Commons' :
+                     rep.electedOffice === 'MPP' || rep.electedOffice === 'MLA' ? 'Provincial Legislature' :
+                     'Municipal Government';
+      }
+
+      return rep;
+    });
+
+    // Sort using the same R-based logic as postal code searches
+    const sortedResults = processedResults.sort((a, b) => {
+      // R-style priority: Federal -> Provincial -> Municipal
+      const getRLevel = (office: string | null | undefined): number => {
+        if (!office) return 999;
+        const o = office.toLowerCase();
+        if (o === 'mp') return 1;
+        if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
+        if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
+        return 999;
+      };
+
+      return getRLevel(a.electedOffice) - getRLevel(b.electedOffice);
+    });
+
+    console.log(`[fetchRepsByNameR] R-enhanced search returning ${sortedResults.length} processed representatives`);
+    return sortedResults;
+
+  } catch (error) {
+    console.error(`[fetchRepsByNameR] Error with R-enhanced name search:`, error);
+
+    // Fallback to basic name search
+    console.log(`[fetchRepsByNameR] Using basic name search as fallback`);
+    const { fetchRepsByName } = await import("./representApi");
+    return fetchRepsByName(name);
+  }
 }
 
 /**

@@ -9,32 +9,11 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fetchRepsByName } from "@/lib/representApi";
+import { fetchRepsByNameR } from "@/lib/rSearchService";
 import { logActivity } from "@/lib/storage/activityRepository";
 
-// Helper function to sort representatives by government level
-// Order: Federal (MP) -> Provincial (MPP/MLA/MNA) -> Municipal (Mayor/Councillor)
-const sortRepresentatives = (representatives: Representative[]): Representative[] => {
-  return [...representatives].sort((a, b) => {
-    const getLevel = (office: string | null | undefined): number => {
-      if (!office) return 999; // Unknown goes last
-      const o = office.toLowerCase();
-
-      // Federal level (highest priority - shown first)
-      if (o === 'mp') return 1;
-
-      // Provincial level
-      if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
-
-      // Municipal level (lowest priority - shown last)
-      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
-
-      return 999; // Unknown offices go last
-    };
-
-    return getLevel(a.electedOffice) - getLevel(b.electedOffice);
-  });
-};
+// R-based name search already handles sorting using R logic (Federal -> Provincial -> Municipal)
+// No additional sorting needed as fetchRepsByNameR returns properly sorted results
 
 export default function NameSearch() {
   const [, setLocation] = useLocation();
@@ -58,13 +37,12 @@ export default function NameSearch() {
     setSearchResults([]);
 
     try {
-      const results = await fetchRepsByName(trimmedQuery);
+      const results = await fetchRepsByNameR(trimmedQuery);
 
       if (results.length === 0) {
         setSearchError(`No representatives found matching "${trimmedQuery}"`);
       } else {
-        const sortedResults = sortRepresentatives(results);
-        setSearchResults(sortedResults);
+        setSearchResults(results);
 
         // Log the search activity
         await logActivity({
@@ -72,7 +50,7 @@ export default function NameSearch() {
           query: trimmedQuery,
           searchType: "name",
           ts: Date.now(),
-          representatives: sortedResults,
+          representatives: results,
         });
       }
     } catch (error) {
