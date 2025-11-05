@@ -4,7 +4,7 @@
  */
 
 // Multiple geocoding services for Canadian postal codes
-const USER_AGENT = "RepFinder/2.1.0 (contact@example.com)";
+const USER_AGENT = "RepFinder/2.2.0 (contact@example.com)";
 
 export interface NominatimCoordinates {
   lat: number;

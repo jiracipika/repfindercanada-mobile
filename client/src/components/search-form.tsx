@@ -98,7 +98,7 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       // Use official House of Commons data sources first, with R-based fallback
       let results: Representative[];
       try {
-        results = await searchWithOfficialData(trimmedQuery);
+        results = await searchWithOfficialData(trimmedQuery, false); // Disable cache to force fresh R-based search
         console.log('[SearchForm] Using official House of Commons data sources');
       } catch (officialError) {
         console.warn('[SearchForm] Official House of Commons sources failed, falling back to R-based search:', officialError);
