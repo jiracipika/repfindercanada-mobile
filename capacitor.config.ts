@@ -12,7 +12,12 @@ const config: CapacitorConfig = {
       'www.ourcommons.ca',
       'sencanada.ca',
       'elections.ca',
+      'nominatim.openstreetmap.org',
+      'api.opencagedata.com',
+      'geocoder.ca',
+      'postalcodecsv.com'
     ]
+    // No URL specified - app runs standalone on device
   }
 };
 
