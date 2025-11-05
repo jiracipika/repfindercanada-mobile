@@ -2,6 +2,7 @@ import type { Representative } from "@shared/schema";
 import { searchByName } from "./api/represent";
 import { makeRepresentativeId, __debugCheckRepId } from "./repId";
 import { searchCacheRepository } from "./storage/searchCacheRepository";
+import { geocodeWithRetry, normalizePostalCode } from "./nominatim";
 
 interface OpenNorthRepresentative {
   name: string;
@@ -224,33 +225,23 @@ export async function fetchRepsByPostal(postal: string, useCache: boolean = true
 }
 
 /**
- * Convert postal code to coordinates using Represent API
+ * Convert postal code to coordinates using OpenStreetMap Nominatim
  * Returns coordinates with latitude and longitude
+ * This is more accurate than Represent API's postal code lookup
  */
 export async function postalCodeToCoordinates(postal: string): Promise<CoordinatesData> {
-  const clean = postal.replace(/\s+/g, "").toUpperCase();
+  const clean = normalizePostalCode(postal);
 
   try {
-    const res = await fetch(`https://represent.opennorth.ca/postcodes/${clean}/`);
-    if (!res.ok) {
-      throw new Error(`Represent API error ${res.status} for postal code ${clean}`);
-    }
+    const coords = await geocodeWithRetry(clean);
 
-    const data = await res.json();
+    console.log(`[postalCodeToCoordinates] Converted ${clean} to coordinates [${coords.lat}, ${coords.lon}] via Nominatim`);
 
-    // The API response includes a 'centroid' field with coordinates
-    // Note: API returns [longitude, latitude] format
-    if (data.centroid && Array.isArray(data.centroid.coordinates) && data.centroid.coordinates.length >= 2) {
-      const [longitude, latitude] = data.centroid.coordinates;
-
-      return {
-        latitude,
-        longitude,
-        postalCode: clean
-      };
-    }
-
-    throw new Error(`No coordinates found for postal code ${clean}`);
+    return {
+      latitude: coords.lat,
+      longitude: coords.lon,
+      postalCode: clean
+    };
   } catch (error) {
     console.error('[postalCodeToCoordinates] Error:', error);
     throw error;
@@ -341,11 +332,11 @@ export async function getLocationDataByCoordinates(latitude: number, longitude: 
 }
 
 /**
- * Enhanced version of fetchRepsByPostal that uses coordinates for better accuracy
- * First converts postal code to coordinates, then searches by coordinates
+ * Enhanced version of fetchRepsByPostal that uses OpenStreetMap Nominatim + coordinates for better accuracy
+ * First converts postal code to coordinates via Nominatim, then searches by coordinates using Represent API
  */
 export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolean = true): Promise<Representative[]> {
-  const clean = postal.replace(/\s+/g, "").toUpperCase();
+  const clean = normalizePostalCode(postal);
 
   // Try to get from cache first if enabled
   if (useCache) {
@@ -357,30 +348,53 @@ export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolea
   }
 
   try {
-    // Step 1: Convert postal code to coordinates
+    // Step 1: Convert postal code to coordinates using OpenStreetMap Nominatim
     const coordinates = await postalCodeToCoordinates(clean);
-    console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}]`);
+    console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}] via Nominatim`);
 
-    // Step 2: Search representatives using coordinates for better accuracy
+    // Step 2: Search representatives using coordinates for maximum accuracy
     const representatives = await fetchRepsByCoordinates(coordinates.latitude, coordinates.longitude);
 
-    // Cache the results
-    if (useCache && representatives.length > 0) {
-      await searchCacheRepository.cacheSearch(clean, representatives);
-      console.log(`[fetchRepsByPostalEnhanced] Cached ${representatives.length} representatives for ${clean}`);
+    // Step 3: Also try federal-specific endpoint to ensure we get the MP
+    let federalReps: Representative[] = [];
+    try {
+      const federalRes = await fetch(`https://represent.opennorth.ca/representatives/house-of-commons/?point=${coordinates.latitude},${coordinates.longitude}&pretty=1`);
+      if (federalRes.ok) {
+        const federalData = await federalRes.json();
+        if (federalData.objects && Array.isArray(federalData.objects)) {
+          federalReps = await Promise.all(
+            federalData.objects.map((rep: OpenNorthRepresentative) => toRepresentative(rep))
+          );
+          console.log(`[fetchRepsByPostalEnhanced] Found ${federalReps.length} federal representatives for ${clean}`);
+        }
+      }
+    } catch (federalError) {
+      console.log('[fetchRepsByPostalEnhanced] Federal-specific query failed, using general results');
     }
 
-    return representatives;
+    // Combine results, prioritizing federal reps and removing duplicates
+    const allReps = [...federalReps, ...representatives];
+    const uniqueReps = allReps.filter((rep, index, self) =>
+      index === self.findIndex((r) => r.name === rep.name && r.constituency === rep.constituency)
+    );
+
+    // Cache the results
+    if (useCache && uniqueReps.length > 0) {
+      await searchCacheRepository.cacheSearch(clean, uniqueReps);
+      console.log(`[fetchRepsByPostalEnhanced] Cached ${uniqueReps.length} representatives for ${clean}`);
+    }
+
+    return uniqueReps;
   } catch (error) {
-    console.error('[fetchRepsByPostalEnhanced] Error:', error);
+    console.error('[fetchRepsByPostalEnhanced] Error with Nominatim + coordinate approach:', error);
 
     // Fallback to original postal code method if coordinate-based search fails
-    console.log('[fetchRepsByPostalEnhanced] Falling back to original postal code method');
+    console.log('[fetchRepsByPostalEnhanced] Falling back to original Represent postal code method');
     try {
       return await fetchRepsByPostal(postal, useCache);
     } catch (fallbackError) {
-      console.error('[fetchRepsByPostalEnhanced] Fallback also failed:', fallbackError);
-      throw fallbackError;
+      console.error('[fetchRepsByPostalEnhanced] All methods failed for postal code:', clean);
+      throw new Error(`Unable to find representatives for postal code ${clean}. Please try again or use location-based search.`);
     }
   }
 }
