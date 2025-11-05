@@ -91,19 +91,15 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Check if we have cached data first
-      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
-      const hasCached = await searchCacheRepository.hasCachedSearch(cleanQuery);
-
-      // Use official House of Commons data sources first, with R-based fallback
+      // Prioritize R-based search first for better Canadian postal code support
       let results: Representative[];
       try {
-        results = await searchWithOfficialData(trimmedQuery, false); // Disable cache to force fresh R-based search
-        console.log('[SearchForm] Using official House of Commons data sources');
-      } catch (officialError) {
-        console.warn('[SearchForm] Official House of Commons sources failed, falling back to R-based search:', officialError);
         results = await fetchRepsByPostalR(trimmedQuery);
         console.log('[SearchForm] Using R-based geocoding and search (converted from R code)');
+      } catch (rSearchError) {
+        console.warn('[SearchForm] R-based search failed, falling back to official House of Commons sources:', rSearchError);
+        results = await searchWithOfficialData(trimmedQuery, false);
+        console.log('[SearchForm] Using official House of Commons data sources as fallback');
       }
       onSearchComplete(results);
 
@@ -120,13 +116,9 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         incrementSearchCount();
         updateLastSearch(trimmedQuery, 'postalCode');
 
-        // Show toast if using cached data
-        if (hasCached) {
-          toast({
-            title: "Loaded from cache",
-            description: "Using previously downloaded data for faster results.",
-          });
-        }
+        // Cache the new R-based search results for future use
+        const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
+        await searchCacheRepository.cacheSearch(cleanQuery, results);
       } else {
         toast({
           title: "No representatives found",
