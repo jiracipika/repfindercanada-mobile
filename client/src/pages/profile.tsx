@@ -23,6 +23,7 @@ import {
 import { Section } from "@/components/ui/section";
 import { Link } from "wouter";
 import type { Representative } from "@shared/schema";
+import { getCacheManagementStatus, forceClearAllCaches } from "@/lib/cacheManager";
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
 
@@ -84,6 +85,19 @@ export default function Profile() {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [testProgress, setTestProgress] = useState({ current: 0, total: 0 });
 
+  // Cache management state
+  const [cacheStatus, setCacheStatus] = useState<{
+    currentVersion: string;
+    lastProcessedVersion: string | null;
+    shouldPreserveCache: boolean;
+  } | null>(null);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+
+  // Developer options state
+  const [devTapCount, setDevTapCount] = useState(0);
+  const [showDevOptions, setShowDevOptions] = useState(false);
+  const [lastTapTime, setLastTapTime] = useState(0);
+
   // Development environment check
   const isDevelopment = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
 
@@ -128,6 +142,19 @@ export default function Profile() {
     return () => {
       unsubscribe();
     };
+  }, []);
+
+  // Load cache management status
+  useEffect(() => {
+    const loadCacheStatus = async () => {
+      try {
+        const status = await getCacheManagementStatus();
+        setCacheStatus(status);
+      } catch (error) {
+        console.error('[Profile] Error loading cache status:', error);
+      }
+    };
+    loadCacheStatus();
   }, []);
 
   const handleSave = () => {
@@ -213,6 +240,67 @@ export default function Profile() {
     });
   };
 
+  // Handle cache clearing
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      await forceClearAllCaches();
+      toast({
+        title: "Cache Cleared",
+        description: "All caches have been successfully cleared.",
+      });
+      // Reload cache status
+      const status = await getCacheManagementStatus();
+      setCacheStatus(status);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear cache. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  // Handle developer options activation
+  const handleProfileTitleTap = () => {
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapTime;
+
+    // Reset if more than 3 seconds between taps
+    if (timeSinceLastTap > 3000) {
+      setDevTapCount(1);
+    } else {
+      setDevTapCount(prev => prev + 1);
+    }
+
+    setLastTapTime(now);
+
+    // Show toast feedback for taps
+    const newCount = timeSinceLastTap > 3000 ? 1 : devTapCount + 1;
+
+    if (newCount < 7) {
+      const remaining = 7 - newCount;
+      toast({
+        title: `Developer Options`,
+        description: `Tap ${remaining} more time${remaining > 1 ? 's' : ''} to enable`,
+        duration: 1000,
+      });
+    }
+
+    // Enable developer options after 7 taps
+    if (newCount >= 7) {
+      setShowDevOptions(true);
+      setDevTapCount(0);
+      toast({
+        title: "Developer Options Enabled! 🎉",
+        description: "You now have access to developer tools",
+        duration: 3000,
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <Section className="pt-8 pb-4 text-center">
@@ -234,7 +322,12 @@ export default function Profile() {
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="space-y-6 px-4 pt-8 pb-32">
         <Section className="pt-8 pb-4">
-          <h2 className="text-3xl font-bold text-center">Profile</h2>
+          <h2
+            className="text-3xl font-bold text-center cursor-pointer select-none active:scale-95 transition-transform"
+            onClick={handleProfileTitleTap}
+          >
+            Profile
+          </h2>
         </Section>
 
         {/* Edit Profile Form */}
@@ -309,8 +402,49 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <GitBranch className="h-4 w-4 shrink-0" />
-              <span>Version: 3.0.0</span>
+              <span>Version: {cacheStatus?.currentVersion || '3.0.0'}</span>
             </div>
+
+            {/* Cache Management Status */}
+            {cacheStatus && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Info className="h-4 w-4 shrink-0" />
+                  <span>Cache Status:</span>
+                  <Badge variant={cacheStatus.shouldPreserveCache ? "default" : "secondary"}>
+                    {cacheStatus.shouldPreserveCache ? "Preserved" : "Clearable"}
+                  </Badge>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <div>Last processed: {cacheStatus.lastProcessedVersion || 'Never'}</div>
+                  <div>
+                    {cacheStatus.shouldPreserveCache
+                      ? "Cache is preserved for v>3.0.0"
+                      : "Cache will be cleared for v≤3.0.0"}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={handleClearCache}
+                  disabled={isClearingCache}
+                >
+                  {isClearingCache ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Clearing Cache...
+                    </>
+                  ) : (
+                    <>
+                      <GitBranch className="h-4 w-4 mr-2" />
+                      Clear All Caches
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
             <Link href="/sources-disclaimer">
               <Button variant="outline" className="w-full justify-start">
                 <Info className="h-4 w-4 mr-2" />
@@ -329,117 +463,183 @@ export default function Profile() {
           </Card>
         </Section>
 
-        {/* Development Auto Tester */}
-        {isDevelopment && (
+        {/* Developer Options - Hidden until enabled */}
+        {showDevOptions && (
           <Section>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Play className="h-5 w-5" />
-                  Development Auto Tester
+                  Developer Options
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Test geocoder.ca + Represent API implementation with sample postal codes from across Canada.
-                </p>
+                <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <Info className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm text-yellow-800">
+                    Developer options enabled! These tools are for testing and debugging purposes.
+                  </span>
+                </div>
 
-                <Button
-                  onClick={runAutoTest}
-                  disabled={isTesting}
-                  className="w-full"
-                  variant={isTesting ? "secondary" : "default"}
-                >
-                  {isTesting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Testing... ({testProgress.current}/{testProgress.total})
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Run Auto Test ({TEST_POSTAL_CODES.length} postal codes)
-                    </>
-                  )}
-                </Button>
+                {/* Development Auto Tester */}
+                {(isDevelopment || showDevOptions) && (
+                  <div className="space-y-4">
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Play className="h-4 w-4" />
+                        Auto Tester
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Test geocoder.ca + Represent API implementation with sample postal codes from across Canada.
+                      </p>
 
-                {testResults.length > 0 && (
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-sm font-semibold">Test Results</h3>
-                      <Badge variant="outline">
-                        {testResults.filter(r => r.passed).length}/{testResults.length} passed
-                      </Badge>
-                    </div>
+                      <Button
+                        onClick={runAutoTest}
+                        disabled={isTesting}
+                        className="w-full"
+                        variant={isTesting ? "secondary" : "default"}
+                      >
+                        {isTesting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Testing... ({testProgress.current}/{testProgress.total})
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Run Auto Test ({TEST_POSTAL_CODES.length} postal codes)
+                          </>
+                        )}
+                      </Button>
 
-                    <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-3">
-                      {testResults.map((result, index) => (
-                        <div
-                          key={index}
-                          className={`p-3 rounded-lg border text-sm ${
-                            result.passed
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-red-50 border-red-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <div className="mt-0.5">
-                              {result.passed ? (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-mono font-semibold">{result.code}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {result.province}
-                                </Badge>
-                              </div>
+                      {testResults.length > 0 && (
+                        <div className="mt-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="text-sm font-semibold">Test Results</h3>
+                            <Badge variant="outline">
+                              {testResults.filter(r => r.passed).length}/{testResults.length} passed
+                            </Badge>
+                          </div>
 
-                              <div className="space-y-1">
-                                <div>
-                                  <span className="text-xs text-muted-foreground">Expected: </span>
-                                  <span className="text-xs font-medium">{result.expected}</span>
+                          <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-3">
+                            {testResults.map((result, index) => (
+                              <div
+                                key={index}
+                                className={`p-3 rounded-lg border text-sm ${
+                                  result.passed
+                                    ? 'bg-green-50 border-green-200'
+                                    : 'bg-red-50 border-red-200'
+                                }`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <div className="mt-0.5">
+                                    {result.passed ? (
+                                      <CheckCircle className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 text-red-600" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-mono font-semibold">{result.code}</span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {result.province}
+                                      </Badge>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <div>
+                                        <span className="text-xs text-muted-foreground">Expected: </span>
+                                        <span className="text-xs font-medium">{result.expected}</span>
+                                      </div>
+
+                                      {result.actual && (
+                                        <div>
+                                          <span className="text-xs text-muted-foreground">Actual: </span>
+                                          <span className="text-xs font-medium">{result.actual}</span>
+                                        </div>
+                                      )}
+
+                                      {result.repName && (
+                                        <div>
+                                          <span className="text-xs text-muted-foreground">Rep: </span>
+                                          <span className="text-xs">{result.repName}</span>
+                                        </div>
+                                      )}
+
+                                      {result.coordinates && (
+                                        <div>
+                                          <span className="text-xs text-muted-foreground">Coords: </span>
+                                          <span className="text-xs font-mono">
+                                            {result.coordinates.lat.toFixed(4)}, {result.coordinates.lon.toFixed(4)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {result.error && (
+                                        <div className="text-xs text-red-600 mt-1">
+                                          Error: {result.error}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-
-                                {result.actual && (
-                                  <div>
-                                    <span className="text-xs text-muted-foreground">Actual: </span>
-                                    <span className="text-xs font-medium">{result.actual}</span>
-                                  </div>
-                                )}
-
-                                {result.repName && (
-                                  <div>
-                                    <span className="text-xs text-muted-foreground">Rep: </span>
-                                    <span className="text-xs">{result.repName}</span>
-                                  </div>
-                                )}
-
-                                {result.coordinates && (
-                                  <div>
-                                    <span className="text-xs text-muted-foreground">Coords: </span>
-                                    <span className="text-xs font-mono">
-                                      {result.coordinates.lat.toFixed(4)}, {result.coordinates.lon.toFixed(4)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {result.error && (
-                                  <div className="text-xs text-red-600 mt-1">
-                                    Error: {result.error}
-                                  </div>
-                                )}
                               </div>
-                            </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 )}
+
+                {/* Force Clear Cache Button */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <GitBranch className="h-4 w-4" />
+                    Cache Management
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Force clear all caches for testing purposes.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleClearCache}
+                    disabled={isClearingCache}
+                  >
+                    {isClearingCache ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Clearing All Caches...
+                      </>
+                    ) : (
+                      <>
+                        <GitBranch className="h-4 w-4 mr-2" />
+                        Force Clear All Caches
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Disable Developer Options */}
+                <div className="border-t pt-4">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setShowDevOptions(false);
+                      toast({
+                        title: "Developer Options Disabled",
+                        description: "Tap the Profile title 7 times to re-enable",
+                        duration: 2000,
+                      });
+                    }}
+                  >
+                    Disable Developer Options
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </Section>

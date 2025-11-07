@@ -125,50 +125,185 @@ export async function getLocationDataR(
 }
 
 /**
- * Enhanced search by name using R-based approach
- * No fallbacks - direct name search through existing API
+ * Enhanced search by name using R-based approach with Represent API
+ * Uses the Represent API search endpoint with R-style filtering and processing
  */
 export async function fetchRepsByNameR(name: string): Promise<Representative[]> {
   if (!name.trim()) {
     return [];
   }
 
-  console.log(`[fetchRepsByNameR] Using name search for "${name}"`);
+  console.log(`[fetchRepsByNameR] Using R-enhanced Represent API search for "${name}"`);
 
-  // Import the original method for name search
-  const { fetchRepsByName } = await import("./representApi");
-  const results = await fetchRepsByName(name);
-  console.log(`[fetchRepsByNameR] Found ${results.length} representatives`);
-
-  // Apply R-style filtering and processing to improve results
-  const processedResults = results.map(rep => {
-    // Ensure we have proper R-style data structure
-    if (!rep.rep_set) {
-      rep.rep_set = rep.electedOffice === 'MP' ? 'House of Commons' :
-                   rep.electedOffice === 'MPP' || rep.electedOffice === 'MLA' ? 'Provincial Legislature' :
-                   'Municipal Government';
-    }
-
-    return rep;
-  });
-
-  // Sort using the same R-based logic as postal code searches
-  const sortedResults = processedResults.sort((a, b) => {
-    // R-style priority: Federal -> Provincial -> Municipal
-    const getRLevel = (office: string | null | undefined): number => {
-      if (!office) return 999;
-      const o = office.toLowerCase();
-      if (o === 'mp') return 1;
-      if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
-      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
-      return 999;
+  try {
+    // --- R-style name search using Represent API ---
+    const ua = {
+      "User-Agent": "CanadianRepFinder/3.0.0 - R-enhanced name search",
+      "Accept": "application/json",
     };
 
-    return getRLevel(a.electedOffice) - getRLevel(b.electedOffice);
-  });
+    // Search Represent API by name
+    const searchUrl = `https://represent.opennorth.ca/representatives/?q=${encodeURIComponent(name.trim())}`;
+    console.log(`[fetchRepsByNameR] Searching Represent API: ${searchUrl}`);
 
-  console.log(`[fetchRepsByNameR] R-enhanced search returning ${sortedResults.length} processed representatives`);
-  return sortedResults;
+    const response = await fetch(searchUrl, { headers: ua });
+
+    if (!response.ok) {
+      throw new Error(`Represent API: HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[fetchRepsByNameR] Represent API returned ${data?.objects?.length || 0} results`);
+
+    if (!data?.objects || !Array.isArray(data.objects)) {
+      console.log(`[fetchRepsByNameR] No results found for "${name}"`);
+      return [];
+    }
+
+    // Convert R-style representatives to existing format
+    const representatives: Representative[] = [];
+
+    for (const rep of data.objects) {
+      // Apply R-style filtering and enhancement
+      const enhancedRep = {
+        name: rep.name || "",
+        electedOffice: rep.elected_office || "",
+        constituency: rep.district_name || "",
+        province: "", // Represent API doesn't provide province in name search
+        party: rep.party_name || "Independent",
+        email: rep.email || undefined,
+        phone: rep.offices?.[0]?.tel || undefined,
+        photo: rep.photo_url || undefined,
+        website: rep.url || rep.personal_url || undefined,
+        personalWebsite: rep.personal_url || undefined,
+        socialMedia: {},
+        biography: null,
+        offices: rep.offices || [],
+        fax: rep.offices?.[0]?.fax || undefined,
+        parliamentId: undefined,
+        rep_set: rep.representative_set_name || "",
+        createdAt: undefined,
+        boundaryUrl: undefined,
+        boundaryData: null,
+        level: classifyRLevel(rep.elected_office, rep.representative_set_name),
+      };
+
+      // Generate ID using R-style logic
+      const id = await generateRRepresentativeId(enhancedRep);
+
+      representatives.push({
+        id: id as any,
+        ...enhancedRep,
+      });
+    }
+
+    // Sort using R-style priority: Federal -> Provincial -> Municipal
+    const sortedResults = representatives.sort((a, b) => {
+      const getRPriority = (rep: Representative): number => {
+        const office = (rep.electedOffice || "").toLowerCase();
+        const level = (rep.level || "").toLowerCase();
+
+        // Federal level (highest priority)
+        if (office === 'mp' || level === 'federal') return 1;
+
+        // Provincial level
+        if (office === 'mpp' || office === 'mla' || office === 'mna' || level === 'provincial') return 2;
+
+        // Municipal level
+        if (office === 'mayor' || office === 'councillor' || office === 'councilor' || level === 'municipal') return 3;
+
+        return 999; // Other/unknown
+      };
+
+      return getRPriority(a) - getRPriority(b);
+    });
+
+    // Apply R-style deduplication (remove exact duplicates)
+    const deduplicatedResults = dedupeRRepresentatives(sortedResults);
+
+    console.log(`[fetchRepsByNameR] R-enhanced search returning ${deduplicatedResults.length} representatives`);
+    return deduplicatedResults;
+
+  } catch (error) {
+    console.error(`[fetchRepsByNameR] Error in R-enhanced search:`, error);
+
+    // Fallback: Try the original represent.ts search method
+    console.log(`[fetchRepsByNameR] Falling back to original represent.ts search`);
+    try {
+      const { searchByName } = await import("./api/represent");
+      const fallbackResults = await searchByName(name);
+      console.log(`[fetchRepsByNameR] Fallback returned ${fallbackResults.length} representatives`);
+      return fallbackResults;
+    } catch (fallbackError) {
+      console.error(`[fetchRepsByNameR] Fallback also failed:`, fallbackError);
+      return [];
+    }
+  }
+}
+
+// Helper function to classify government level using R-style logic
+function classifyRLevel(electedOffice: string, representativeSetName: string): string {
+  const office = (electedOffice || "").toLowerCase();
+  const setName = (representativeSetName || "").toLowerCase();
+
+  // Federal level
+  if (office === 'mp' || /house of commons|chambre des communes|parliament/i.test(setName)) {
+    return "Federal";
+  }
+
+  // Provincial level
+  if (/mpp|mla|mna/i.test(office) ||
+      /legislative|national assembly|house of assembly|provincial/i.test(setName)) {
+    return "Provincial/Territorial";
+  }
+
+  // Municipal level
+  if (/mayor|councillor|councilor/i.test(office) ||
+      /city|ville|council|conseil/i.test(setName)) {
+    return "Municipal";
+  }
+
+  return "Other";
+}
+
+// Helper function to generate R-style representative ID
+async function generateRRepresentativeId(rep: Partial<Representative>): Promise<string> {
+  // Create a deterministic ID based on key fields
+  const keyFields = [
+    rep.name || "",
+    rep.electedOffice || "",
+    rep.constituency || "",
+    rep.party || "",
+    rep.level || ""
+  ].join("|");
+
+  // Simple hash function for consistent ID generation
+  let hash = 0;
+  for (let i = 0; i < keyFields.length; i++) {
+    const char = keyFields.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  return `r_name_${Math.abs(hash)}_${Date.now()}`;
+}
+
+// Helper function to deduplicate representatives using R-style logic
+function dedupeRRepresentatives(reps: Representative[]): Representative[] {
+  const seen = new Set<string>();
+  const deduped: Representative[] = [];
+
+  for (const rep of reps) {
+    // Create a unique key based on name + office + constituency
+    const key = `${rep.name.toLowerCase()}|${rep.electedOffice?.toLowerCase()}|${rep.constituency?.toLowerCase()}`;
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(rep);
+    }
+  }
+
+  return deduped;
 }
 
 /**

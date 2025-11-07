@@ -25,6 +25,7 @@ import AppHeader from "@/components/app-header";
 
 import { SourcesDisclaimer } from "@/pages/sources-disclaimer";
 import NameSearch from "@/pages/name-search";
+import { initializeCacheManagement } from "@/lib/cacheManager";
 
 // Map routes to page indices
 const routeToIndex: Record<string, number> = {
@@ -121,6 +122,11 @@ function AppContent() {
         const currentVersion = info.version ?? '0.0.0';
         setAppVersion(currentVersion);
         console.log('[Startup] Current app version:', currentVersion);
+
+        // Initialize version-based cache management
+        console.log('[Startup] Initializing cache management...');
+        await initializeCacheManagement();
+        console.log('[Startup] Cache management initialized');
 
         // Check if terms were accepted for this version
         const result = await Preferences.get({ key: TERMS_KEY });
