@@ -1,10 +1,11 @@
 /**
  * R-based geocoding and representative search functionality
  * Converted from R to TypeScript for better Canadian postal code support
+ * Exact implementation matching the R code
  */
 
 // Constants for API requests
-const USER_AGENT = "napas-postal-lookup/1.0 (contact@example.com)";
+const getUserAgent = (contactEmail: string): string => `napas-postal-lookup/1.0 (${contactEmail})`;
 
 // Helper functions
 const trimq = (x?: string | null): string => (x || "").trim();
@@ -31,21 +32,20 @@ export interface GeocodeResult {
 
 /**
  * Geocoder.ca API (Canada-focused)
+ * Exact match to R code implementation
  */
-async function geocodeGeocoderCa(query: string): Promise<GeocodeResult> {
+async function geocodeGeocoderCa(query: string, contactEmail: string): Promise<GeocodeResult> {
   const pc = query.toUpperCase().replace(/\s+/g, "");
 
-  const response = await fetch("https://geocoder.ca/", {
-    method: "POST",
+  const url = new URL("https://geocoder.ca/");
+  url.searchParams.append("locate", pc);
+  url.searchParams.append("json", "1");
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": USER_AGENT,
-      "Accept": "application/json",
+      "User-Agent": getUserAgent(contactEmail),
     },
-    body: new URLSearchParams({
-      locate: pc,
-      json: "1",
-    }),
   });
 
   if (!response.ok) {
@@ -67,55 +67,56 @@ async function geocodeGeocoderCa(query: string): Promise<GeocodeResult> {
 
 /**
  * Nominatim (OpenStreetMap) geocoding
+ * Exact match to R code implementation
  */
-async function geocodeNominatim(query: string): Promise<GeocodeResult> {
-  // Strategy A: postalcode param (works if query is a postal code)
+async function geocodeNominatim(query: string, contactEmail: string): Promise<GeocodeResult> {
+  const ua = getUserAgent(contactEmail);
   const pc = query.toUpperCase().replace(/\s+/g, "");
 
-  try {
-    const response1 = await fetch("https://nominatim.openstreetmap.org/search", {
-      method: "GET",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Accept": "application/json",
-      },
-    });
+  // Strategy A: postalcode param (works if query is a PC)
+  const url1 = new URL("https://nominatim.openstreetmap.org/search");
+  url1.searchParams.append("format", "jsonv2");
+  url1.searchParams.append("postalcode", pc);
+  url1.searchParams.append("countrycodes", "ca");
+  url1.searchParams.append("limit", "1");
+  url1.searchParams.append("addressdetails", "0");
 
-    if (response1.ok) {
-      const data1 = await response1.json();
-      if (Array.isArray(data1) && data1.length > 0) {
-        return {
-          lat: parseFloat(data1[0].lat),
-          lon: parseFloat(data1[0].lon),
-          source: "nominatim",
-        };
-      }
+  const response1 = await fetch(url1.toString(), {
+    method: "GET",
+    headers: {
+      "User-Agent": ua,
+      "Accept": "application/json",
+    },
+  });
+
+  if (response1.ok) {
+    const data1 = await response1.json();
+    if (Array.isArray(data1) && data1.length > 0) {
+      return {
+        lat: parseFloat(data1[0].lat),
+        lon: parseFloat(data1[0].lon),
+        source: "nominatim",
+      };
     }
-  } catch (error) {
-    console.log("Nominatim strategy A failed, trying strategy B");
   }
 
   // Strategy B: free-text address
-  const params = new URLSearchParams({
-    format: "jsonv2",
-    q: `${query} Canada`,
-    limit: "1",
-    addressdetails: "0",
+  const url2 = new URL("https://nominatim.openstreetmap.org/search");
+  url2.searchParams.append("format", "jsonv2");
+  url2.searchParams.append("q", `${query} Canada`);
+  url2.searchParams.append("limit", "1");
+  url2.searchParams.append("addressdetails", "0");
+
+  const response2 = await fetch(url2.toString(), {
+    method: "GET",
+    headers: {
+      "User-Agent": ua,
+      "Accept": "application/json",
+    },
   });
 
-  const response2 = await fetch(
-    `https://nominatim.openstreetmap.org/search?${params}`,
-    {
-      method: "GET",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Accept": "application/json",
-      },
-    }
-  );
-
   if (!response2.ok) {
-    throw new Error(`Nominatim API error ${response2.status}`);
+    throw new Error(`nominatim: API error ${response2.status}`);
   }
 
   const data2 = await response2.json();
@@ -180,6 +181,7 @@ function classifyLevel(repSetName: string, electedOffice: string): Representativ
 
 /**
  * Fetch representatives by coordinate (point=lat,lon)
+ * Exact match to R code implementation
  */
 async function fetchRepsByPoint(lat: number, lon: number): Promise<any[]> {
   // Try both lat,lon and lon,lat just in case
@@ -189,24 +191,18 @@ async function fetchRepsByPoint(lat: number, lon: number): Promise<any[]> {
   ];
 
   for (const url of urls) {
-    try {
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "User-Agent": "R civic reps by point",
-          "Accept": "application/json",
-        },
-      });
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "R civic reps by point",
+      },
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.objects && Array.isArray(data.objects) && data.objects.length > 0) {
-          return data.objects;
-        }
+    if (response.ok) {
+      const data = await response.json();
+      if (data.objects && Array.isArray(data.objects) && data.objects.length > 0) {
+        return data.objects;
       }
-    } catch (error) {
-      console.log(`Failed to fetch from ${url}:`, error);
-      continue;
     }
   }
 
@@ -223,74 +219,31 @@ function ensureField(obj: any, fieldName: string): any {
   return obj;
 }
 
-/**
- * Special case handling for known problematic postal codes
- */
-function getSpecialCaseCoordinates(postal: string): GeocodeResult | null {
-  const specialCases: Record<string, { lat: number; lon: number; source: string }> = {
-    // M1C postal codes should be in Scarborough—Guildwood area (Gary Anandasangaree's riding)
-    "M1C5E9": { lat: 43.7847, lon: -79.1868, source: "special_case" },
-    "M1C5E8": { lat: 43.7850, lon: -79.1870, source: "special_case" },
-    "M1C5E7": { lat: 43.7853, lon: -79.1872, source: "special_case" },
-    // More M1C postal codes in the correct riding area
-    "M1C1A1": { lat: 43.7820, lon: -79.1800, source: "special_case" },
-    "M1C1A2": { lat: 43.7823, lon: -79.1803, source: "special_case" },
-    "M1C2A1": { lat: 43.7850, lon: -79.1900, source: "special_case" },
-    "M1C2A2": { lat: 43.7853, lon: -79.1903, source: "special_case" },
-    "M1C3A1": { lat: 43.7880, lon: -79.2000, source: "special_case" },
-    "M1C4A1": { lat: 43.7900, lon: -79.2100, source: "special_case" },
-  };
-
-  const coords = specialCases[postal];
-  if (coords) {
-    console.log(`[RGeocodeSearch] Using special case coordinates for ${postal}: [${coords.lat}, ${coords.lon}]`);
-    return {
-      lat: coords.lat,
-      lon: coords.lon,
-      source: coords.source,
-    };
-  }
-
-  return null;
-}
 
 /**
  * Main function: Get representatives from address/postal code
- * This replaces the existing search functionality with the R-based approach
+ * Exact match to R code implementation
  */
 export async function getRepsFromAddress(
   query: string,
   contactEmail: string = "you@example.com"
 ): Promise<Representative[]> {
-  console.log(`[RGeocodeSearch] Starting search for: ${query}`);
-
-  // Clean the query (normalize postal codes)
-  const cleanQuery = query.toUpperCase().replace(/\s+/g, "");
-
   // ---------- 1) Geocode the input ----------
   let gc: GeocodeResult;
 
-  // Strategy 0: Check for special cases (known problematic postal codes)
-  const specialCase = getSpecialCaseCoordinates(cleanQuery);
-  if (specialCase) {
-    gc = specialCase;
-  } else {
-    // Strategy 1: Try Geocoder.ca
-    try {
-      gc = await geocodeGeocoderCa(cleanQuery);
-      console.log(`[RGeocodeSearch] Geocoder.ca success: [${gc.lat}, ${gc.lon}]`);
-    } catch (error) {
-      console.log(`[RGeocodeSearch] Geocoder.ca failed, trying Nominatim:`, error);
-      gc = await geocodeNominatim(cleanQuery);
-      console.log(`[RGeocodeSearch] Nominatim success: [${gc.lat}, ${gc.lon}]`);
-    }
+  try {
+    gc = await geocodeGeocoderCa(query, contactEmail);
+  } catch (error) {
+    gc = await geocodeNominatim(query, contactEmail);
   }
 
   const { lat, lon, source } = gc;
 
-  // ---------- 2) OpenNorth reps by coordinate ----------
-  console.log(`[RGeocodeSearch] Fetching representatives for coordinates [${lat}, ${lon}]`);
+  // ---------- 2) OpenNorth reps by coordinate (point=lat,lon) ----------
   const objects = await fetchRepsByPoint(lat, lon);
+  if (objects.length === 0) {
+    throw new Error("OpenNorth did not return representatives for that coordinate.");
+  }
 
   // Ensure fields exist
   const processedObjects = objects.map(obj => {
@@ -320,12 +273,10 @@ export async function getRepsFromAddress(
   }));
 
   // De-dup (sometimes centroid & concordance overlap)
-  const uniqueResults = results.filter((item, index, self) =>
-    index === self.findIndex((t) =>
-      t.name === item.name &&
-      t.riding === item.riding &&
-      t.level === item.level
-    )
+  const uniqueResults = Array.from(
+    new Set(results.map(r => `${r.name}|${r.riding}|${r.level}`))
+  ).map(uniqueKey =>
+    results.find(r => `${r.name}|${r.riding}|${r.level}` === uniqueKey)!
   );
 
   // Nice ordering
@@ -349,7 +300,6 @@ export async function getRepsFromAddress(
     return a.name.localeCompare(b.name);
   });
 
-  console.log(`[RGeocodeSearch] Found ${uniqueResults.length} representatives`);
   return uniqueResults;
 }
 
