@@ -46,21 +46,20 @@ function dedupeBy<T>(arr: T[], keyFn: (item: T) => string): T[] {
 
 /**
  * Get precise representatives for a location or postal code.
- * - If you pass a custom getCoords(query, contactEmail) -> { latitude, longitude, source } it will use that first.
- * - Otherwise it falls back to OpenNorth's postcode centroid.
+ * Uses Geocoder.ca API for postal code to coordinates conversion,
+ * then searches Representatives by coordinates using Represent API.
  *
- * Converted from JavaScript to TypeScript, maintaining exact logic
+ * This implementation matches the R code approach exactly:
+ * 1. Convert postal code to coordinates via Geocoder.ca (PRIMARY & ONLY method)
+ * 2. Search representatives by coordinates using Represent API (both lat,lon & lon,lat orders)
+ * 3. Filter and sort results using R-style logic
+ *
+ * @param queryOrPostal - Postal code or address query string
+ * @returns Promise<Array<Representative>> - Array of representative objects
  */
 export async function getRepsFromAddress(
-  queryOrPostal: string,
-  opts: {
-    contactEmail?: string;
-    getCoords?: (q: string, contactEmail?: string) => Promise<{ latitude: number; longitude: number; source?: string }>;
-  } = {}
+  queryOrPostal: string
 ): Promise<Representative[]> {
-  const contactEmail = opts.contactEmail ?? "you@example.com";
-  const getCoords = opts.getCoords;
-
   // --- Helpers ---
   const ua = (headers: Record<string, string> = {}) => ({
     "User-Agent": "JS reps precise",
@@ -76,21 +75,9 @@ export async function getRepsFromAddress(
 
   const nullish = (v: any, d: string = "") => (v == null ? d : v);
 
-  // --- 1) Geocode to coordinates (prefer provided getCoords; else Geocoder.ca) ---
+  // --- 1) Geocode to coordinates using ONLY Geocoder.ca ---
   async function geocodeToPoint(q: string) {
-    if (typeof getCoords === "function") {
-      const df = await getCoords(q, contactEmail);
-      if (!df || df.latitude == null || df.longitude == null) {
-        throw new Error("getCoords() did not return latitude/longitude.");
-      }
-      return {
-        lat: Number(df.latitude),
-        lon: Number(df.longitude),
-        source: df.source ?? "getCoords"
-      };
-    }
-
-    // Fallback: Geocoder.ca API (Canada-focused) - try spaced format first
+    // Geocoder.ca API (Canada-focused) - try spaced format first
     const pc = q.toUpperCase().replace(/\s+/g, "");
     const spacedPostal = pc.slice(0, 3) + " " + pc.slice(3);
 

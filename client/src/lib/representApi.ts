@@ -374,8 +374,9 @@ export async function getLocationDataByCoordinates(latitude: number, longitude: 
 }
 
 /**
- * Enhanced version of fetchRepsByPostal that uses Geocoder.ca coordinates + precise search for better accuracy
- * First converts postal code to coordinates via Geocoder.ca, then searches by coordinates
+ * Enhanced version of fetchRepsByPostal that uses Geocoder.ca + Represent API approach
+ * Converts postal code to coordinates via Geocoder.ca (PRIMARY & ONLY method),
+ * then searches representatives by coordinates using Represent API.
  */
 export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolean = true): Promise<Representative[]> {
   const clean = normalizePostalCode(postal);
@@ -390,54 +391,23 @@ export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolea
   }
 
   try {
-    // Step 1: Convert postal code to coordinates using Geocoder.ca
+    // Step 1: Convert postal code to coordinates using Geocoder.ca (PRIMARY & ONLY method)
     const coordinates = await postalCodeToCoordinates(clean);
     console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}] via Geocoder.ca`);
 
-    // Step 2: Search representatives using coordinates for maximum accuracy (both coordinate orders)
+    // Step 2: Search representatives using coordinates with both coordinate orders for maximum reliability
     const representatives = await fetchRepsByCoordinates(coordinates.latitude, coordinates.longitude);
 
-    // Step 3: Also try federal-specific endpoint to ensure we get the MP
-    let federalReps: Representative[] = [];
-    try {
-      const federalRes = await fetch(`https://represent.opennorth.ca/representatives/house-of-commons/?point=${coordinates.latitude},${coordinates.longitude}&pretty=1`);
-      if (federalRes.ok) {
-        const federalData = await federalRes.json();
-        if (federalData.objects && Array.isArray(federalData.objects)) {
-          federalReps = await Promise.all(
-            federalData.objects.map((rep: OpenNorthRepresentative) => toRepresentative(rep))
-          );
-          console.log(`[fetchRepsByPostalEnhanced] Found ${federalReps.length} federal representatives for ${clean}`);
-        }
-      }
-    } catch (federalError) {
-      console.log('[fetchRepsByPostalEnhanced] Federal-specific query failed, using general results');
-    }
-
-    // Combine results, prioritizing federal reps and removing duplicates
-    const allReps = [...federalReps, ...representatives];
-    const uniqueReps = allReps.filter((rep, index, self) =>
-      index === self.findIndex((r) => r.name === rep.name && r.constituency === rep.constituency)
-    );
-
     // Cache the results
-    if (useCache && uniqueReps.length > 0) {
-      await searchCacheRepository.cacheSearch(clean, uniqueReps);
-      console.log(`[fetchRepsByPostalEnhanced] Cached ${uniqueReps.length} representatives for ${clean}`);
+    if (useCache && representatives.length > 0) {
+      await searchCacheRepository.cacheSearch(clean, representatives);
+      console.log(`[fetchRepsByPostalEnhanced] Cached ${representatives.length} representatives for ${clean}`);
     }
 
-    return uniqueReps;
+    return representatives;
   } catch (error) {
-    console.error('[fetchRepsByPostalEnhanced] Error with coordinate approach:', error);
-
-    // Fallback to original postal code method if coordinate-based search fails
-    console.log('[fetchRepsByPostalEnhanced] Falling back to original Represent postal code method');
-    try {
-      return await fetchRepsByPostal(postal, useCache);
-    } catch (fallbackError) {
-      console.error('[fetchRepsByPostalEnhanced] All methods failed for postal code:', clean);
-      throw new Error(`Unable to find representatives for postal code ${clean}. Please try again or use location-based search.`);
-    }
+    console.error('[fetchRepsByPostalEnhanced] Error with geocoder.ca + coordinate approach:', error);
+    throw new Error(`Unable to find representatives for postal code ${clean} using Geocoder.ca + Represent API approach.`);
   }
 }
 

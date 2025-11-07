@@ -9,8 +9,9 @@ import { searchCacheRepository } from "./storage/searchCacheRepository";
 import { normalizePostalCode } from "./nominatim";
 
 /**
- * Enhanced postal code search using precise getRepsPrecise logic
- * Uses OpenNorth postcode centroid with no fallbacks for maximum reliability
+ * Enhanced postal code search using geocoder.ca + Represent API approach
+ * Uses Geocoder.ca for postal code to coordinates conversion (PRIMARY & ONLY method),
+ * then searches representatives by coordinates using Represent API.
  */
 export async function fetchRepsByPostalR(
   postal: string,
@@ -27,11 +28,11 @@ export async function fetchRepsByPostalR(
     }
   }
 
-  console.log(`[fetchRepsByPostalR] Using precise search for ${clean}`);
+  console.log(`[fetchRepsByPostalR] Using geocoder.ca + Represent API search for ${clean}`);
 
-  // Use the precise geocoding and representative search (getRepsPrecise logic)
+  // Use geocoder.ca for coordinates, then Represent API for representatives
   const preciseResults = await getRepsFromAddress(clean);
-  console.log(`[fetchRepsByPostalR] Precise search found ${preciseResults.length} representatives`);
+  console.log(`[fetchRepsByPostalR] Geocoder.ca + Represent API search found ${preciseResults.length} representatives`);
 
   // Convert precise results to existing format for UI compatibility
   const representatives = convertToExistingFormat(preciseResults);
@@ -46,20 +47,19 @@ export async function fetchRepsByPostalR(
 }
 
 /**
- * Enhanced location-based search using precise getRepsPrecise logic
- * This replaces fetchRepsByCoordinates with the R logic
- * No fallbacks - uses only the R code implementation
+ * Enhanced location-based search using geocoder.ca + Represent API approach
+ * Direct coordinate search using Represent API with both coordinate orders for maximum reliability
  */
 export async function fetchRepsByCoordinatesR(
   latitude: number,
   longitude: number
 ): Promise<Representative[]> {
-  console.log(`[fetchRepsByCoordinatesR] Using R-based search for coordinates [${latitude}, ${longitude}]`);
+  console.log(`[fetchRepsByCoordinatesR] Using coordinate search for [${latitude}, ${longitude}]`);
 
-  // Convert coordinates to a search query for R function
+  // Convert coordinates to a search query - this will use the coordinate-based search path
   const query = `${latitude},${longitude}`;
   const rResults = await getRepsFromAddress(query);
-  console.log(`[fetchRepsByCoordinatesR] R search found ${rResults.length} representatives`);
+  console.log(`[fetchRepsByCoordinatesR] Coordinate search found ${rResults.length} representatives`);
 
   // Convert R results to existing format for UI compatibility
   const representatives = convertToExistingFormat(rResults);

@@ -1,13 +1,12 @@
-# App Store Submission Checklist for Version 2.2.0
+# App Store Submission Checklist for Version 3.0.0
 
 ## ✅ Completed Updates
 
 ### Version Updates
-- ✅ package.json: 2.1.0 → 2.2.0
-- ✅ Android build.gradle: versionName "2.1.0" → "2.2.0", versionCode 500000 → 501000
-- ✅ iOS project.pbxproj: MARKETING_VERSION 2.1.0 → 2.2.0, CURRENT_PROJECT_VERSION 2 → 3
-- ✅ User agent in nominatim.ts: RepFinder/2.1.0 → RepFinder/2.2.0
-- ✅ UI version display in profile.tsx: Version: 2.1.0 → Version: 2.2.0
+- ✅ package.json: 2.2.0 → 3.0.0
+- ✅ Android build.gradle: versionName "2.2.0" → "3.0.0", versionCode 501000 → 502000
+- ✅ iOS project.pbxproj: MARKETING_VERSION 2.2.0 → 3.0.0
+- ✅ UI version display in profile.tsx: Version: 2.2.0 → Version: 3.0.0
 
 ### Build Status
 - ✅ Web build successful with new version

@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
 import { fetchRepsByPostalR } from "@/lib/rSearchService";
-import { searchWithOfficialData } from "@/lib/houseOfCommonsApi";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -91,16 +90,9 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Prioritize R-based search first for better Canadian postal code support
-      let results: Representative[];
-      try {
-        results = await fetchRepsByPostalR(trimmedQuery);
-        console.log('[SearchForm] Using R-based geocoding and search (converted from R code)');
-      } catch (rSearchError) {
-        console.warn('[SearchForm] R-based search failed, falling back to official House of Commons sources:', rSearchError);
-        results = await searchWithOfficialData(trimmedQuery, false);
-        console.log('[SearchForm] Using official House of Commons data sources as fallback');
-      }
+      // Use geocoder.ca + Represent API approach only (no fallbacks)
+      console.log('[SearchForm] Using geocoder.ca + Represent API search (R-based approach)');
+      const results = await fetchRepsByPostalR(trimmedQuery);
       onSearchComplete(results);
 
       // Log the search activity with representatives
@@ -116,7 +108,7 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         incrementSearchCount();
         updateLastSearch(trimmedQuery, 'postalCode');
 
-        // Cache the new R-based search results for future use
+        // Cache the search results for future use
         const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
         await searchCacheRepository.cacheSearch(cleanQuery, results);
       } else {
@@ -142,25 +134,22 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
           variant: "default",
         });
       } else {
-        // No cached data available - provide more specific error messages
-        let errorMessage = "Could not retrieve representatives. Please check your connection and try again.";
+        // No cached data available - provide more specific error messages for geocoder.ca + Represent API
+        let errorMessage = "Could not retrieve representatives using geocoder.ca + Represent API. Please check your connection and try again.";
         let errorTitle = "Search failed";
 
         // Check for specific error patterns
         if (error instanceof Error) {
           const errorString = error.message.toLowerCase();
-          if (errorString.includes('could not geocode')) {
-            errorMessage = `Unable to locate postal code "${trimmedQuery}". Please verify the postal code is correct and try again.`;
-            errorTitle = "Invalid postal code";
+          if (errorString.includes('could not geocode') || errorString.includes('geocoder.ca')) {
+            errorMessage = `Unable to locate postal code "${trimmedQuery}" using geocoder.ca. Please verify the postal code is correct and try again.`;
+            errorTitle = "Geocoder lookup failed";
           } else if (errorString.includes('no representatives found')) {
-            errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in our database.`;
+            errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in the database.`;
             errorTitle = "No representatives found";
           } else if (errorString.includes('network') || errorString.includes('fetch')) {
-            errorMessage = "Network connection error. Please check your internet connection and try again.";
+            errorMessage = "Network connection error to geocoder.ca or Represent API. Please check your internet connection and try again.";
             errorTitle = "Connection error";
-          } else if (errorString.includes('all data sources failed')) {
-            errorMessage = "All representative data sources are temporarily unavailable. Please try again in a few minutes.";
-            errorTitle = "Service unavailable";
           }
         }
 
