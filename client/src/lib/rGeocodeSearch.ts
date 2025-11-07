@@ -76,7 +76,7 @@ export async function getRepsFromAddress(
 
   const nullish = (v: any, d: string = "") => (v == null ? d : v);
 
-  // --- 1) Geocode to coordinates (prefer provided getCoords; else OpenNorth postcode centroid) ---
+  // --- 1) Geocode to coordinates (prefer provided getCoords; else Geocoder.ca) ---
   async function geocodeToPoint(q: string) {
     if (typeof getCoords === "function") {
       const df = await getCoords(q, contactEmail);
@@ -90,16 +90,40 @@ export async function getRepsFromAddress(
       };
     }
 
-    // Fallback: postcode centroid
+    // Fallback: Geocoder.ca API (Canada-focused) - try spaced format first
     const pc = q.toUpperCase().replace(/\s+/g, "");
-    const u = `https://represent.opennorth.ca/postcodes/${encodeURIComponent(pc)}/`;
-    const j = await fetchJSON(u);
-    if (!j?.centroid?.coordinates || j.centroid.coordinates.length < 2) {
-      throw new Error("Could not geocode input and no centroid available.");
+    const spacedPostal = pc.slice(0, 3) + " " + pc.slice(3);
+
+    const url = new URL("https://geocoder.ca/");
+    url.searchParams.append("locate", spacedPostal);
+    url.searchParams.append("json", "1");
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        "User-Agent": "JS reps precise",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Geocoder.ca: HTTP ${response.status}`);
     }
-    // GeoJSON order is [lon, lat]
-    const [lon, lat] = j.centroid.coordinates.map(Number);
-    return { lat, lon, source: "opennorth_postcode_centroid" };
+
+    const data = await response.json();
+
+    // Geocoder.ca returns different field names
+    const lat = data.latt || data.lat;
+    const lon = data.longt || data.long || data.lon;
+
+    if (!lat || !lon) {
+      throw new Error("Geocoder.ca: no result");
+    }
+
+    return {
+      lat: parseFloat(lat),
+      lon: parseFloat(lon),
+      source: "geocoder.ca"
+    };
   }
 
   const gc = await geocodeToPoint(queryOrPostal);

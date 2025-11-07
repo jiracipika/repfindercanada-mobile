@@ -47,21 +47,22 @@ export async function fetchRepsByPostalR(
 
 /**
  * Enhanced location-based search using precise getRepsPrecise logic
- * Uses coordinate-based search with both lat,lon and lon,lat attempts
+ * This replaces fetchRepsByCoordinates with the R logic
+ * No fallbacks - uses only the R code implementation
  */
 export async function fetchRepsByCoordinatesR(
   latitude: number,
   longitude: number
 ): Promise<Representative[]> {
-  console.log(`[fetchRepsByCoordinatesR] Using precise search for coordinates [${latitude}, ${longitude}]`);
+  console.log(`[fetchRepsByCoordinatesR] Using R-based search for coordinates [${latitude}, ${longitude}]`);
 
-  // Convert coordinates to a search query for precise function
+  // Convert coordinates to a search query for R function
   const query = `${latitude},${longitude}`;
-  const preciseResults = await getRepsFromAddress(query);
-  console.log(`[fetchRepsByCoordinatesR] Precise search found ${preciseResults.length} representatives`);
+  const rResults = await getRepsFromAddress(query);
+  console.log(`[fetchRepsByCoordinatesR] R search found ${rResults.length} representatives`);
 
-  // Convert precise results to existing format for UI compatibility
-  const representatives = convertToExistingFormat(preciseResults);
+  // Convert R results to existing format for UI compatibility
+  const representatives = convertToExistingFormat(rResults);
 
   return representatives;
 }

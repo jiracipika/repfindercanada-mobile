@@ -225,16 +225,17 @@ export async function fetchRepsByPostal(postal: string, useCache: boolean = true
 }
 
 /**
- * Convert postal code to coordinates using OpenNorth postcode centroid
+ * Convert postal code to coordinates using Geocoder.ca API
  * Returns coordinates with latitude and longitude
- * Uses the same approach as getRepsPrecise - no Nominatim dependency
+ * Uses the same approach as getRepsPrecise - Geocoder.ca fallback
  */
 export async function postalCodeToCoordinates(postal: string): Promise<CoordinatesData> {
   const clean = normalizePostalCode(postal);
 
   try {
-    // Use OpenNorth postcode centroid (same as getRepsPrecise fallback)
-    const url = `https://represent.opennorth.ca/postcodes/${encodeURIComponent(clean)}/`;
+    // Use Geocoder.ca API (same as getRepsPrecise fallback)
+    const spacedPostal = clean.slice(0, 3) + " " + clean.slice(3);
+    const url = `https://geocoder.ca/?locate=${encodeURIComponent(spacedPostal)}&json=1`;
     const response = await fetch(url, {
       headers: {
         "User-Agent": "RepFinder coordinates",
@@ -243,23 +244,24 @@ export async function postalCodeToCoordinates(postal: string): Promise<Coordinat
     });
 
     if (!response.ok) {
-      throw new Error(`OpenNorth API error ${response.status}`);
+      throw new Error(`Geocoder.ca API error ${response.status}`);
     }
 
     const data = await response.json();
 
-    if (!data?.centroid?.coordinates || data.centroid.coordinates.length < 2) {
+    // Geocoder.ca returns different field names
+    const lat = data.latt || data.lat;
+    const lon = data.longt || data.long || data.lon;
+
+    if (!lat || !lon) {
       throw new Error(`Could not get coordinates for postal code ${clean}`);
     }
 
-    // GeoJSON order is [lon, lat]
-    const [lon, lat] = data.centroid.coordinates.map(Number);
-
-    console.log(`[postalCodeToCoordinates] Converted ${clean} to coordinates [${lat}, ${lon}] via OpenNorth`);
+    console.log(`[postalCodeToCoordinates] Converted ${clean} to coordinates [${lat}, ${lon}] via Geocoder.ca`);
 
     return {
-      latitude: lat,
-      longitude: lon,
+      latitude: parseFloat(lat),
+      longitude: parseFloat(lon),
       postalCode: clean
     };
   } catch (error) {
@@ -372,8 +374,8 @@ export async function getLocationDataByCoordinates(latitude: number, longitude: 
 }
 
 /**
- * Enhanced version of fetchRepsByPostal that uses OpenNorth coordinates + precise search for better accuracy
- * First converts postal code to coordinates via OpenNorth postcode centroid, then searches by coordinates
+ * Enhanced version of fetchRepsByPostal that uses Geocoder.ca coordinates + precise search for better accuracy
+ * First converts postal code to coordinates via Geocoder.ca, then searches by coordinates
  */
 export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolean = true): Promise<Representative[]> {
   const clean = normalizePostalCode(postal);
@@ -388,9 +390,9 @@ export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolea
   }
 
   try {
-    // Step 1: Convert postal code to coordinates using OpenNorth postcode centroid
+    // Step 1: Convert postal code to coordinates using Geocoder.ca
     const coordinates = await postalCodeToCoordinates(clean);
-    console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}] via OpenNorth`);
+    console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}] via Geocoder.ca`);
 
     // Step 2: Search representatives using coordinates for maximum accuracy (both coordinate orders)
     const representatives = await fetchRepsByCoordinates(coordinates.latitude, coordinates.longitude);
