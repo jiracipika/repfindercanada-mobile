@@ -125,6 +125,29 @@ export async function getLocationDataR(
 }
 
 /**
+ * Validate Canadian phone numbers to prevent fake/incorrect numbers
+ */
+function isValidPhoneNumber(phone: string | undefined | null): boolean {
+  if (!phone || typeof phone !== 'string') {
+    return false;
+  }
+
+  const cleaned = phone.trim();
+
+  // Basic validation for Canadian phone numbers
+  // Accept formats: (613) 992-0919, 613-992-0919, 6139920919, 1 613 992-0919, etc.
+  const phoneRegex = /^(\+?1[\s-]?)?(\(?[2-9]\d{2}\)?[\s-]?)?[2-9]\d{2}[\s-]?\d{4}$/;
+
+  // Must be reasonable length (10-15 characters with formatting)
+  if (cleaned.length < 10 || cleaned.length > 20) {
+    return false;
+  }
+
+  // Check if it matches Canadian phone number pattern
+  return phoneRegex.test(cleaned.replace(/[^\d\(\)\-\s\+]/g, ''));
+}
+
+/**
  * Enhanced search by name using R-based approach with Represent API
  * Uses the Represent API search endpoint with R-style filtering and processing
  */
@@ -164,6 +187,49 @@ export async function fetchRepsByNameR(name: string): Promise<Representative[]> 
     const representatives: Representative[] = [];
 
     for (const rep of data.objects) {
+      // Extract phone number more carefully - prioritize legislature/constituency offices
+      let phoneNumber: string | undefined;
+      let faxNumber: string | undefined;
+
+      if (rep.offices && Array.isArray(rep.offices) && rep.offices.length > 0) {
+        // Find the best office for phone contact (prioritize legislature/constituency)
+        const bestOffice = rep.offices.find(office =>
+          office.type && (
+            office.type.toLowerCase().includes('legislature') ||
+            office.type.toLowerCase().includes('constituency') ||
+            office.type.toLowerCase().includes('parliament')
+          )
+        ) || rep.offices[0]; // Fallback to first office
+
+        // Debug logging for phone numbers
+        if (bestOffice?.tel) {
+          const isValid = isValidPhoneNumber(bestOffice.tel);
+          console.log(`[fetchRepsByNameR] Phone validation for ${rep.name}: "${bestOffice.tel}" -> ${isValid ? 'VALID' : 'INVALID'}`);
+          if (isValid) {
+            phoneNumber = bestOffice.tel;
+          }
+        }
+
+        if (bestOffice?.fax) {
+          const isValid = isValidPhoneNumber(bestOffice.fax);
+          console.log(`[fetchRepsByNameR] Fax validation for ${rep.name}: "${bestOffice.fax}" -> ${isValid ? 'VALID' : 'INVALID'}`);
+          if (isValid) {
+            faxNumber = bestOffice.fax;
+          }
+        }
+
+        // If no valid phone found, log all available phone numbers for debugging
+        if (!phoneNumber) {
+          console.log(`[fetchRepsByNameR] No valid phone found for ${rep.name}. Available offices:`,
+            rep.offices.map(office => ({
+              type: office.type,
+              tel: office.tel,
+              isValid: office.tel ? isValidPhoneNumber(office.tel) : false
+            }))
+          );
+        }
+      }
+
       // Apply R-style filtering and enhancement
       const enhancedRep = {
         name: rep.name || "",
@@ -172,14 +238,14 @@ export async function fetchRepsByNameR(name: string): Promise<Representative[]> 
         province: "", // Represent API doesn't provide province in name search
         party: rep.party_name || "Independent",
         email: rep.email || undefined,
-        phone: rep.offices?.[0]?.tel || undefined,
+        phone: phoneNumber, // Only include validated phone numbers
         photo: rep.photo_url || undefined,
         website: rep.url || rep.personal_url || undefined,
         personalWebsite: rep.personal_url || undefined,
         socialMedia: {},
         biography: null,
         offices: rep.offices || [],
-        fax: rep.offices?.[0]?.fax || undefined,
+        fax: faxNumber, // Only include validated fax numbers
         parliamentId: undefined,
         rep_set: rep.representative_set_name || "",
         createdAt: undefined,
