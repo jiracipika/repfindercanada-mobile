@@ -11,6 +11,7 @@ import { normalizePostalCode } from "./nominatim";
 /**
  * Enhanced postal code search using R-based approach
  * This replaces fetchRepsByPostalEnhanced with the more reliable R logic
+ * No fallbacks - uses only the R code implementation
  */
 export async function fetchRepsByPostalR(
   postal: string,
@@ -27,73 +28,44 @@ export async function fetchRepsByPostalR(
     }
   }
 
-  try {
-    console.log(`[fetchRepsByPostalR] Using R-based search for ${clean}`);
+  console.log(`[fetchRepsByPostalR] Using R-based search for ${clean}`);
 
-    // Use the R-based geocoding and representative search
-    const rResults = await getRepsFromAddress(clean);
-    console.log(`[fetchRepsByPostalR] R search found ${rResults.length} representatives`);
+  // Use the R-based geocoding and representative search
+  const rResults = await getRepsFromAddress(clean);
+  console.log(`[fetchRepsByPostalR] R search found ${rResults.length} representatives`);
 
-    // Convert R results to existing format for UI compatibility
-    const representatives = convertToExistingFormat(rResults);
+  // Convert R results to existing format for UI compatibility
+  const representatives = convertToExistingFormat(rResults);
 
-    // Cache the results
-    if (useCache && representatives.length > 0) {
-      await searchCacheRepository.cacheSearch(clean, representatives);
-      console.log(`[fetchRepsByPostalR] Cached ${representatives.length} representatives for ${clean}`);
-    }
-
-    return representatives;
-  } catch (error) {
-    console.error(`[fetchRepsByPostalR] Error with R-based search:`, error);
-
-    // Fallback to original method if R search fails
-    console.log(`[fetchRepsByPostalR] Falling back to original representApi method`);
-    try {
-      // Import here to avoid circular dependency
-      const { fetchRepsByPostalEnhanced } = await import("./representApi");
-      return await fetchRepsByPostalEnhanced(postal, useCache);
-    } catch (fallbackError) {
-      console.error(`[fetchRepsByPostalR] All search methods failed for postal code:`, clean);
-      throw new Error(`Unable to find representatives for postal code ${clean}. Please try again or use location-based search.`);
-    }
+  // Cache the results
+  if (useCache && representatives.length > 0) {
+    await searchCacheRepository.cacheSearch(clean, representatives);
+    console.log(`[fetchRepsByPostalR] Cached ${representatives.length} representatives for ${clean}`);
   }
+
+  return representatives;
 }
 
 /**
  * Enhanced location-based search using R-based approach
  * This replaces fetchRepsByCoordinates with the R logic
+ * No fallbacks - uses only the R code implementation
  */
 export async function fetchRepsByCoordinatesR(
   latitude: number,
   longitude: number
 ): Promise<Representative[]> {
-  try {
-    console.log(`[fetchRepsByCoordinatesR] Using R-based search for coordinates [${latitude}, ${longitude}]`);
+  console.log(`[fetchRepsByCoordinatesR] Using R-based search for coordinates [${latitude}, ${longitude}]`);
 
-    // Convert coordinates to a search query for R function
-    const query = `${latitude},${longitude}`;
-    const rResults = await getRepsFromAddress(query);
-    console.log(`[fetchRepsByCoordinatesR] R search found ${rResults.length} representatives`);
+  // Convert coordinates to a search query for R function
+  const query = `${latitude},${longitude}`;
+  const rResults = await getRepsFromAddress(query);
+  console.log(`[fetchRepsByCoordinatesR] R search found ${rResults.length} representatives`);
 
-    // Convert R results to existing format for UI compatibility
-    const representatives = convertToExistingFormat(rResults);
+  // Convert R results to existing format for UI compatibility
+  const representatives = convertToExistingFormat(rResults);
 
-    return representatives;
-  } catch (error) {
-    console.error(`[fetchRepsByCoordinatesR] Error with R-based coordinate search:`, error);
-
-    // Fallback to original method if R search fails
-    console.log(`[fetchRepsByCoordinatesR] Falling back to original representApi method`);
-    try {
-      // Import here to avoid circular dependency
-      const { fetchRepsByCoordinates } = await import("./representApi");
-      return await fetchRepsByCoordinates(latitude, longitude);
-    } catch (fallbackError) {
-      console.error(`[fetchRepsByCoordinatesR] All coordinate search methods failed`);
-      throw fallbackError;
-    }
-  }
+  return representatives;
 }
 
 /**
@@ -155,61 +127,49 @@ export async function getLocationDataR(
 
 /**
  * Enhanced search by name using R-based approach
- * Combines R logic with improved name matching and fallback strategies
+ * No fallbacks - direct name search through existing API
  */
 export async function fetchRepsByNameR(name: string): Promise<Representative[]> {
   if (!name.trim()) {
     return [];
   }
 
-  console.log(`[fetchRepsByNameR] Using R-enhanced name search for "${name}"`);
+  console.log(`[fetchRepsByNameR] Using name search for "${name}"`);
 
-  try {
-    // Import the original method for fallback
-    const { fetchRepsByName } = await import("./representApi");
+  // Import the original method for name search
+  const { fetchRepsByName } = await import("./representApi");
+  const results = await fetchRepsByName(name);
+  console.log(`[fetchRepsByNameR] Found ${results.length} representatives`);
 
-    // Try the enhanced name search first
-    const results = await fetchRepsByName(name);
-    console.log(`[fetchRepsByNameR] Found ${results.length} representatives with enhanced search`);
+  // Apply R-style filtering and processing to improve results
+  const processedResults = results.map(rep => {
+    // Ensure we have proper R-style data structure
+    if (!rep.rep_set) {
+      rep.rep_set = rep.electedOffice === 'MP' ? 'House of Commons' :
+                   rep.electedOffice === 'MPP' || rep.electedOffice === 'MLA' ? 'Provincial Legislature' :
+                   'Municipal Government';
+    }
 
-    // Apply R-style filtering and processing to improve results
-    const processedResults = results.map(rep => {
-      // Ensure we have proper R-style data structure
-      if (!rep.rep_set) {
-        rep.rep_set = rep.electedOffice === 'MP' ? 'House of Commons' :
-                     rep.electedOffice === 'MPP' || rep.electedOffice === 'MLA' ? 'Provincial Legislature' :
-                     'Municipal Government';
-      }
+    return rep;
+  });
 
-      return rep;
-    });
+  // Sort using the same R-based logic as postal code searches
+  const sortedResults = processedResults.sort((a, b) => {
+    // R-style priority: Federal -> Provincial -> Municipal
+    const getRLevel = (office: string | null | undefined): number => {
+      if (!office) return 999;
+      const o = office.toLowerCase();
+      if (o === 'mp') return 1;
+      if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
+      if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
+      return 999;
+    };
 
-    // Sort using the same R-based logic as postal code searches
-    const sortedResults = processedResults.sort((a, b) => {
-      // R-style priority: Federal -> Provincial -> Municipal
-      const getRLevel = (office: string | null | undefined): number => {
-        if (!office) return 999;
-        const o = office.toLowerCase();
-        if (o === 'mp') return 1;
-        if (o === 'mpp' || o === 'mla' || o === 'mna') return 2;
-        if (o === 'mayor' || o === 'councillor' || o === 'councilor') return 3;
-        return 999;
-      };
+    return getRLevel(a.electedOffice) - getRLevel(b.electedOffice);
+  });
 
-      return getRLevel(a.electedOffice) - getRLevel(b.electedOffice);
-    });
-
-    console.log(`[fetchRepsByNameR] R-enhanced search returning ${sortedResults.length} processed representatives`);
-    return sortedResults;
-
-  } catch (error) {
-    console.error(`[fetchRepsByNameR] Error with R-enhanced name search:`, error);
-
-    // Fallback to basic name search
-    console.log(`[fetchRepsByNameR] Using basic name search as fallback`);
-    const { fetchRepsByName } = await import("./representApi");
-    return fetchRepsByName(name);
-  }
+  console.log(`[fetchRepsByNameR] R-enhanced search returning ${sortedResults.length} processed representatives`);
+  return sortedResults;
 }
 
 /**
