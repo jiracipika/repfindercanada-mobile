@@ -2,7 +2,7 @@ import type { Representative } from "@shared/schema";
 import { searchByName } from "./api/represent";
 import { makeRepresentativeId, __debugCheckRepId } from "./repId";
 import { searchCacheRepository } from "./storage/searchCacheRepository";
-import { geocodeWithRetry, normalizePostalCode } from "./nominatim";
+import { normalizePostalCode } from "./nominatim";
 
 interface OpenNorthRepresentative {
   name: string;
@@ -225,21 +225,41 @@ export async function fetchRepsByPostal(postal: string, useCache: boolean = true
 }
 
 /**
- * Convert postal code to coordinates using OpenStreetMap Nominatim
+ * Convert postal code to coordinates using OpenNorth postcode centroid
  * Returns coordinates with latitude and longitude
- * This is more accurate than Represent API's postal code lookup
+ * Uses the same approach as getRepsPrecise - no Nominatim dependency
  */
 export async function postalCodeToCoordinates(postal: string): Promise<CoordinatesData> {
   const clean = normalizePostalCode(postal);
 
   try {
-    const coords = await geocodeWithRetry(clean);
+    // Use OpenNorth postcode centroid (same as getRepsPrecise fallback)
+    const url = `https://represent.opennorth.ca/postcodes/${encodeURIComponent(clean)}/`;
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "RepFinder coordinates",
+        "Accept": "application/json",
+      },
+    });
 
-    console.log(`[postalCodeToCoordinates] Converted ${clean} to coordinates [${coords.lat}, ${coords.lon}] via Nominatim`);
+    if (!response.ok) {
+      throw new Error(`OpenNorth API error ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data?.centroid?.coordinates || data.centroid.coordinates.length < 2) {
+      throw new Error(`Could not get coordinates for postal code ${clean}`);
+    }
+
+    // GeoJSON order is [lon, lat]
+    const [lon, lat] = data.centroid.coordinates.map(Number);
+
+    console.log(`[postalCodeToCoordinates] Converted ${clean} to coordinates [${lat}, ${lon}] via OpenNorth`);
 
     return {
-      latitude: coords.lat,
-      longitude: coords.lon,
+      latitude: lat,
+      longitude: lon,
       postalCode: clean
     };
   } catch (error) {
@@ -251,28 +271,48 @@ export async function postalCodeToCoordinates(postal: string): Promise<Coordinat
 /**
  * Search representatives by coordinates using Represent API
  * This provides 100% accuracy compared to postal code lookup
+ * Uses both coordinate orders like getRepsPrecise for maximum reliability
  */
 export async function fetchRepsByCoordinates(latitude: number, longitude: number): Promise<Representative[]> {
   try {
-    // Use the representatives endpoint with point parameter
-    const res = await fetch(`https://represent.opennorth.ca/representatives/?point=${latitude},${longitude}`);
-    if (!res.ok) {
-      throw new Error(`Represent API error ${res.status} for coordinates [${latitude}, ${longitude}]`);
+    // Try both coordinate orders like getRepsPrecise
+    const urls = [
+      `https://represent.opennorth.ca/representatives/?point=${latitude.toFixed(7)},${longitude.toFixed(7)}`,
+      `https://represent.opennorth.ca/representatives/?point=${longitude.toFixed(7)},${latitude.toFixed(7)}`
+    ];
+
+    let representatives: Representative[] = [];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+
+        const data = await res.json();
+
+        // The API returns an 'objects' array with representatives
+        if (data && Array.isArray(data.objects) && data.objects.length > 0) {
+          const reps = await Promise.all(
+            data.objects.map((rep: OpenNorthRepresentative) => toRepresentative(rep))
+          );
+
+          if (reps.length > 0) {
+            representatives = reps;
+            console.log(`[fetchRepsByCoordinates] Found ${reps.length} representatives for coordinates [${latitude}, ${longitude}] using order ${url.includes(latitude.toFixed(7) + ',' + longitude.toFixed(7)) ? 'lat,lon' : 'lon,lat'}`);
+            break;
+          }
+        }
+      } catch {
+        // Try the next coordinate order
+        continue;
+      }
     }
 
-    const data = await res.json();
-
-    // The API returns an 'objects' array with representatives
-    if (data && Array.isArray(data.objects)) {
-      const representatives = await Promise.all(
-        data.objects.map((rep: OpenNorthRepresentative) => toRepresentative(rep))
-      );
-
-      console.log(`[fetchRepsByCoordinates] Found ${representatives.length} representatives for coordinates [${latitude}, ${longitude}]`);
-      return representatives;
+    if (representatives.length === 0) {
+      throw new Error(`OpenNorth did not return representatives for coordinates [${latitude}, ${longitude}]`);
     }
 
-    return [];
+    return representatives;
   } catch (error) {
     console.error('[fetchRepsByCoordinates] Error:', error);
     throw error;
@@ -332,8 +372,8 @@ export async function getLocationDataByCoordinates(latitude: number, longitude: 
 }
 
 /**
- * Enhanced version of fetchRepsByPostal that uses OpenStreetMap Nominatim + coordinates for better accuracy
- * First converts postal code to coordinates via Nominatim, then searches by coordinates using Represent API
+ * Enhanced version of fetchRepsByPostal that uses OpenNorth coordinates + precise search for better accuracy
+ * First converts postal code to coordinates via OpenNorth postcode centroid, then searches by coordinates
  */
 export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolean = true): Promise<Representative[]> {
   const clean = normalizePostalCode(postal);
@@ -348,11 +388,11 @@ export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolea
   }
 
   try {
-    // Step 1: Convert postal code to coordinates using OpenStreetMap Nominatim
+    // Step 1: Convert postal code to coordinates using OpenNorth postcode centroid
     const coordinates = await postalCodeToCoordinates(clean);
-    console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}] via Nominatim`);
+    console.log(`[fetchRepsByPostalEnhanced] Converted ${clean} to coordinates [${coordinates.latitude}, ${coordinates.longitude}] via OpenNorth`);
 
-    // Step 2: Search representatives using coordinates for maximum accuracy
+    // Step 2: Search representatives using coordinates for maximum accuracy (both coordinate orders)
     const representatives = await fetchRepsByCoordinates(coordinates.latitude, coordinates.longitude);
 
     // Step 3: Also try federal-specific endpoint to ensure we get the MP
@@ -386,7 +426,7 @@ export async function fetchRepsByPostalEnhanced(postal: string, useCache: boolea
 
     return uniqueReps;
   } catch (error) {
-    console.error('[fetchRepsByPostalEnhanced] Error with Nominatim + coordinate approach:', error);
+    console.error('[fetchRepsByPostalEnhanced] Error with coordinate approach:', error);
 
     // Fallback to original postal code method if coordinate-based search fails
     console.log('[fetchRepsByPostalEnhanced] Falling back to original Represent postal code method');

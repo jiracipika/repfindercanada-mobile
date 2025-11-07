@@ -4,9 +4,6 @@
  * Exact implementation matching the R code
  */
 
-// Constants for API requests
-const getUserAgent = (contactEmail: string): string => `napas-postal-lookup/1.0 (${contactEmail})`;
-
 // Helper functions
 const trimq = (x?: string | null): string => (x || "").trim();
 const isNullish = (x: any): boolean => x === null || x === undefined;
@@ -30,277 +27,197 @@ export interface GeocodeResult {
   source: string;
 }
 
-/**
- * Geocoder.ca API (Canada-focused)
- * Exact match to R code implementation
- */
-async function geocodeGeocoderCa(query: string, contactEmail: string): Promise<GeocodeResult> {
-  const pc = query.toUpperCase().replace(/\s+/g, "");
 
-  const url = new URL("https://geocoder.ca/");
-  url.searchParams.append("locate", pc);
-  url.searchParams.append("json", "1");
 
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      "User-Agent": getUserAgent(contactEmail),
-    },
-  });
 
-  if (!response.ok) {
-    throw new Error(`geocoder.ca API error ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  if (isNullish(data.lat) || isNullish(data.long)) {
-    throw new Error("geocoder.ca: no result");
-  }
-
-  return {
-    lat: parseFloat(data.lat),
-    lon: parseFloat(data.long),
-    source: "geocoder.ca",
-  };
-}
-
-/**
- * Nominatim (OpenStreetMap) geocoding
- * Exact match to R code implementation
- */
-async function geocodeNominatim(query: string, contactEmail: string): Promise<GeocodeResult> {
-  const ua = getUserAgent(contactEmail);
-  const pc = query.toUpperCase().replace(/\s+/g, "");
-
-  // Strategy A: postalcode param (works if query is a PC)
-  const url1 = new URL("https://nominatim.openstreetmap.org/search");
-  url1.searchParams.append("format", "jsonv2");
-  url1.searchParams.append("postalcode", pc);
-  url1.searchParams.append("countrycodes", "ca");
-  url1.searchParams.append("limit", "1");
-  url1.searchParams.append("addressdetails", "0");
-
-  const response1 = await fetch(url1.toString(), {
-    method: "GET",
-    headers: {
-      "User-Agent": ua,
-      "Accept": "application/json",
-    },
-  });
-
-  if (response1.ok) {
-    const data1 = await response1.json();
-    if (Array.isArray(data1) && data1.length > 0) {
-      return {
-        lat: parseFloat(data1[0].lat),
-        lon: parseFloat(data1[0].lon),
-        source: "nominatim",
-      };
+// Small util to dedupe arrays by a key function
+function dedupeBy<T>(arr: T[], keyFn: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of arr) {
+    const k = keyFn(item);
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(item);
     }
   }
-
-  // Strategy B: free-text address
-  const url2 = new URL("https://nominatim.openstreetmap.org/search");
-  url2.searchParams.append("format", "jsonv2");
-  url2.searchParams.append("q", `${query} Canada`);
-  url2.searchParams.append("limit", "1");
-  url2.searchParams.append("addressdetails", "0");
-
-  const response2 = await fetch(url2.toString(), {
-    method: "GET",
-    headers: {
-      "User-Agent": ua,
-      "Accept": "application/json",
-    },
-  });
-
-  if (!response2.ok) {
-    throw new Error(`nominatim: API error ${response2.status}`);
-  }
-
-  const data2 = await response2.json();
-
-  if (!Array.isArray(data2) || data2.length === 0) {
-    throw new Error("nominatim: no result");
-  }
-
-  return {
-    lat: parseFloat(data2[0].lat),
-    lon: parseFloat(data2[0].lon),
-    source: "nominatim",
-  };
+  return out;
 }
 
 /**
- * Classify government level using representative_set_name / elected_office
- */
-function classifyLevel(repSetName: string, electedOffice: string): Representative["level"] {
-  const rsn = trimq(repSetName).toLowerCase();
-  const off = trimq(electedOffice).toLowerCase();
-
-  if (
-    rsn.includes("house of commons") ||
-    rsn.includes("parliament") ||
-    rsn.includes("chambre des communes") ||
-    off === "mp"
-  ) {
-    return "Federal";
-  }
-
-  if (
-    rsn.includes("legislative assembly") ||
-    rsn.includes("assemblée législative") ||
-    rsn.includes("national assembly") ||
-    rsn.includes("assemblée nationale") ||
-    rsn.includes("house of assembly") ||
-    /\b(mpp|mla|mna|mha)\b/.test(off)
-  ) {
-    return "Provincial/Territorial";
-  }
-
-  if (
-    rsn.includes("city") ||
-    rsn.includes("town") ||
-    rsn.includes("municipal") ||
-    rsn.includes("regional") ||
-    rsn.includes("district") ||
-    rsn.includes("ville") ||
-    rsn.includes("conseil") ||
-    rsn.includes("council") ||
-    off.includes("mayor") ||
-    off.includes("councillor") ||
-    off.includes("alderman") ||
-    off.includes("reeve")
-  ) {
-    return "Municipal";
-  }
-
-  return "Other";
-}
-
-/**
- * Fetch representatives by coordinate (point=lat,lon)
- * Exact match to R code implementation
- */
-async function fetchRepsByPoint(lat: number, lon: number): Promise<any[]> {
-  // Try both lat,lon and lon,lat just in case
-  const urls = [
-    `https://represent.opennorth.ca/representatives/?point=${lat.toFixed(7)},${lon.toFixed(7)}`,
-    `https://represent.opennorth.ca/representatives/?point=${lon.toFixed(7)},${lat.toFixed(7)}`,
-  ];
-
-  for (const url of urls) {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "User-Agent": "R civic reps by point",
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.objects && Array.isArray(data.objects) && data.objects.length > 0) {
-        return data.objects;
-      }
-    }
-  }
-
-  throw new Error("OpenNorth did not return representatives for that coordinate.");
-}
-
-/**
- * Ensure required fields exist in representative objects
- */
-function ensureField(obj: any, fieldName: string): any {
-  if (isNullish(obj[fieldName])) {
-    obj[fieldName] = "";
-  }
-  return obj;
-}
-
-
-/**
- * Main function: Get representatives from address/postal code
- * Exact match to R code implementation
+ * Get precise representatives for a location or postal code.
+ * - If you pass a custom getCoords(query, contactEmail) -> { latitude, longitude, source } it will use that first.
+ * - Otherwise it falls back to OpenNorth's postcode centroid.
+ *
+ * Converted from JavaScript to TypeScript, maintaining exact logic
  */
 export async function getRepsFromAddress(
-  query: string,
-  contactEmail: string = "you@example.com"
+  queryOrPostal: string,
+  opts: {
+    contactEmail?: string;
+    getCoords?: (q: string, contactEmail?: string) => Promise<{ latitude: number; longitude: number; source?: string }>;
+  } = {}
 ): Promise<Representative[]> {
-  // ---------- 1) Geocode the input ----------
-  let gc: GeocodeResult;
+  const contactEmail = opts.contactEmail ?? "you@example.com";
+  const getCoords = opts.getCoords;
 
-  try {
-    gc = await geocodeGeocoderCa(query, contactEmail);
-  } catch (error) {
-    gc = await geocodeNominatim(query, contactEmail);
-  }
-
-  const { lat, lon, source } = gc;
-
-  // ---------- 2) OpenNorth reps by coordinate (point=lat,lon) ----------
-  const objects = await fetchRepsByPoint(lat, lon);
-  if (objects.length === 0) {
-    throw new Error("OpenNorth did not return representatives for that coordinate.");
-  }
-
-  // Ensure fields exist
-  const processedObjects = objects.map(obj => {
-    ensureField(obj, "name");
-    ensureField(obj, "district_name");
-    ensureField(obj, "party_name");
-    ensureField(obj, "elected_office");
-    ensureField(obj, "representative_set_name");
-    return obj;
+  // --- Helpers ---
+  const ua = (headers: Record<string, string> = {}) => ({
+    "User-Agent": "JS reps precise",
+    "Accept": "application/json",
+    ...headers
   });
 
-  // ---------- 3) Tidy output ----------
-  const level = processedObjects.map(obj =>
-    classifyLevel(obj.representative_set_name, obj.elected_office)
-  );
+  const fetchJSON = async (url: string): Promise<any> => {
+    const res = await fetch(url, { headers: ua() });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return res.json();
+  };
 
-  const results: Representative[] = processedObjects.map((obj, index) => ({
-    level: level[index],
-    name: trimq(obj.name),
-    riding: trimq(obj.district_name),
-    affiliation: trimq(obj.party_name),
-    office: trimq(obj.elected_office),
-    rep_set: trimq(obj.representative_set_name),
-    latitude: lat,
-    longitude: lon,
-    coord_source: source,
+  const nullish = (v: any, d: string = "") => (v == null ? d : v);
+
+  // --- 1) Geocode to coordinates (prefer provided getCoords; else OpenNorth postcode centroid) ---
+  async function geocodeToPoint(q: string) {
+    if (typeof getCoords === "function") {
+      const df = await getCoords(q, contactEmail);
+      if (!df || df.latitude == null || df.longitude == null) {
+        throw new Error("getCoords() did not return latitude/longitude.");
+      }
+      return {
+        lat: Number(df.latitude),
+        lon: Number(df.longitude),
+        source: df.source ?? "getCoords"
+      };
+    }
+
+    // Fallback: postcode centroid
+    const pc = q.toUpperCase().replace(/\s+/g, "");
+    const u = `https://represent.opennorth.ca/postcodes/${encodeURIComponent(pc)}/`;
+    const j = await fetchJSON(u);
+    if (!j?.centroid?.coordinates || j.centroid.coordinates.length < 2) {
+      throw new Error("Could not geocode input and no centroid available.");
+    }
+    // GeoJSON order is [lon, lat]
+    const [lon, lat] = j.centroid.coordinates.map(Number);
+    return { lat, lon, source: "opennorth_postcode_centroid" };
+  }
+
+  const gc = await geocodeToPoint(queryOrPostal);
+  const lat = gc.lat, lon = gc.lon, src = gc.source;
+
+  // --- 2) Fetch representatives by coordinate (try lat,lon then lon,lat) ---
+  async function fetchRepsByPoint(lat: number, lon: number) {
+    const urls = [
+      `https://represent.opennorth.ca/representatives/?point=${lat.toFixed(7)},${lon.toFixed(7)}`,
+      `https://represent.opennorth.ca/representatives/?point=${lon.toFixed(7)},${lat.toFixed(7)}`
+    ];
+    for (const u of urls) {
+      try {
+        const j = await fetchJSON(u);
+        if (j?.objects && Array.isArray(j.objects) && j.objects.length) {
+          return j.objects;
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  }
+
+  const objs = await fetchRepsByPoint(lat, lon);
+  if (!objs) throw new Error("OpenNorth didn't return representatives for that point.");
+
+  // --- 3) Keep only current reps (drop ones with end_date present) ---
+  const current = objs.filter(o => {
+    const end = nullish(o.end_date, "").trim();
+    return end === "";
+  });
+
+  // --- 4) Classify level & filter buckets ---
+  function classifyLevel(setName: string, office: string): Representative["level"] {
+    const s = nullish(setName, "");
+    const o = nullish(office, "");
+
+    // Federal
+    if (/(House of Commons|Parliament|Chambre des communes)/i.test(s) || /^MP$/i.test(o)) {
+      return "Federal";
+    }
+    // Provincial/Territorial
+    if (/(Legislative Assembly|Assemblée législative|National Assembly|Assemblée nationale|House of Assembly)/i.test(s) ||
+        /\b(MPP|MLA|MNA|MHA)\b/i.test(o)) {
+      return "Provincial/Territorial";
+    }
+    // Municipal
+    if (/(City|Town|Municipal|Regional|District|Ville|Conseil|Council)/i.test(s) ||
+        /(Mayor|Councillor|Alderman|Reeve)/i.test(o)) {
+      return "Municipal";
+    }
+    return "Other";
+  }
+
+  const withLevel = current.map(o => ({
+    ...o,
+    level: classifyLevel(o.representative_set_name, o.elected_office)
   }));
 
-  // De-dup (sometimes centroid & concordance overlap)
-  const uniqueResults = Array.from(
-    new Set(results.map(r => `${r.name}|${r.riding}|${r.level}`))
-  ).map(uniqueKey =>
-    results.find(r => `${r.name}|${r.riding}|${r.level}` === uniqueKey)!
+  const pickOne = (arr: any[]) => (arr && arr.length ? [arr[0]] : []);
+
+  // Federal: exactly one from House of Commons
+  const federal = pickOne(
+    withLevel
+      .filter(o => o.level === "Federal" && /(House of Commons|Chambre des communes)/i.test(nullish(o.representative_set_name)))
+      .sort((a, b) => nullish(a.name).localeCompare(nullish(b.name)))
   );
 
-  // Nice ordering
-  const levelOrder: Representative["level"][] = [
-    "Federal",
-    "Provincial/Territorial",
-    "Municipal",
-    "Other"
-  ];
+  // Provincial/Territorial: one from Legislative/National/House of Assembly
+  const provincial = pickOne(
+    withLevel
+      .filter(o =>
+        o.level === "Provincial/Territorial" &&
+        /(Legislative|National Assembly|House of Assembly)/i.test(nullish(o.representative_set_name))
+      )
+      .sort((a, b) => nullish(a.name).localeCompare(nullish(b.name)))
+  );
 
-  uniqueResults.sort((a, b) => {
-    const levelDiff = levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level);
-    if (levelDiff !== 0) return levelDiff;
+  // Municipal: mayor + ward councillor from city council set; exclude school boards/regions
+  const muniCandidates = withLevel
+    .filter(o => o.level === "Municipal")
+    .filter(o => /(City|Ville|Council|Conseil)/i.test(nullish(o.representative_set_name)))
+    .filter(o => !/(School|École|School Board|Regional|Comté|County|District School)/i.test(nullish(o.representative_set_name)));
 
-    const repSetDiff = a.rep_set.localeCompare(b.rep_set);
-    if (repSetDiff !== 0) return repSetDiff;
+  const mayor = pickOne(muniCandidates.filter(o => /(Mayor|Maire)/i.test(nullish(o.elected_office))));
+  const ward  = pickOne(muniCandidates.filter(o => /(Councillor|Conseiller|Alderman|Reeve)/i.test(nullish(o.elected_office))));
+  const municipal = dedupeBy([...mayor, ...ward], (o) => `${o.name}|${o.elected_office}|${o.representative_set_name}`);
 
-    const officeDiff = a.office.localeCompare(b.office);
-    if (officeDiff !== 0) return officeDiff;
+  // --- 5) Build output ---
+  const levelOrder: Record<string, number> = { "Federal": 1, "Provincial/Territorial": 2, "Municipal": 3 };
 
-    return a.name.localeCompare(b.name);
-  });
+  const out = [...federal, ...provincial, ...municipal]
+    .filter(Boolean)
+    .map(o => ({
+      level: o.level,
+      name: nullish(o.name),
+      riding: o.district_name,
+      affiliation: o.party_name,
+      office: o.elected_office,
+      rep_set: o.representative_set_name,
+      latitude: lat,
+      longitude: lon,
+      coord_source: src
+    }))
+    .filter(o => o.level)
+    .sort((a, b) => {
+      const lv = (levelOrder[a.level] ?? 99) - (levelOrder[b.level] ?? 99);
+      if (lv !== 0) return lv;
+      // then office, then name (both optional-safe)
+      const oCmp = nullish(a.office).localeCompare(nullish(b.office));
+      if (oCmp !== 0) return oCmp;
+      return nullish(a.name).localeCompare(nullish(b.name));
+    });
 
-  return uniqueResults;
+  const results: Representative[] = dedupeBy(out, (o) => `${o.level}|${o.office}|${o.name}|${o.riding}`);
+
+  return results;
 }
 
 /**

@@ -9,9 +9,8 @@ import { searchCacheRepository } from "./storage/searchCacheRepository";
 import { normalizePostalCode } from "./nominatim";
 
 /**
- * Enhanced postal code search using R-based approach
- * This replaces fetchRepsByPostalEnhanced with the more reliable R logic
- * No fallbacks - uses only the R code implementation
+ * Enhanced postal code search using precise getRepsPrecise logic
+ * Uses OpenNorth postcode centroid with no fallbacks for maximum reliability
  */
 export async function fetchRepsByPostalR(
   postal: string,
@@ -28,14 +27,14 @@ export async function fetchRepsByPostalR(
     }
   }
 
-  console.log(`[fetchRepsByPostalR] Using R-based search for ${clean}`);
+  console.log(`[fetchRepsByPostalR] Using precise search for ${clean}`);
 
-  // Use the R-based geocoding and representative search
-  const rResults = await getRepsFromAddress(clean);
-  console.log(`[fetchRepsByPostalR] R search found ${rResults.length} representatives`);
+  // Use the precise geocoding and representative search (getRepsPrecise logic)
+  const preciseResults = await getRepsFromAddress(clean);
+  console.log(`[fetchRepsByPostalR] Precise search found ${preciseResults.length} representatives`);
 
-  // Convert R results to existing format for UI compatibility
-  const representatives = convertToExistingFormat(rResults);
+  // Convert precise results to existing format for UI compatibility
+  const representatives = convertToExistingFormat(preciseResults);
 
   // Cache the results
   if (useCache && representatives.length > 0) {
@@ -47,29 +46,28 @@ export async function fetchRepsByPostalR(
 }
 
 /**
- * Enhanced location-based search using R-based approach
- * This replaces fetchRepsByCoordinates with the R logic
- * No fallbacks - uses only the R code implementation
+ * Enhanced location-based search using precise getRepsPrecise logic
+ * Uses coordinate-based search with both lat,lon and lon,lat attempts
  */
 export async function fetchRepsByCoordinatesR(
   latitude: number,
   longitude: number
 ): Promise<Representative[]> {
-  console.log(`[fetchRepsByCoordinatesR] Using R-based search for coordinates [${latitude}, ${longitude}]`);
+  console.log(`[fetchRepsByCoordinatesR] Using precise search for coordinates [${latitude}, ${longitude}]`);
 
-  // Convert coordinates to a search query for R function
+  // Convert coordinates to a search query for precise function
   const query = `${latitude},${longitude}`;
-  const rResults = await getRepsFromAddress(query);
-  console.log(`[fetchRepsByCoordinatesR] R search found ${rResults.length} representatives`);
+  const preciseResults = await getRepsFromAddress(query);
+  console.log(`[fetchRepsByCoordinatesR] Precise search found ${preciseResults.length} representatives`);
 
-  // Convert R results to existing format for UI compatibility
-  const representatives = convertToExistingFormat(rResults);
+  // Convert precise results to existing format for UI compatibility
+  const representatives = convertToExistingFormat(preciseResults);
 
   return representatives;
 }
 
 /**
- * Get comprehensive search results with R-based logic
+ * Get comprehensive search results with precise getRepsPrecise logic
  * Returns structured data similar to the original app format
  */
 export async function getLocationDataR(
@@ -81,27 +79,27 @@ export async function getLocationDataR(
   debug: {
     query: string;
     searchType: string;
-    rResults: RRepresentative[];
+    preciseResults: RRepresentative[];
     coordinates?: { lat: number; lon: number; source: string };
   };
 }> {
   const cleanQuery = normalizePostalCode(query);
 
   try {
-    console.log(`[getLocationDataR] Starting R-based search: ${cleanQuery} (${searchType})`);
+    console.log(`[getLocationDataR] Starting precise search: ${cleanQuery} (${searchType})`);
 
-    // Use the R-based search
-    const rResults = await getRepsFromAddress(cleanQuery);
-    console.log(`[getLocationDataR] R search completed with ${rResults.length} results`);
+    // Use the precise search
+    const preciseResults = await getRepsFromAddress(cleanQuery);
+    console.log(`[getLocationDataR] Precise search completed with ${preciseResults.length} results`);
 
     // Convert to existing format
-    const representatives = convertToExistingFormat(rResults);
+    const representatives = convertToExistingFormat(preciseResults);
 
     // Extract coordinate info if available
-    const coordinates = rResults.length > 0 ? {
-      lat: rResults[0].latitude,
-      lon: rResults[0].longitude,
-      source: rResults[0].coord_source
+    const coordinates = preciseResults.length > 0 ? {
+      lat: preciseResults[0].latitude,
+      lon: preciseResults[0].longitude,
+      source: preciseResults[0].coord_source
     } : undefined;
 
     // Cache the results if this is a postal code search
@@ -115,7 +113,7 @@ export async function getLocationDataR(
       debug: {
         query: cleanQuery,
         searchType,
-        rResults,
+        preciseResults,
         coordinates
       }
     };
