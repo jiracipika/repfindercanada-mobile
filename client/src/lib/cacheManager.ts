@@ -1,7 +1,6 @@
 import { Preferences } from "@capacitor/preferences";
 import { App as CapApp } from "@capacitor/app";
 import { searchCacheRepository } from "./storage/searchCacheRepository";
-import { clearHouseOfCommonsCache, clearAllSearchCaches } from "./houseOfCommonsApi";
 
 /**
  * Version-based cache management
@@ -148,12 +147,12 @@ async function clearAllCaches(): Promise<void> {
       console.warn('[CacheManager] Error clearing search cache repository:', error);
     }
 
-    // 3. Clear House of Commons cache
+    // 3. Clear any remaining search-related caches (House of Commons functionality moved to R search)
     try {
-      clearHouseOfCommonsCache();
-      console.log('[CacheManager] Cleared House of Commons cache');
+      // R search doesn't need separate cache clearing - handled by searchCacheRepository
+      console.log('[CacheManager] R search cache clearing handled by searchCacheRepository');
     } catch (error) {
-      console.warn('[CacheManager] Error clearing House of Commons cache:', error);
+      console.warn('[CacheManager] Note on R search cache clearing:', error);
     }
 
     // 4. Clear any localStorage caches

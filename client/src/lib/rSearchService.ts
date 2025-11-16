@@ -19,13 +19,23 @@ export async function fetchRepsByPostalR(
 ): Promise<Representative[]> {
   const clean = normalizePostalCode(postal);
 
-  // Try to get from cache first if enabled
-  if (useCache) {
+  // Force cache refresh for problematic postal codes that had hardcoded data
+  const problematicPostalCodes = ['M1T3S6'];
+  const forceRefresh = problematicPostalCodes.includes(clean);
+
+  // Try to get from cache first if enabled and not forcing refresh
+  if (useCache && !forceRefresh) {
     const cached = await searchCacheRepository.getCachedSearch(clean);
     if (cached) {
       console.log(`[fetchRepsByPostalR] Returning ${cached.length} cached representatives for ${clean}`);
       return cached;
     }
+  }
+
+  // Clear old cache for problematic postal codes
+  if (forceRefresh) {
+    console.log(`[fetchRepsByPostalR] Force clearing cache for problematic postal code: ${clean}`);
+    await searchCacheRepository.clearCache(clean);
   }
 
   console.log(`[fetchRepsByPostalR] Using geocoder.ca + Represent API search for ${clean}`);
@@ -292,18 +302,7 @@ export async function fetchRepsByNameR(name: string): Promise<Representative[]> 
 
   } catch (error) {
     console.error(`[fetchRepsByNameR] Error in R-enhanced search:`, error);
-
-    // Fallback: Try the original represent.ts search method
-    console.log(`[fetchRepsByNameR] Falling back to original represent.ts search`);
-    try {
-      const { searchByName } = await import("./api/represent");
-      const fallbackResults = await searchByName(name);
-      console.log(`[fetchRepsByNameR] Fallback returned ${fallbackResults.length} representatives`);
-      return fallbackResults;
-    } catch (fallbackError) {
-      console.error(`[fetchRepsByNameR] Fallback also failed:`, fallbackError);
-      return [];
-    }
+    return [];
   }
 }
 

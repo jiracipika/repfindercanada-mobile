@@ -1,5 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
-import { Representative } from './representApi';
+import type { Representative } from '@shared/schema';
 
 const SAVED_REPS_KEY = 'savedReps';
 

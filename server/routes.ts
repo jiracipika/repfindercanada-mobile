@@ -130,14 +130,7 @@ const SAMPLE_POLITICIANS: OpenParliamentRepresentative[] = [
     image: "/media/polpics/justin-trudeau.jpg",
     url: "/politicians/justin-trudeau/"
   },
-  {
-    name: "Chrystia Freeland",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "University—Rosedale" }, province: "ON" },
-    image: "/media/polpics/chrystia-freeland.jpg",
-    url: "/politicians/chrystia-freeland/"
-  },
-  {
+    {
     name: "Pierre Poilievre",
     current_party: { short_name: { en: "Conservative" } },
     current_riding: { name: { en: "Carleton" }, province: "ON" },
@@ -193,14 +186,7 @@ const SAMPLE_POLITICIANS: OpenParliamentRepresentative[] = [
     image: "/media/polpics/anita-vandenbeld.jpg",
     url: "/politicians/anita-vandenbeld/"
   },
-  {
-    name: "Chrystia Freeland",
-    current_party: { short_name: { en: "Liberal" } },
-    current_riding: { name: { en: "University—Rosedale" }, province: "ON" },
-    image: "/media/polpics/chrystia-freeland.jpg",
-    url: "/politicians/chrystia-freeland/"
-  },
-  {
+    {
     name: "Julie Dabrusin",
     current_party: { short_name: { en: "Liberal" } },
     current_riding: { name: { en: "Toronto—Danforth" }, province: "ON" },
@@ -301,14 +287,14 @@ async function getAllPoliticians(): Promise<OpenParliamentRepresentative[]> {
       return politiciansCache;
     }
   } catch (error: any) {
-    console.log('Represent API unavailable, using sample data:', error?.message || String(error));
+    console.log('Represent API unavailable, no fallback to hardcoded data:', error?.message || String(error));
+    console.log('Please check API connectivity - no hardcoded fallback data will be used');
   }
-  
-  // Use sample data when API is unavailable
+
+  // Return empty array if API is unavailable - no more hardcoded fallbacks
   if (politiciansCache.length === 0) {
-    console.log('Loading sample politician data for demonstration');
-    politiciansCache = SAMPLE_POLITICIANS;
-    cacheTimestamp = now;
+    console.log('No politicians data available - API is required');
+    return [];
   }
   
   return politiciansCache;
