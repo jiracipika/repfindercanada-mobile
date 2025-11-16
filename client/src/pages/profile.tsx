@@ -186,8 +186,8 @@ export default function Profile() {
       try {
         console.log(`[AutoTest] Testing ${testCase.code} (${testCase.province})`);
 
-        // Use our geocoder.ca + Represent API implementation
-        const representatives: Representative[] = await fetchRepsByPostalR(testCase.code, false);
+        // Use our hybrid geocoder + Represent API implementation
+        const representatives: Representative[] = await fetchRepsByPostalR(testCase.code);
 
         // Find federal representative (MP)
         const federalRep = representatives.find(rep =>
@@ -490,7 +490,7 @@ export default function Profile() {
                         Auto Tester
                       </h4>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Test geocoder.ca + Represent API implementation with sample postal codes from across Canada.
+                        Test hybrid geocoder + Represent API implementation with sample postal codes from across Canada.
                       </p>
 
                       <Button

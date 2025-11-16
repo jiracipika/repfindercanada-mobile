@@ -1,8 +1,10 @@
 /**
  * R-based geocoding and representative search functionality
  * Converted from R to TypeScript for better Canadian postal code support
- * Exact implementation matching the R code
+ * Exact implementation matching the R code but with improved geocoding
  */
+
+import { geocodePostalCode } from './alternativeGeocoder';
 
 // Helper functions
 const trimq = (x?: string | null): string => (x || "").trim();
@@ -27,34 +29,6 @@ export interface GeocodeResult {
   source: string;
 }
 
-/**
- * Get special case coordinates for known problematic postal codes
- * This function provides hardcoded coordinates for postal codes that
- * consistently fail with geocoding services but need to work for the application
- */
-export function getSpecialCaseCoordinates(postal: string): GeocodeResult | null {
-  const specialCases: Record<string, GeocodeResult> = {
-    // M1C postal codes should be in Scarborough—Guildwood area (Gary Anandasangaree's riding)
-    "M1C5E9": { lat: 43.7847, lon: -79.1868, source: "special_case" },
-    "M1C5E8": { lat: 43.7850, lon: -79.1870, source: "special_case" },
-    "M1C5E7": { lat: 43.7853, lon: -79.1872, source: "special_case" },
-    // More M1C postal codes in the correct riding area
-    "M1C1A1": { lat: 43.7820, lon: -79.1800, source: "special_case" },
-    "M1C1A2": { lat: 43.7823, lon: -79.1803, source: "special_case" },
-    "M1C2A1": { lat: 43.7850, lon: -79.1900, source: "special_case" },
-    "M1C2A2": { lat: 43.7853, lon: -79.1903, source: "special_case" },
-    "M1C3A1": { lat: 43.7880, lon: -79.2000, source: "special_case" },
-    "M1C4A1": { lat: 43.7900, lon: -79.2100, source: "special_case" },
-  };
-
-  const coords = specialCases[postal];
-  if (coords) {
-    console.log(`[getSpecialCaseCoordinates] Using special case coordinates for ${postal}: [${coords.lat}, ${coords.lon}]`);
-    return coords;
-  }
-
-  return null;
-}
 
 
 
@@ -75,11 +49,13 @@ function dedupeBy<T>(arr: T[], keyFn: (item: T) => string): T[] {
 
 /**
  * Get precise representatives for a location or postal code.
- * Uses Geocoder.ca API for postal code to coordinates conversion,
+ * Uses hybrid geocoding based on region for postal code to coordinates conversion,
  * then searches Representatives by coordinates using Represent API.
  *
- * This implementation matches the R code approach exactly:
- * 1. Convert postal code to coordinates via Geocoder.ca (PRIMARY & ONLY method)
+ * This implementation matches the R code approach but with improved region-based geocoding:
+ * 1. Convert postal code to coordinates via hybrid geocoder:
+ *    - Ontario: Alternative geocoding (Nominatim + fallbacks) for better accuracy
+ *    - Outside Ontario: geocoder.ca (original approach) for consistency
  * 2. Search representatives by coordinates using Represent API (both lat,lon & lon,lat orders)
  * 3. Filter and sort results using R-style logic
  *
@@ -104,49 +80,18 @@ export async function getRepsFromAddress(
 
   const nullish = (v: any, d: string = "") => (v == null ? d : v);
 
-  // --- 1) Geocode to coordinates using Geocoder.ca with special case fallback ---
+  // --- 1) Geocode to coordinates using hybrid geocoder ---
   async function geocodeToPoint(q: string) {
-    const cleanPostal = q.toUpperCase().replace(/\s+/g, "");
+    console.log(`[RGeocodeSearch] Geocoding postal code: ${q}`);
 
-    // First check for special cases (known problematic postal codes)
-    const specialCase = getSpecialCaseCoordinates(cleanPostal);
-    if (specialCase) {
-      return specialCase;
+    try {
+      const result = await geocodePostalCode(q);
+      console.log(`[RGeocodeSearch] Successfully geocoded ${q} to ${result.lat}, ${result.lon} using ${result.source}`);
+      return result;
+    } catch (error) {
+      console.error(`[RGeocodeSearch] Failed to geocode ${q}:`, error);
+      throw error;
     }
-
-    // Geocoder.ca API (Canada-focused) - try spaced format first
-    const spacedPostal = cleanPostal.slice(0, 3) + " " + cleanPostal.slice(3);
-
-    const url = new URL("https://geocoder.ca/");
-    url.searchParams.append("locate", spacedPostal);
-    url.searchParams.append("json", "1");
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "User-Agent": "JS reps precise",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Geocoder.ca: HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Geocoder.ca returns different field names
-    const lat = data.latt || data.lat;
-    const lon = data.longt || data.long || data.lon;
-
-    if (!lat || !lon) {
-      throw new Error("Geocoder.ca: no result");
-    }
-
-    return {
-      lat: parseFloat(lat),
-      lon: parseFloat(lon),
-      source: "geocoder.ca"
-    };
   }
 
   const gc = await geocodeToPoint(queryOrPostal);
@@ -154,9 +99,10 @@ export async function getRepsFromAddress(
 
   // --- 2) Fetch representatives by coordinate (try lat,lon then lon,lat) ---
   async function fetchRepsByPoint(lat: number, lon: number) {
+    const timestamp = Date.now().toString();
     const urls = [
-      `https://represent.opennorth.ca/representatives/?point=${lat.toFixed(7)},${lon.toFixed(7)}`,
-      `https://represent.opennorth.ca/representatives/?point=${lon.toFixed(7)},${lat.toFixed(7)}`
+      `https://represent.opennorth.ca/representatives/?point=${lat.toFixed(7)},${lon.toFixed(7)}&_=${timestamp}`,
+      `https://represent.opennorth.ca/representatives/?point=${lon.toFixed(7)},${lat.toFixed(7)}&_=${timestamp}`
     ];
     for (const u of urls) {
       try {

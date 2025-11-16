@@ -7,7 +7,6 @@ import { Section } from "@/components/ui/section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { Representative } from "@shared/schema";
-import { searchCacheRepository } from "@/lib/storage/searchCacheRepository";
 
 // Helper function to sort representatives by government level
 const sortRepresentatives = (representatives: Representative[]): Representative[] => {
@@ -40,16 +39,9 @@ export default function Activity() {
   const handleSearchClick = async (activity: ActivityItem) => {
     if (!activity.query) return;
 
-    console.log('[Activity] Clicked search:', activity.query, 'with', activity.representatives?.length || 0, 'representatives');
+    console.log('[Activity] Clicked search:', activity.query, '- performing fresh search (no caching)');
 
-    // Store the search data in sessionStorage for the Home page to pick up
-    sessionStorage.setItem('pendingSearch', JSON.stringify({
-      query: activity.query,
-      representatives: activity.representatives,
-      timestamp: Date.now()
-    }));
-
-    console.log('[Activity] Stored search in sessionStorage, navigating to home');
+    console.log('[Activity] Navigating to home for fresh search');
 
     // Navigate to home
     setLocation('/');

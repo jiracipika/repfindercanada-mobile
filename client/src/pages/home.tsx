@@ -43,43 +43,7 @@ export default function Home() {
   const [triggeredSearch, setTriggeredSearch] = useState<{ query: string; representatives?: Representative[]; shouldAutoSearch?: boolean } | null>(null);
   const { toast } = useToast();
 
-  // Check for pending search from Activity page on mount
-  useEffect(() => {
-    console.log('[Home] Checking for pending search in sessionStorage');
-    const pendingSearchStr = sessionStorage.getItem('pendingSearch');
-
-    if (pendingSearchStr) {
-      try {
-        const pendingSearch = JSON.parse(pendingSearchStr);
-        console.log('[Home] Found pending search:', pendingSearch);
-
-        // Clear it immediately to prevent re-triggering
-        sessionStorage.removeItem('pendingSearch');
-
-        const { query, representatives } = pendingSearch;
-
-        // If we have cached representatives, show them immediately without re-searching
-        if (representatives && representatives.length > 0) {
-          console.log('[Home] Showing cached representatives from pending search');
-          setTriggeredSearch({ query, representatives, shouldAutoSearch: false });
-          setSearchResults(sortRepresentatives(representatives));
-          toast({
-            title: "Loaded from history",
-            description: "Showing your previous search results.",
-          });
-        } else {
-          // No cached results - trigger a new search
-          console.log('[Home] No cached representatives, will trigger new search');
-          setTriggeredSearch({ query, representatives, shouldAutoSearch: true });
-          setSearchResults([]);
-        }
-      } catch (error) {
-        console.error('[Home] Error parsing pending search:', error);
-        sessionStorage.removeItem('pendingSearch');
-      }
-    }
-  }, [toast]);
-
+  
   const handleSearchComplete = (results: Representative[]) => {
     setSearchResults(sortRepresentatives(results));
     setIsSearching(false);

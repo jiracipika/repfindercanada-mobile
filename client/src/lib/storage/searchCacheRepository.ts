@@ -130,11 +130,22 @@ export const searchCacheRepository = {
   },
 
   /**
-   * Clear all cached searches
+   * Clear cache for specific postal codes or all cache
    */
-  clearCache: async (): Promise<void> => {
-    await Preferences.remove({ key: CACHE_KEY });
-    console.log("[searchCacheRepository] Cache cleared");
+  clearCache: async (postalCode?: string): Promise<void> => {
+    if (postalCode) {
+      const normalizedPostal = normalizePostalCode(postalCode);
+      const cache = await getCache();
+
+      if (cache[normalizedPostal]) {
+        delete cache[normalizedPostal];
+        await saveCache(cache);
+        console.log(`[searchCacheRepository] Cache cleared for postal code: ${normalizedPostal}`);
+      }
+    } else {
+      await Preferences.remove({ key: CACHE_KEY });
+      console.log("[searchCacheRepository] Cache cleared");
+    }
   },
 
   /**

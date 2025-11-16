@@ -1,6 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
 import { App as CapApp } from "@capacitor/app";
-import { searchCacheRepository } from "./storage/searchCacheRepository";
 
 /**
  * Version-based cache management
@@ -139,18 +138,10 @@ async function clearAllCaches(): Promise<void> {
       console.warn('[CacheManager] Error clearing React Query cache:', error);
     }
 
-    // 2. Clear search cache repository
+    // 2. Clear any remaining search-related caches (House of Commons functionality moved to R search)
     try {
-      await searchCacheRepository.clearCache();
-      console.log('[CacheManager] Cleared search cache repository');
-    } catch (error) {
-      console.warn('[CacheManager] Error clearing search cache repository:', error);
-    }
-
-    // 3. Clear any remaining search-related caches (House of Commons functionality moved to R search)
-    try {
-      // R search doesn't need separate cache clearing - handled by searchCacheRepository
-      console.log('[CacheManager] R search cache clearing handled by searchCacheRepository');
+      // R search doesn't use any cache anymore - all searches are live API calls
+      console.log('[CacheManager] R search does not use cache - all searches are live API calls');
     } catch (error) {
       console.warn('[CacheManager] Note on R search cache clearing:', error);
     }

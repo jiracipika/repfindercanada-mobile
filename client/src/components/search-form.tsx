@@ -7,7 +7,6 @@ import { fetchRepsByPostalR } from "@/lib/rSearchService";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
-import { searchCacheRepository } from "@/lib/storage/searchCacheRepository";
 
 interface SearchFormProps {
   onSearchStart: () => void;
@@ -90,8 +89,8 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Use geocoder.ca + Represent API approach only (no fallbacks)
-      console.log('[SearchForm] Using geocoder.ca + Represent API search (R-based approach)');
+      // Use hybrid geocoder + Represent API approach only (no fallbacks)
+      console.log('[SearchForm] Using hybrid geocoder + Represent API search (R-based approach)');
       const results = await fetchRepsByPostalR(trimmedQuery);
       onSearchComplete(results);
 
@@ -107,10 +106,6 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
       if (results.length > 0) {
         incrementSearchCount();
         updateLastSearch(trimmedQuery, 'postalCode');
-
-        // Cache the search results for future use
-        const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
-        await searchCacheRepository.cacheSearch(cleanQuery, results);
       } else {
         toast({
           title: "No representatives found",
@@ -121,48 +116,35 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     } catch (error) {
       console.error('[SearchForm] Search error:', error);
 
-      // Try to get cached data as a last resort
-      const cleanQuery = trimmedQuery.replace(/\s+/g, "").toUpperCase();
-      const cachedResults = await searchCacheRepository.getCachedSearch(cleanQuery);
+      // No fallbacks - provide specific error messages for hybrid geocoder + Represent API
+      let errorMessage = "Could not retrieve representatives using hybrid geocoder + Represent API. Please check your connection and try again.";
+      let errorTitle = "Search failed";
 
-      if (cachedResults && cachedResults.length > 0) {
-        // We have cached data, use it!
-        onSearchComplete(cachedResults);
-        toast({
-          title: "Using cached data",
-          description: "Unable to reach representative data services. Showing previously downloaded results.",
-          variant: "default",
-        });
-      } else {
-        // No cached data available - provide more specific error messages for geocoder.ca + Represent API
-        let errorMessage = "Could not retrieve representatives using geocoder.ca + Represent API. Please check your connection and try again.";
-        let errorTitle = "Search failed";
-
-        // Check for specific error patterns
-        if (error instanceof Error) {
-          const errorString = error.message.toLowerCase();
-          if (errorString.includes('could not geocode') || errorString.includes('geocoder.ca')) {
-            errorMessage = `Unable to locate postal code "${trimmedQuery}" using geocoder.ca. Please verify the postal code is correct and try again.`;
-            errorTitle = "Geocoder lookup failed";
-          } else if (errorString.includes('no representatives found')) {
-            errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in the database.`;
-            errorTitle = "No representatives found";
-          } else if (errorString.includes('network') || errorString.includes('fetch')) {
-            errorMessage = "Network connection error to geocoder.ca or Represent API. Please check your internet connection and try again.";
-            errorTitle = "Connection error";
-          }
-        }
-
-        toast({
-          title: errorTitle,
-          description: errorMessage,
-          variant: "destructive",
-        });
-        onSearchComplete([]);
-        if (onSearchError) {
-          onSearchError(errorMessage);
+      // Check for specific error patterns
+      if (error instanceof Error) {
+        const errorString = error.message.toLowerCase();
+        if (errorString.includes('could not geocode') || errorString.includes('geocoder')) {
+          errorMessage = `Unable to locate postal code "${trimmedQuery}" using geocoding services. Please verify the postal code is correct and try again.`;
+          errorTitle = "Geocoder lookup failed";
+        } else if (errorString.includes('no representatives found')) {
+          errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in the database.`;
+          errorTitle = "No representatives found";
+        } else if (errorString.includes('network') || errorString.includes('fetch')) {
+          errorMessage = "Network connection error to geocoding services or Represent API. Please check your internet connection and try again.";
+          errorTitle = "Connection error";
         }
       }
+
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+      });
+      onSearchComplete([]);
+      if (onSearchError) {
+        onSearchError(errorMessage);
+      }
+
     } finally {
       setIsSearching(false);
     }

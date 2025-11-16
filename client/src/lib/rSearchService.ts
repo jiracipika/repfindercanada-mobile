@@ -5,59 +5,34 @@
 
 import type { Representative } from "@shared/schema";
 import { getRepsFromAddress, convertToExistingFormat, Representative as RRepresentative } from "./rGeocodeSearch";
-import { searchCacheRepository } from "./storage/searchCacheRepository";
 import { normalizePostalCode } from "./nominatim";
 
 /**
- * Enhanced postal code search using geocoder.ca + Represent API approach
- * Uses Geocoder.ca for postal code to coordinates conversion (PRIMARY & ONLY method),
+ * Enhanced postal code search using hybrid geocoding + Represent API approach
+ * Uses region-specific geocoding services:
+ * - Ontario: Alternative geocoding (Nominatim + fallbacks) for better accuracy
+ * - Outside Ontario: geocoder.ca (original approach) for consistency
  * then searches representatives by coordinates using Represent API.
  */
 export async function fetchRepsByPostalR(
-  postal: string,
-  useCache: boolean = true
+  postal: string
 ): Promise<Representative[]> {
   const clean = normalizePostalCode(postal);
 
-  // Force cache refresh for problematic postal codes that had hardcoded data
-  const problematicPostalCodes = ['M1T3S6'];
-  const forceRefresh = problematicPostalCodes.includes(clean);
+  console.log(`[fetchRepsByPostalR] Using hybrid geocoder + Represent API search for ${clean} (NO CACHE)`);
 
-  // Try to get from cache first if enabled and not forcing refresh
-  if (useCache && !forceRefresh) {
-    const cached = await searchCacheRepository.getCachedSearch(clean);
-    if (cached) {
-      console.log(`[fetchRepsByPostalR] Returning ${cached.length} cached representatives for ${clean}`);
-      return cached;
-    }
-  }
-
-  // Clear old cache for problematic postal codes
-  if (forceRefresh) {
-    console.log(`[fetchRepsByPostalR] Force clearing cache for problematic postal code: ${clean}`);
-    await searchCacheRepository.clearCache(clean);
-  }
-
-  console.log(`[fetchRepsByPostalR] Using geocoder.ca + Represent API search for ${clean}`);
-
-  // Use geocoder.ca for coordinates, then Represent API for representatives
+  // Use hybrid geocoding for coordinates, then Represent API for representatives - ALWAYS use API
   const preciseResults = await getRepsFromAddress(clean);
-  console.log(`[fetchRepsByPostalR] Geocoder.ca + Represent API search found ${preciseResults.length} representatives`);
+  console.log(`[fetchRepsByPostalR] Hybrid geocoder + Represent API search found ${preciseResults.length} representatives`);
 
   // Convert precise results to existing format for UI compatibility
   const representatives = convertToExistingFormat(preciseResults);
-
-  // Cache the results
-  if (useCache && representatives.length > 0) {
-    await searchCacheRepository.cacheSearch(clean, representatives);
-    console.log(`[fetchRepsByPostalR] Cached ${representatives.length} representatives for ${clean}`);
-  }
 
   return representatives;
 }
 
 /**
- * Enhanced location-based search using geocoder.ca + Represent API approach
+ * Enhanced location-based search using hybrid geocoding + Represent API approach
  * Direct coordinate search using Represent API with both coordinate orders for maximum reliability
  */
 export async function fetchRepsByCoordinatesR(
@@ -83,8 +58,7 @@ export async function fetchRepsByCoordinatesR(
  */
 export async function getLocationDataR(
   query: string,
-  searchType: "postal" | "address" | "coordinates" = "postal",
-  useCache: boolean = true
+  searchType: "postal" | "address" | "coordinates" = "postal"
 ): Promise<{
   representatives: Representative[];
   debug: {
@@ -97,9 +71,9 @@ export async function getLocationDataR(
   const cleanQuery = normalizePostalCode(query);
 
   try {
-    console.log(`[getLocationDataR] Starting precise search: ${cleanQuery} (${searchType})`);
+    console.log(`[getLocationDataR] Starting precise search: ${cleanQuery} (${searchType}) (NO CACHE)`);
 
-    // Use the precise search
+    // Use the precise search - ALWAYS use API
     const preciseResults = await getRepsFromAddress(cleanQuery);
     console.log(`[getLocationDataR] Precise search completed with ${preciseResults.length} results`);
 
@@ -112,12 +86,6 @@ export async function getLocationDataR(
       lon: preciseResults[0].longitude,
       source: preciseResults[0].coord_source
     } : undefined;
-
-    // Cache the results if this is a postal code search
-    if (searchType === "postal" && useCache && representatives.length > 0) {
-      await searchCacheRepository.cacheSearch(cleanQuery, representatives);
-      console.log(`[getLocationDataR] Cached ${representatives.length} representatives for ${cleanQuery}`);
-    }
 
     return {
       representatives,
@@ -375,10 +343,9 @@ function dedupeRRepresentatives(reps: Representative[]): Representative[] {
  * Get federal representatives only (filtered from R results)
  */
 export async function fetchFederalRepsR(
-  query: string,
-  useCache: boolean = true
+  query: string
 ): Promise<Representative[]> {
-  const results = await fetchRepsByPostalR(query, useCache);
+  const results = await fetchRepsByPostalR(query);
   return results.filter(rep => {
     // Check multiple ways to identify federal reps
     return (
