@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostalR } from "@/lib/rSearchService";
+import { fetchRepsByPostalBackend } from "@/lib/backendSearchService";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -89,9 +89,9 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Use hybrid geocoder + Represent API approach only (no fallbacks)
-      console.log('[SearchForm] Using hybrid geocoder + Represent API search (R-based approach)');
-      const results = await fetchRepsByPostalR(trimmedQuery);
+      // Use backend Radar geocoding + Represent API approach
+      console.log('[SearchForm] Using backend Radar geocoding + Represent API search');
+      const results = await fetchRepsByPostalBackend(trimmedQuery);
       onSearchComplete(results);
 
       // Log the search activity with representatives
@@ -116,21 +116,27 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     } catch (error) {
       console.error('[SearchForm] Search error:', error);
 
-      // No fallbacks - provide specific error messages for hybrid geocoder + Represent API
-      let errorMessage = "Could not retrieve representatives using hybrid geocoder + Represent API. Please check your connection and try again.";
+      // Provide specific error messages for Radar geocoding + Represent API
+      let errorMessage = "Could not retrieve representatives using Radar geocoding. Please check your connection and try again.";
       let errorTitle = "Search failed";
 
       // Check for specific error patterns
       if (error instanceof Error) {
         const errorString = error.message.toLowerCase();
-        if (errorString.includes('could not geocode') || errorString.includes('geocoder')) {
-          errorMessage = `Unable to locate postal code "${trimmedQuery}" using geocoding services. Please verify the postal code is correct and try again.`;
-          errorTitle = "Geocoder lookup failed";
+        if (errorString.includes('invalid canadian postal code format')) {
+          errorMessage = `The postal code "${trimmedQuery}" doesn't appear to be a valid Canadian postal code. Please check the format (e.g., K1A 0A9).`;
+          errorTitle = "Invalid postal code";
+        } else if (errorString.includes('no geocoding results found')) {
+          errorMessage = `Unable to find location for postal code "${trimmedQuery}". Please verify the postal code is correct and try again.`;
+          errorTitle = "Location not found";
+        } else if (errorString.includes('radar api error')) {
+          errorMessage = "There was a problem with the location service. Please try again in a moment.";
+          errorTitle = "Location service error";
         } else if (errorString.includes('no representatives found')) {
           errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in the database.`;
           errorTitle = "No representatives found";
-        } else if (errorString.includes('network') || errorString.includes('fetch')) {
-          errorMessage = "Network connection error to geocoding services or Represent API. Please check your internet connection and try again.";
+        } else if (errorString.includes('network') || errorString.includes('fetch') || errorString.includes('server error')) {
+          errorMessage = "Network connection error. Please check your internet connection and try again.";
           errorTitle = "Connection error";
         }
       }

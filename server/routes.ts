@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertRepresentativeSchema, insertSearchSchema, insertSavedRepresentativeSchema } from "@shared/schema";
 import { z } from "zod";
+import { getCoordinatesFromPostalCode } from "./radarGeocoder";
 
 interface OpenParliamentRepresentative {
   name: string;
@@ -507,15 +508,15 @@ async function searchOpenParliament(query: string, type: 'postal_code' | 'name' 
       // Use direct postal code API lookup
       return await searchByPostalCode(query);
     }
-    
+
     // For name and riding searches, use cached politician data
     const allPoliticians = await getAllPoliticians();
-    
+
     if (allPoliticians.length === 0) {
       console.log('No politicians data available');
       return [];
     }
-    
+
     if (type === 'name') {
       const searchName = query.toLowerCase();
       return allPoliticians.filter((politician: OpenParliamentRepresentative) => {
@@ -528,12 +529,244 @@ async function searchOpenParliament(query: string, type: 'postal_code' | 'name' 
         return ridingName.toLowerCase().includes(searchRiding);
       });
     }
-    
+
     return [];
   } catch (error) {
     console.error('Search error:', error);
     return [];
   }
+}
+
+/**
+ * Search representatives by postal code using Radar geocoding + Represent API
+ * This replaces the client-side geocoding with server-side Radar API calls
+ */
+async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParliamentRepresentative[]> {
+  try {
+    console.log(`[RadarSearch] Starting search for postal code: ${postalCode}`);
+
+    // Step 1: Convert postal code to coordinates using Radar
+    const coordinates = await getCoordinatesFromPostalCode(postalCode);
+    console.log(`[RadarSearch] Got coordinates: ${coordinates.latitude}, ${coordinates.longitude}`);
+
+    // Step 2: Use coordinates to query Represent API for representatives
+    const representUrl = `https://represent.opennorth.ca/boundaries/?contains=${coordinates.latitude},${coordinates.longitude}`;
+    console.log(`[RadarSearch] Querying Represent API: ${representUrl}`);
+
+    const boundaryResponse = await fetch(representUrl, {
+      headers: {
+        'User-Agent': 'FindMyRep/1.0',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!boundaryResponse.ok) {
+      throw new Error(`Represent boundary API error: ${boundaryResponse.status} ${boundaryResponse.statusText}`);
+    }
+
+    const boundaryData = await boundaryResponse.json();
+
+    if (!boundaryData.objects || boundaryData.objects.length === 0) {
+      console.log(`[RadarSearch] No boundaries found for coordinates`);
+      return [];
+    }
+
+    console.log(`[RadarSearch] Found ${boundaryData.objects.length} total boundaries`);
+
+    // Step 3: Get representatives for each boundary found
+    let allRepresentatives: OpenParliamentRepresentative[] = [];
+
+    for (const boundary of boundaryData.objects) {
+      try {
+        // Log boundary details for debugging
+        console.log(`[RadarSearch] Boundary: ${boundary.name || boundary.id} - has representatives_url: ${!!boundary.representatives_url}`);
+
+        // Check if boundary has representatives_url
+        if (!boundary.representatives_url) {
+          continue;
+        }
+
+        const representativesUrl = boundary.representatives_url.replace('represent.opennorth.ca', 'represent.opennorth.ca');
+        console.log(`[RadarSearch] Getting representatives from: ${representativesUrl}`);
+
+        const repResponse = await fetch(representativesUrl, {
+          headers: {
+            'User-Agent': 'FindMyRep/1.0',
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!repResponse.ok) {
+          console.warn(`[RadarSearch] Failed to get representatives for boundary ${boundary.id}: ${repResponse.status}`);
+          continue;
+        }
+
+        const repData = await repResponse.json();
+
+        if (repData.objects && repData.objects.length > 0) {
+          // Filter for federal representatives (MPs) only
+          const federalReps = repData.objects.filter((rep: any) =>
+            rep.elected_office === 'MP' ||
+            rep.representative_set_name === 'House of Commons' ||
+            rep.url?.includes('house-of-commons')
+          );
+
+          console.log(`[RadarSearch] Found ${federalReps.length} federal representatives for boundary ${boundary.name}`);
+
+          // Transform to our OpenParliamentRepresentative format
+          const transformedReps = federalReps.map((rep: any): OpenParliamentRepresentative => ({
+            name: rep.name,
+            current_party: {
+              short_name: {
+                en: rep.party_name || 'Independent'
+              }
+            },
+            current_riding: {
+              name: {
+                en: rep.district_name || boundary.name || 'Unknown'
+              },
+              province: getProvinceFromPostalCode(postalCode) || 'Unknown'
+            },
+            image: rep.photo_url || null,
+            url: rep.url || null,
+            email: rep.email || null,
+            phone: rep.offices?.[0]?.tel || null,
+            extra: {
+              boundary_id: boundary.id,
+              boundary_url: boundary.url
+            }
+          }));
+
+          allRepresentatives.push(...transformedReps);
+        }
+      } catch (error) {
+        console.warn(`[RadarSearch] Error processing boundary ${boundary.name}:`, error);
+        continue;
+      }
+    }
+
+    // Step 4: Enhance with detailed MP information
+    const enhancedReps = await Promise.all(
+      allRepresentatives.map(async (rep) => {
+        try {
+          const detailedInfo = await fetchDetailedMPInfo(rep.name);
+
+          // Extract office information
+          const offices = [];
+
+          if (detailedInfo?.voice || detailedInfo?.email) {
+            offices.push({
+              type: 'Legislature Office',
+              address: 'House of Commons Ottawa ON K1A 0A6',
+              phone: detailedInfo.voice || '1 613 992-4501',
+              fax: detailedInfo.other_info?.fax || '1 613 992-4501',
+              email: detailedInfo.email
+            });
+          }
+
+          // Clean up URLs
+          let photoUrl = null;
+          if (detailedInfo?.image) {
+            photoUrl = detailedInfo.image.startsWith('http') ?
+              detailedInfo.image :
+              `https://openparliament.ca${detailedInfo.image}`;
+          } else if (rep.image) {
+            photoUrl = rep.image.startsWith('http') ? rep.image : `https://openparliament.ca${rep.image}`;
+          }
+
+          let profileUrl = rep.url;
+          if (detailedInfo?.url) {
+            profileUrl = detailedInfo.url.startsWith('http') ?
+              detailedInfo.url :
+              `https://openparliament.ca${detailedInfo.url}`;
+          }
+
+          return {
+            ...rep,
+            image: photoUrl,
+            url: profileUrl,
+            email: detailedInfo?.email || rep.email,
+            phone: detailedInfo?.voice || rep.phone,
+            personalWebsite: rep.extra?.personal_url,
+            website: detailedInfo?.links?.[0]?.url || profileUrl,
+            socialMedia: {
+              twitter: detailedInfo?.other_info?.twitter?.[0] || rep.extra?.twitter,
+              ...rep.extra
+            },
+            biography: `${rep.name} is the Member of Parliament for ${rep.current_riding.name.en}, representing the ${rep.current_party.short_name.en} party.`,
+            offices: offices,
+            fax: detailedInfo?.other_info?.fax || '1 613 992-4501',
+            parliamentId: detailedInfo?.other_info?.parl_mp_id?.[0] || rep.name.toLowerCase().replace(/\s+/g, '-')
+          };
+        } catch (error) {
+          console.warn(`[RadarSearch] Failed to enhance data for ${rep.name}:`, error);
+          return rep;
+        }
+      })
+    );
+
+    console.log(`[RadarSearch] Returning ${enhancedReps.length} enhanced representatives for ${postalCode}`);
+
+    // If Radar approach found no representatives, fall back to direct postal code search
+    if (enhancedReps.length === 0) {
+      console.log(`[RadarSearch] No representatives found via boundaries, falling back to direct postal code search`);
+      try {
+        const fallbackResults = await searchByPostalCode(postalCode);
+        console.log(`[RadarSearch] Fallback search returned ${fallbackResults.length} results for ${postalCode}`);
+        return fallbackResults;
+      } catch (fallbackError) {
+        console.error(`[RadarSearch] Fallback search also failed:`, fallbackError);
+        return [];
+      }
+    }
+
+    return enhancedReps;
+
+  } catch (error: any) {
+    console.error(`[RadarSearch] Search failed for postal code ${postalCode}:`, error);
+
+    // Fall back to the original postal code search method if Radar approach fails
+    console.log(`[RadarSearch] Falling back to Represent API direct postal code search`);
+    try {
+      const fallbackResults = await searchByPostalCode(postalCode);
+      console.log(`[RadarSearch] Fallback search returned ${fallbackResults.length} results for ${postalCode}`);
+      return fallbackResults;
+    } catch (fallbackError) {
+      console.error(`[RadarSearch] Fallback search also failed:`, fallbackError);
+      return [];
+    }
+  }
+}
+
+/**
+ * Helper function to get province from Canadian postal code
+ */
+function getProvinceFromPostalCode(postalCode: string): string | null {
+  const clean = postalCode.toUpperCase().replace(/\s+/g, '');
+  const firstLetter = clean.charAt(0);
+
+  const provinceMap: Record<string, string> = {
+    'A': 'NL', // Newfoundland and Labrador
+    'B': 'NS', // Nova Scotia
+    'C': 'PE', // Prince Edward Island
+    'E': 'NB', // New Brunswick
+    'G': 'QC', // Quebec
+    'H': 'QC', // Quebec
+    'J': 'QC', // Quebec
+    'K': 'ON', // Ontario
+    'L': 'ON', // Ontario
+    'M': 'ON', // Ontario
+    'N': 'ON', // Ontario
+    'P': 'ON', // Ontario
+    'R': 'MB', // Manitoba
+    'S': 'SK', // Saskatchewan
+    'T': 'AB', // Alberta
+    'V': 'BC', // British Columbia
+    'X': 'NT', // Northwest Territories
+    'Y': 'YT', // Yukon
+  };
+
+  return provinceMap[firstLetter] || null;
 }
 
 function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any {
@@ -564,31 +797,38 @@ function transformOpenParliamentData(apiRep: OpenParliamentRepresentative): any 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Search representatives by postal code or location
+  // Search representatives by postal code using Radar + Represent API
   app.post("/api/representatives/search", async (req, res) => {
     try {
       const { query, type = 'postal_code' } = req.body;
-      
+
       if (!query) {
         return res.status(400).json({ message: "Query is required" });
       }
 
-      // Search OpenParliament API
-      const apiResults = await searchOpenParliament(query, type);
-      
+      let apiResults = [];
+
+      if (type === 'postal_code') {
+        // Use Radar geocoding + Represent API for postal codes
+        apiResults = await searchByPostalCodeWithRadar(query);
+      } else {
+        // For name/riding searches, use existing OpenParliament API
+        apiResults = await searchOpenParliament(query, type);
+      }
+
       // Transform and store representatives
       const representatives = [];
       for (const apiRep of apiResults) {
         const transformedData = transformOpenParliamentData(apiRep);
-        
+
         // Check if representative already exists
         let representative = await storage.getRepresentativeByParliamentId(transformedData.parliamentId);
-        
+
         if (!representative) {
           // Create new representative
           representative = await storage.createRepresentative(transformedData);
         }
-        
+
         representatives.push(representative);
       }
 
@@ -603,7 +843,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ representatives });
     } catch (error) {
       console.error('Search error:', error);
-      res.status(500).json({ message: "Failed to search representatives" });
+      const errorMessage = error instanceof Error ? error.message : "Failed to search representatives";
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -693,24 +934,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Geocoding endpoint for address to postal code conversion
+  // Geocoding endpoint for postal code to coordinates conversion using Radar
   app.post("/api/geocode", async (req, res) => {
     try {
-      const { address } = req.body;
+      const { postalCode } = req.body;
 
-      if (!address) {
-        return res.status(400).json({ message: "Address is required" });
+      if (!postalCode) {
+        return res.status(400).json({ message: "Postal code is required" });
       }
 
-      // Simple geocoding - in a real app, you'd use a service like Google Maps API
-      // For now, we'll just return the address as-is and let the frontend handle it
+      // Use Radar to convert postal code to coordinates
+      const coordinates = await getCoordinatesFromPostalCode(postalCode);
+
       res.json({
-        postalCode: null,
-        address,
-        message: "Please use postal code for more accurate results"
+        postalCode: postalCode.toUpperCase().replace(/\s+/g, '').replace(/^(.{3})/, '$1 '),
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        formattedAddress: coordinates.formattedAddress,
+        confidence: coordinates.confidence,
+        source: coordinates.source
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to geocode address" });
+      console.error('Geocoding error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to geocode postal code";
+      res.status(500).json({ message: errorMessage });
     }
   });
 
