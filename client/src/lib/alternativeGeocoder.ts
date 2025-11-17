@@ -111,6 +111,50 @@ async function geocodeWithNominatim(query: string): Promise<GeocodeResult | null
 }
 
 /**
+ * Geocode using the free geocode.maps.co service (OSM-backed)
+ * Acts as an additional free-tier fallback to improve accuracy
+ */
+async function geocodeWithMapsCo(query: string): Promise<GeocodeResult | null> {
+  try {
+    const url = new URL("https://geocode.maps.co/search");
+    url.searchParams.append("q", query);
+    url.searchParams.append("countrycodes", "ca");
+    url.searchParams.append("limit", "1");
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        "User-Agent": "CanadianRepFinder/1.0 (geocoding request)",
+        "Accept": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Maps.co: HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return null;
+    }
+
+    const result = data[0];
+    if (!result.lat || !result.lon) {
+      return null;
+    }
+
+    return {
+      lat: parseFloat(result.lat),
+      lon: parseFloat(result.lon),
+      source: "maps.co",
+    };
+  } catch (error) {
+    console.warn(`Maps.co geocoding failed:`, error);
+    return null;
+  }
+}
+
+/**
  * Geocode using Canada Post API (if available) or alternative Canadian service
  * Note: This would require API key for official Canada Post
  */
@@ -120,39 +164,8 @@ async function geocodeWithCanadaPost(query: string): Promise<GeocodeResult | nul
   return null;
 }
 
-/**
- * Fallback to a simple coordinate database for known postal codes
- * This helps with common postal codes that might fail with APIs
- */
-function geocodeWithFallback(query: string): GeocodeResult | null {
-  const cleanQuery = query.toUpperCase().replace(/\s+/g, "");
-
-  // Known postal codes with their correct coordinates
-  const knownPostalCodes: Record<string, { lat: number; lon: number }> = {
-    // Toronto area (Ontario)
-    "M1T3S6": { lat: 43.77715, lon: -79.320077 }, // Scarborough-Agincourt (Jean Yip's riding)
-    "M1T3S5": { lat: 43.77715, lon: -79.320077 }, // Same area, should be Jean Yip
-    "M1C5E9": { lat: 43.7089, lon: -79.3073 },     // Scarborough area
-    "M5V3L8": { lat: 43.6456, lon: -79.3893 },     // Downtown Toronto
-    "K1A0A6": { lat: 45.4215, lon: -75.6972 },     // Ottawa (Parliament)
-
-    // Other Ontario areas
-    "N2G1G6": { lat: 43.2558, lon: -80.2298 },     // Waterloo
-    "L5V1N5": { lat: 43.5890, lon: -79.6441 },     // Mississauga
-    "H3Z2Y9": { lat: 45.5017, lon: -73.5673 },     // Montreal (Quebec - for completeness)
-  };
-
-  const coords = knownPostalCodes[cleanQuery];
-  if (coords) {
-    return {
-      lat: coords.lat,
-      lon: coords.lon,
-      source: "fallback"
-    };
-  }
-
-  return null;
-}
+// No on-device fallback database: we intentionally fetch fresh coordinates
+// from live APIs on every request to avoid stale or cached results.
 
 /**
  * Main hybrid geocoding function that uses region-specific services
@@ -178,7 +191,7 @@ export async function geocodePostalCode(postalCode: string): Promise<GeocodeResu
 
 /**
  * Geocode Ontario postal codes using alternative methods
- * Priority: Nominatim -> Canada Post -> Fallback database
+ * Priority: Nominatim -> maps.co -> Canada Post placeholder
  */
 async function geocodeOntarioPostalCode(postalCode: string): Promise<GeocodeResult> {
   const cleanPostal = postalCode.toUpperCase().replace(/\s+/g, "");
@@ -200,6 +213,15 @@ async function geocodeOntarioPostalCode(postalCode: string): Promise<GeocodeResu
     }
   }
 
+  // 1b. Try geocode.maps.co as another free OSM-based provider
+  for (const query of queries) {
+    const result = await geocodeWithMapsCo(query);
+    if (result) {
+      console.log(`[HybridGeocoder] Ontario Maps.co success for ${postalCode}: ${result.lat}, ${result.lon}`);
+      return result;
+    }
+  }
+
   // 2. Try Canada Post (if implemented)
   for (const query of queries) {
     const result = await geocodeWithCanadaPost(query);
@@ -207,13 +229,6 @@ async function geocodeOntarioPostalCode(postalCode: string): Promise<GeocodeResu
       console.log(`[HybridGeocoder] Ontario Canada Post success for ${postalCode}: ${result.lat}, ${result.lon}`);
       return result;
     }
-  }
-
-  // 3. Use fallback database for Ontario postal codes
-  const fallbackResult = geocodeWithFallback(postalCode);
-  if (fallbackResult) {
-    console.log(`[HybridGeocoder] Ontario fallback used for ${postalCode}: ${fallbackResult.lat}, ${fallbackResult.lon}`);
-    return fallbackResult;
   }
 
   // If all fail, throw error
@@ -246,11 +261,11 @@ async function geocodeNonOntarioPostalCode(postalCode: string): Promise<GeocodeR
     return result;
   }
 
-  // Final fallback check
-  const fallbackResult = geocodeWithFallback(postalCode);
-  if (fallbackResult) {
-    console.log(`[HybridGeocoder] Non-Ontario fallback used for ${postalCode}: ${fallbackResult.lat}, ${fallbackResult.lon}`);
-    return fallbackResult;
+  // Try geocode.maps.co as an additional free-tier fallback
+  const mapsResult = await geocodeWithMapsCo(cleanPostal);
+  if (mapsResult) {
+    console.log(`[HybridGeocoder] Non-Ontario Maps.co fallback success for ${postalCode}: ${mapsResult.lat}, ${mapsResult.lon}`);
+    return mapsResult;
   }
 
   throw new Error(`Unable to geocode postal code: ${postalCode}`);
