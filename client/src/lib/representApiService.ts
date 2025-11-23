@@ -34,7 +34,7 @@ export async function fetchRepsByCoordinatesDirect(
     const allRepresentatives: Representative[] = [];
     if (repsData.objects) {
       for (const rep of repsData.objects) {
-        const representative = transformRepresentative(rep);
+        const representative = await transformRepresentative(rep);
         if (representative) {
           allRepresentatives.push(representative);
         }
@@ -63,12 +63,35 @@ export async function fetchRepsByCoordinatesDirect(
 }
 
 /**
+ * Fetch detailed representative information from Represent API
+ */
+async function fetchRepresentativeDetails(repUrl: string): Promise<any | null> {
+  try {
+    const response = await fetch(`${REPRESENT_API_BASE}${repUrl}`);
+    if (!response.ok) {
+      console.warn(`[RepresentAPI] Failed to fetch details for ${repUrl}: ${response.status}`);
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn(`[RepresentAPI] Error fetching details for ${repUrl}:`, error);
+    return null;
+  }
+}
+
+/**
  * Transform Represent API representative object to our Representative interface
  */
-function transformRepresentative(rep: any): Representative | null {
+async function transformRepresentative(rep: any): Promise<Representative | null> {
   try {
     if (!rep.name) {
       return null;
+    }
+
+    // Fetch detailed information if URL is available
+    let details = null;
+    if (rep.url && rep.url !== rep.self) {
+      details = await fetchRepresentativeDetails(rep.url);
     }
 
     // Determine government level based on representative set name
@@ -86,45 +109,171 @@ function transformRepresentative(rep: any): Representative | null {
       level = 'municipal';
     }
 
-    // Extract party/affiliation
+    // Extract party/affiliation - prefer detailed info
     let party = 'Independent';
-    if (rep.party_name) {
+    if (details?.party_name) {
+      party = details.party_name;
+    } else if (rep.party_name) {
       party = rep.party_name;
+    } else if (details?.related?.party?.name) {
+      party = details.related.party.name;
     } else if (rep.related?.party && rep.related.party.name) {
       party = rep.related.party.name;
     }
 
-    // Extract riding/constituency name
-    let riding = rep.district_name || rep.constituency_name || '';
+    // Extract riding/constituency name - prefer detailed info
+    let riding = details?.district_name || rep.district_name || rep.constituency_name || '';
     if (riding) {
-      // Clean up riding name
+      // Clean up riding name (preserve full riding names with em dashes)
       riding = riding
         .replace(/\s*\[.*?\]/g, '')
-        .replace(/\s*—.*/g, '')
-        .replace(/\s*- .*/g, '')
+        .replace(/\s*\-\s.*$/g, '') // Only remove text after regular dash, not em dash
         .trim();
     }
 
-    // Extract office title
-    let office = rep.elected_office || rep.office || 'Representative';
+    // Extract office title - prefer detailed info
+    let office = details?.elected_office || rep.elected_office || details?.office || rep.office || 'Representative';
 
-    // Create representative object
+    // Extract contact information - prefer detailed info
+    const email = details?.email || rep.email || '';
+
+    // Extract phone number from multiple sources
+    let phone = '';
+
+    // 1. Try detailed info first
+    if (details?.phone || details?.voice) {
+      phone = details.phone || details.voice;
+    }
+    // 2. Try basic rep fields
+    else if (rep.phone || rep.voice) {
+      phone = rep.phone || rep.voice;
+    }
+    // 3. Try offices array (most reliable source) - prioritize constituency office for local contact
+    else if (rep.offices && rep.offices.length > 0) {
+      // Prefer constituency office for local contact, then legislature office, then any available
+      const constituencyOffice = rep.offices.find((office: any) =>
+        office.type?.toLowerCase().includes('constituency')
+      );
+      const legislatureOffice = rep.offices.find((office: any) =>
+        office.type?.toLowerCase().includes('legislature')
+      );
+
+      // Use constituency office first (most relevant for users), then legislature, then any office with phone
+      const officeWithPhone = constituencyOffice || legislatureOffice || rep.offices.find((office: any) => office.tel);
+
+      if (officeWithPhone?.tel) {
+        phone = officeWithPhone.tel;
+        console.log(`[RepresentAPI] Phone extracted for ${rep.name}: ${phone} (from ${officeWithPhone.type} office)`);
+      } else {
+        console.log(`[RepresentAPI] No phone found for ${rep.name} in offices:`, rep.offices);
+      }
+    }
+    // 4. Try detailed offices - same prioritization logic
+    else if (details?.offices && details.offices.length > 0) {
+      const constituencyOffice = details.offices.find((office: any) =>
+        office.type?.toLowerCase().includes('constituency')
+      );
+      const legislatureOffice = details.offices.find((office: any) =>
+        office.type?.toLowerCase().includes('legislature')
+      );
+
+      const officeWithPhone = constituencyOffice || legislatureOffice || details.offices.find((office: any) => office.tel);
+
+      if (officeWithPhone?.tel) {
+        phone = officeWithPhone.tel;
+      }
+    }
+
+    const photo = details?.photo_url || rep.photo_url || '';
+
+    // Extract websites and social media
+    let website = details?.url || rep.url || '';
+    let personalWebsite = '';
+    let socialMedia: any = {};
+
+    // Extract additional contact info from details
+    if (details) {
+      // Websites
+      if (details.personal_url || details.website) {
+        personalWebsite = details.personal_url || details.website;
+      }
+
+      // Social media
+      if (details.social_media) {
+        socialMedia = details.social_media;
+      }
+
+      // Office information
+      const offices: any[] = [];
+      if (details.offices) {
+        offices.push(...details.offices);
+      } else if (details.email || details.phone) {
+        // Create basic office info if no structured offices data
+        offices.push({
+          type: 'primary',
+          postal: '',
+            phone: details.phone || phone,
+            fax: details.fax || '',
+            email: details.email || email
+        });
+      }
+    }
+
+    // Extract office information for the offices field
+    let offices: any[] = [];
+
+    // Add offices from detailed info first
+    if (details?.offices && details.offices.length > 0) {
+      offices.push(...details.offices);
+    }
+    // Then add offices from basic rep data
+    else if (rep.offices && rep.offices.length > 0) {
+      offices.push(...rep.offices);
+    }
+    // Create basic office if no structured data but we have contact info
+    else if (phone || email) {
+      offices.push({
+        type: office?.toLowerCase().includes('mayor') ? 'City Hall' :
+              office?.toLowerCase().includes('mp') ? 'Constituency Office' :
+              office?.toLowerCase().includes('mpp') || office?.toLowerCase().includes('mna') ? 'Constituency Office' :
+              'Main Office',
+        tel: phone,
+        email: email,
+        postal: riding || ''
+      });
+    }
+
+    // Create representative object with all available fields
     const representative: Representative = {
       id: rep.url || `${rep.name}-${rep.representative_set_name || ''}`,
       name: rep.name,
+      party: party,
+      constituency: riding,
+      province: '', // This might need to be extracted from district_name or other field
+      electedOffice: office,
+      email: email,
+      phone: phone,
+      photo: photo,
+      website: website,
+      personalWebsite: personalWebsite,
+      socialMedia: socialMedia,
+      biography: details?.biography || '',
+      offices: offices,
+      fax: details?.fax || rep.fax || '',
+      parliamentId: details?.parliament_id || '',
+      boundaryUrl: details?.boundary_url || rep.boundary_url || '',
+      boundaryData: details?.boundary_data || rep.boundary_data || null,
+      // Add extra fields for compatibility
       level: level as 'federal' | 'provincial' | 'municipal',
       riding: riding,
-      party: party,
       office: office,
-      email: rep.email || '',
-      phone: rep.phone || rep.voice || '',
-      photoUrl: rep.photo_url || '',
       source: 'represent-api',
       extra: {
         url: rep.url || '',
         representativeSetName: rep.representative_set_name || '',
-        firstName: rep.first_name || '',
-        lastName: rep.last_name || ''
+        firstName: rep.first_name || details?.first_name || '',
+        lastName: rep.last_name || details?.last_name || '',
+        hasDetails: !!details
       }
     };
 
@@ -192,7 +341,7 @@ export async function fetchRepsByNameDirect(name: string): Promise<Representativ
     const representatives: Representative[] = [];
     if (data.objects) {
       for (const rep of data.objects) {
-        const representative = transformRepresentative(rep);
+        const representative = await transformRepresentative(rep);
         if (representative) {
           representatives.push(representative);
         }
@@ -248,7 +397,7 @@ export async function fetchRepsByRidingDirect(ridingName: string): Promise<Repre
             const repsData = await repsResponse.json();
             if (repsData.objects) {
               for (const rep of repsData.objects) {
-                const representative = transformRepresentative(rep);
+                const representative = await transformRepresentative(rep);
                 if (representative) {
                   allRepresentatives.push(representative);
                 }

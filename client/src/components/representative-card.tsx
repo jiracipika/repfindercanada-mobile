@@ -97,14 +97,22 @@ export function RepresentativeCard({
   };
 
   const handleCall = () => {
-    const phoneNumber = representative.phone || '1-613-992-4501'; // Legislature office default
+    if (!representative.phone) {
+      alert('No phone number available for this representative');
+      return;
+    }
+    const phoneNumber = representative.phone;
     const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/-/g, '');
     window.open(`tel:${cleanPhone}`, '_self');
   };
 
   const handleEmail = () => {
-    const email = representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`;
-    window.open(`mailto:${email}`, '_self');
+    if (representative.email) {
+      window.open(`mailto:${representative.email}`, '_self');
+    } else {
+      // Show message that no email is available
+      alert('No email address available for this representative');
+    }
   };
 
   const getPartyColor = (party: string) => {
@@ -152,6 +160,8 @@ export function RepresentativeCard({
               className="object-cover"
               onError={(e) => {
                 console.log('Avatar image failed to load:', representative.photo);
+                // Set to empty string to show fallback when image fails
+                (e.target as HTMLImageElement).src = '';
               }}
             />
             <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-semibold text-lg">
@@ -204,7 +214,13 @@ export function RepresentativeCard({
 
               <div className="flex items-center text-muted-foreground">
                 <MapPin className="h-4 w-4 mr-2" />
-                <span>{representative.constituency}</span>
+                <span>{representative.constituency || representative.riding || 'No constituency information'}</span>
+                {representative.level && (
+                  <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                    {representative.level === 'federal' ? 'Federal' :
+                     representative.level === 'provincial' ? 'Provincial' : 'Municipal'}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center text-muted-foreground">
@@ -220,20 +236,26 @@ export function RepresentativeCard({
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="flex flex-col items-center justify-center p-4 h-auto rounded-xl"
+              className={`flex flex-col items-center justify-center p-4 h-auto rounded-xl ${!representative.phone ? 'opacity-50' : ''}`}
               onClick={handleCall}
+              disabled={!representative.phone}
             >
               <Phone className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">Call</span>
+              <span className="text-xs font-medium">
+                {representative.phone ? 'Call' : 'No Phone'}
+              </span>
             </Button>
 
             <Button
               variant="outline"
-              className="flex flex-col items-center justify-center p-4 h-auto rounded-xl"
+              className={`flex flex-col items-center justify-center p-4 h-auto rounded-xl ${!representative.email ? 'opacity-50' : ''}`}
               onClick={handleEmail}
+              disabled={!representative.email}
             >
               <Mail className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">Email</span>
+              <span className="text-xs font-medium">
+                {representative.email ? 'Email' : 'No Email'}
+              </span>
             </Button>
           </div>
         </div>

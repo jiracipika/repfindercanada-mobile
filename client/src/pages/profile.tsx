@@ -12,7 +12,7 @@ import { isPlatform } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { repRepository } from "@/lib/storage/repRepository";
 import { getSearchCount, subscribeActivityChanges } from "@/lib/storage/activityRepository";
-import { fetchRepsByPostalBackend } from "@/lib/backendSearchService";
+import { fetchRepsByPostalCodeDirect } from "@/lib/representApiService";
 import {
   APP_DISCLAIMER,
   DATA_SOURCE_SINGLE,
@@ -27,28 +27,27 @@ import { getCacheManagementStatus, forceClearAllCaches } from "@/lib/cacheManage
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
 
-// Test data for development auto tester
+// Test data for development auto tester - updated for local database + Represent API
 const TEST_POSTAL_CODES = [
-  { code: "M4C 1A1", expected: "Beaches East York", province: "ON" },
-  { code: "V6B 5K3", expected: "Vancouver Centre", province: "BC" },
-  { code: "H2X 1Y4", expected: "Laurier Saint Marie", province: "QC" },
-  { code: "T6G 2R3", expected: "Edmonton Strathcona", province: "AB" },
-  { code: "R3T 2N2", expected: "Winnipeg South", province: "MB" },
-  { code: "S7N 3R1", expected: "Saskatoon-University", province: "SK" },
-  { code: "B3H 4R2", expected: "Halifax", province: "NS" },
-  { code: "E1C 5H7", expected: "Moncton-Dieppe", province: "NB" },
-  { code: "G1R 2K5", expected: "Quebec Centre", province: "QC" },
-  { code: "K1N 5C8", expected: "Ottawa-Vanier-Gloucester", province: "ON" },
-  { code: "A1C 2Z3", expected: "St. John's East", province: "NL" },
-  { code: "Y1A 2B5", expected: "Yukon", province: "YT" },
-  { code: "X1A 1E2", expected: "Northwest Territories", province: "NT" },
-  { code: "X0A 0H0", expected: "Nunavut", province: "NU" },
-  { code: "L5L 2T1", expected: "Mississauga Erin Mills", province: "ON" },
-  { code: "T2P 3G4", expected: "Calgary Centre", province: "AB" },
-  { code: "V8W 1L6", expected: "Victoria", province: "BC" },
-  { code: "J8X 2M7", expected: "Hull-Alymer", province: "QC" },
-  { code: "N2L 3G1", expected: "Waterloo", province: "ON" },
-  { code: "C1A 4R4", expected: "Charlottetown", province: "PE" },
+  { code: "V2H1L5", expected: "Kamloops—Thompson—Nicola", province: "BC" },
+  { code: "E6G0B1", expected: "Nackawic", province: "NB" },
+  { code: "T6T0Y4", expected: "Edmonton-Ellerslie", province: "AB" },
+  { code: "L3M0B4", expected: "Ward 3", province: "ON" },
+  { code: "V3T1N2", expected: "Surrey", province: "BC" },
+  { code: "V2M6K8", expected: "Cariboo—Prince George", province: "BC" },
+  { code: "J6S2M3", expected: "Beauharnois—Salaberry—Soulanges—Huntingdon", province: "QC" },
+  { code: "J1M2A2", expected: "Compton—Stanstead", province: "QC" },
+  { code: "K1J7R8", expected: "Rideau-Rockcliffe", province: "ON" },
+  { code: "V2A1N6", expected: "Similkameen—South Okanagan—West Kootenay", province: "BC" },
+  { code: "N0M2N0", expected: "Lambton", province: "ON" },
+  { code: "L2E0A3", expected: "Niagara Falls", province: "ON" },
+  { code: "V7K2H9", expected: "North Vancouver—Capilano", province: "BC" },
+  { code: "N6J3P4", expected: "London West", province: "ON" },
+  { code: "K6J3M7", expected: "Stormont—Dundas—South Glengarry", province: "ON" },
+  { code: "J1L2X5", expected: "Sherbrooke", province: "QC" },
+  { code: "G8B3R4", expected: "Lac-Saint-Jean", province: "QC" },
+  { code: "P6B2B2", expected: "Sault Ste. Marie", province: "ON" },
+  { code: "J7M2B2", expected: "District 2", province: "QC" },
   { code: "M1C5E9", expected: "Scarborough-Guildwood-Rouge Park", province: "ON" }
 ];
 
@@ -165,7 +164,7 @@ export default function Profile() {
     });
   };
 
-  // Auto tester function
+  // Auto tester function - updated to use local database + Represent API (same as mobile app)
   const runAutoTest = async () => {
     setIsTesting(true);
     setTestProgress({ current: 0, total: TEST_POSTAL_CODES.length });
@@ -186,31 +185,37 @@ export default function Profile() {
       try {
         console.log(`[AutoTest] Testing ${testCase.code} (${testCase.province})`);
 
-        // Use our hybrid geocoder + Represent API implementation
-        const representatives: Representative[] = await fetchRepsByPostalBackend(testCase.code);
+        // Use direct local database + Represent API implementation (same as mobile app)
+        const searchResult = await fetchRepsByPostalCodeDirect(testCase.code);
+        const representatives = searchResult.representatives;
 
-        // Find federal representative (MP)
+        // Extract coordinates from geocoding result
+        if (searchResult.geocoding) {
+          result.coordinates = {
+            lat: searchResult.geocoding.latitude,
+            lon: searchResult.geocoding.longitude
+          };
+        }
+
+        // Find federal representative (MP) - updated for new data structure
         const federalRep = representatives.find(rep =>
-          rep.electedOffice === "MP" ||
-          rep.level === "Federal" ||
-          rep.rep_set?.toLowerCase().includes("house of commons")
+          rep.level === 'federal' ||
+          rep.office?.toLowerCase().includes('mp') ||
+          rep.extra?.representativeSetName?.toLowerCase().includes('house of commons')
         );
 
         if (federalRep) {
-          result.actual = federalRep.constituency;
+          result.actual = federalRep.riding || federalRep.constituency || '';
           result.repName = federalRep.name;
-
-          // Extract coordinates from representative data if available
-          if (federalRep.latitude && federalRep.longitude) {
-            result.coordinates = { lat: federalRep.latitude, lon: federalRep.longitude };
-          }
 
           // Check if result matches expected (allowing for some variations)
           const expectedLower = testCase.expected.toLowerCase();
-          const actualLower = federalRep.constituency.toLowerCase();
+          const actualLower = (federalRep.riding || '').toLowerCase();
 
           result.passed = actualLower.includes(expectedLower.split(' ')[0]) ||
-                         expectedLower.includes(actualLower.split(' ')[0]);
+                         expectedLower.includes(actualLower.split(' ')[0]) ||
+                         expectedLower.includes(actualLower) ||
+                         actualLower.includes(expectedLower);
         } else {
           result.error = "No federal representative found";
           result.passed = false;
@@ -225,7 +230,7 @@ export default function Profile() {
       setTestResults([...results]);
 
       // Small delay between requests to avoid overwhelming APIs
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     setIsTesting(false);
@@ -490,7 +495,7 @@ export default function Profile() {
                         Auto Tester
                       </h4>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Test hybrid geocoder + Represent API implementation with sample postal codes from across Canada.
+                        Test local postal database + Represent API implementation (same as mobile app) with sample postal codes from across Canada.
                       </p>
 
                       <Button

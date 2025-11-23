@@ -99,8 +99,12 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
   };
 
   const handleShare = () => {
-    const shareText = `Contact ${representative.name} - ${representative.party} MP for ${representative.constituency}, ${representative.province}\n\nLegislature Office: 1-613-992-4501\nConstituency Office: 1-416-321-5454\nEmail: ${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}
-@parl.gc.ca`}\n\nFind your MP at: ${window.location.href}`;
+    const legislatureOffice = getLegislatureOffice();
+    const constituencyOffice = getConstituencyOffice();
+    const legislaturePhone = getOfficePhone(legislatureOffice) || 'Not available';
+    const constituencyPhone = getOfficePhone(constituencyOffice) || 'Not available';
+
+    const shareText = `Contact ${representative.name} - ${representative.party} ${getPositionLabel(representative.electedOffice)} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}\n\nLegislature Office: ${legislaturePhone}\nConstituency Office: ${constituencyPhone}\nEmail: ${representative.email || 'Not available'}\n\nFind your representative at: ${window.location.href}`;
 
     if (navigator.share) {
       navigator.share({
@@ -117,7 +121,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
       // Social media sharing options
       const encodedText = encodeURIComponent(shareText);
       const encodedUrl = encodeURIComponent(window.location.href);
-      
+
       // Show sharing options (simplified - just copy to clipboard for now)
       navigator.clipboard.writeText(shareText).then(() => {
         alert('Contact information copied to clipboard! You can now paste it anywhere to share.');
@@ -179,6 +183,42 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
   // Parse offices from the representative data
   const offices = representative.offices as any[] || [];
   const socialMedia = representative.socialMedia as any || {};
+
+  // Helper functions to get office contact information
+  const getLegislatureOffice = () => {
+    return offices.find(office =>
+      office.type?.toLowerCase().includes('legislature') ||
+      office.type?.toLowerCase().includes('parliament') ||
+      office.type?.toLowerCase().includes('house of commons')
+    );
+  };
+
+  const getConstituencyOffice = () => {
+    return offices.find(office =>
+      office.type?.toLowerCase().includes('constituency') ||
+      office.type?.toLowerCase().includes('district')
+    );
+  };
+
+  const getOfficePhone = (office: any) => {
+    return office?.tel || office?.phone || '';
+  };
+
+  const getOfficeFax = (office: any) => {
+    return office?.fax || '';
+  };
+
+  const getOfficeAddress = (office: any) => {
+    if (office?.postal) {
+      let address = '';
+      if (office.address) address += office.address + '\n';
+      if (office.city) address += office.city + ' ';
+      if (office.province) address += office.province + ' ';
+      if (office.postal) address += office.postal;
+      return address.trim();
+    }
+    return '';
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -268,7 +308,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   <Button
                     variant="outline"
                     size="default"
-                    onClick={() => handleCall(representative.phone || '1 613 992-4501')}
+                    onClick={() => handleCall(representative.phone || '')}
+                    disabled={!representative.phone}
                     className="w-full h-10 sm:h-11 text-sm sm:text-base"
                   >
                     <Phone className="h-4 w-4 mr-1.5 sm:mr-2" />
@@ -277,7 +318,8 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                   <Button
                     variant="outline"
                     size="default"
-                    onClick={() => handleEmail(representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`)}
+                    onClick={() => handleEmail(representative.email || '')}
+                    disabled={!representative.email}
                     className="w-full h-10 sm:h-11 text-sm sm:text-base"
                   >
                     <Mail className="h-4 w-4 mr-1.5 sm:mr-2" />
@@ -287,22 +329,29 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
                 {/* Contact Details */}
                 <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
-                  <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
-                    <Mail className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <a
-                      href={`mailto:${representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
-                    >
-                      {representative.email || `${representative.name.toLowerCase().replace(/\s+/g, '.')}@parl.gc.ca`}
-                    </a>
-                  </div>
+                  {representative.email && (
+                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                      <Mail className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <a
+                        href={`mailto:${representative.email}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                      >
+                        {representative.email}
+                      </a>
+                    </div>
+                  )}
 
-                  <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
-                    <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground flex-1">
-                      {representative.phone || '1-613-992-4501'}
-                    </span>
-                  </div>
+                  {representative.phone && (
+                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <button
+                        onClick={() => handleCall(representative.phone)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1 text-left"
+                      >
+                        {representative.phone}
+                      </button>
+                    </div>
+                  )}
 
                   {representative.website && (
                     <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
@@ -367,70 +416,89 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
             {/* Offices Section */}
             <Card>
               <CardHeader className="p-4 sm:p-5">
-                <h3 className="text-base sm:text-lg font-semibold">Contact Information</h3>
+                <h3 className="text-base sm:text-lg font-semibold">Office Information</h3>
               </CardHeader>
               <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
-                {/* Legislature Office */}
-                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
-                    <Building2 className="h-4 w-4 shrink-0" />
-                    Legislature Office
-                  </h4>
+                {/* Display all available offices */}
+                {offices.length > 0 ? (
+                  offices.map((office: any, index: number) => {
+                    const phone = getOfficePhone(office);
+                    const fax = getOfficeFax(office);
+                    const address = getOfficeAddress(office);
 
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed">
-                    House of Commons<br/>
-                    Ottawa ON K1A 0A6
-                  </p>
+                    return (
+                      <div key={index} className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                        <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
+                          <Building2 className="h-4 w-4 shrink-0" />
+                          {office.type || 'Office'}
+                        </h4>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
-                      <button
-                        onClick={() => handleCall('1 613 992-4501')}
-                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded"
-                      >
-                        1 613 992-4501
-                      </button>
-                    </div>
+                        {address && (
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed whitespace-pre-line">
+                            {address}
+                          </p>
+                        )}
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                      <span className="text-xs sm:text-sm text-muted-foreground">Fax: 1 613 992-4501</span>
+                        <div className="space-y-2">
+                          {phone && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                              <button
+                                onClick={() => handleCall(phone)}
+                                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded"
+                              >
+                                {phone}
+                              </button>
+                            </div>
+                          )}
+
+                          {fax && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                              <span className="text-xs sm:text-sm text-muted-foreground">Fax: {fax}</span>
+                            </div>
+                          )}
+
+                          {office.email && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                              <a
+                                href={`mailto:${office.email}`}
+                                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded break-all"
+                              >
+                                {office.email}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <p className="text-sm">No office information available</p>
+                  </div>
+                )}
+
+                {/* Fallback for federal MPs showing basic Parliament info */}
+                {representative.level === 'federal' && offices.length === 0 && (
+                  <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
+                      <Building2 className="h-4 w-4 shrink-0" />
+                      Parliament Office
+                    </h4>
+
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed">
+                      House of Commons<br/>
+                      Ottawa, ON K1A 0A6<br/>
+                      Canada
+                    </p>
+
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      <p>Contact information not available. Please check the official website for details.</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Constituency Office */}
-                <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
-                    <Building2 className="h-4 w-4 shrink-0" />
-                    Constituency Office
-                  </h4>
-
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed">
-                    Main office - {representative.constituency}<br/>
-                    Sheppard Avenue East<br/>
-                    {representative.constituency}<br/>
-                    M1T 3K1
-                  </p>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
-                      <button
-                        onClick={() => handleCall('1 416 321-5454')}
-                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded"
-                      >
-                        1 416 321-5454
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                      <span className="text-xs sm:text-sm text-muted-foreground">Fax: 1 416 321-5456</span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
