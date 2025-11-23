@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "services": {
+    "api": {
+      "buildCommand": "npm install && node server/compressPostalData.ts && npm run build",
+      "startCommand": "npm start",
+      "env": "node",
+      "nodeVersion": "18",
+      "plan": "free",
+      "healthCheckPath": "/api/representatives/search",
+      "autoDeploy": true,
+      "headers": [
+        {
+          "source": "/**",
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

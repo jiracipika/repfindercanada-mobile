@@ -89,8 +89,8 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Use backend Radar geocoding + Represent API approach
-      console.log('[SearchForm] Using backend Radar geocoding + Represent API search');
+      // Use backend local database + Represent API approach
+      console.log('[SearchForm] Using backend local database + Represent API search');
       const results = await fetchRepsByPostalBackend(trimmedQuery);
       onSearchComplete(results);
 
@@ -116,8 +116,8 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     } catch (error) {
       console.error('[SearchForm] Search error:', error);
 
-      // Provide specific error messages for Radar geocoding + Represent API
-      let errorMessage = "Could not retrieve representatives using Radar geocoding. Please check your connection and try again.";
+      // Provide specific error messages for local database + Represent API
+      let errorMessage = "Could not retrieve representatives using local postal code database. Please check your connection and try again.";
       let errorTitle = "Search failed";
 
       // Check for specific error patterns
@@ -126,12 +126,12 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         if (errorString.includes('invalid canadian postal code format')) {
           errorMessage = `The postal code "${trimmedQuery}" doesn't appear to be a valid Canadian postal code. Please check the format (e.g., K1A 0A9).`;
           errorTitle = "Invalid postal code";
-        } else if (errorString.includes('no geocoding results found')) {
-          errorMessage = `Unable to find location for postal code "${trimmedQuery}". Please verify the postal code is correct and try again.`;
-          errorTitle = "Location not found";
-        } else if (errorString.includes('radar api error')) {
-          errorMessage = "There was a problem with the location service. Please try again in a moment.";
-          errorTitle = "Location service error";
+        } else if (errorString.includes('postal code not found in database')) {
+          errorMessage = `The postal code "${trimmedQuery}" is not in our local database. Please verify the postal code is correct and try again.`;
+          errorTitle = "Postal code not found";
+        } else if (errorString.includes('postal code database not loaded')) {
+          errorMessage = "The postal code database is currently loading. Please try again in a moment.";
+          errorTitle = "Database loading";
         } else if (errorString.includes('no representatives found')) {
           errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in the database.`;
           errorTitle = "No representatives found";

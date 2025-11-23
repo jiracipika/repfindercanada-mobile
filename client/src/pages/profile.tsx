@@ -12,7 +12,7 @@ import { isPlatform } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { repRepository } from "@/lib/storage/repRepository";
 import { getSearchCount, subscribeActivityChanges } from "@/lib/storage/activityRepository";
-import { fetchRepsByPostalR } from "@/lib/rSearchService";
+import { fetchRepsByPostalBackend } from "@/lib/backendSearchService";
 import {
   APP_DISCLAIMER,
   DATA_SOURCE_SINGLE,
@@ -187,7 +187,7 @@ export default function Profile() {
         console.log(`[AutoTest] Testing ${testCase.code} (${testCase.province})`);
 
         // Use our hybrid geocoder + Represent API implementation
-        const representatives: Representative[] = await fetchRepsByPostalR(testCase.code);
+        const representatives: Representative[] = await fetchRepsByPostalBackend(testCase.code);
 
         // Find federal representative (MP)
         const federalRep = representatives.find(rep =>

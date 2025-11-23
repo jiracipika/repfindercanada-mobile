@@ -1,14 +1,17 @@
 /**
- * Backend Search Service - Radar-powered Canadian Representative Finder
- * Uses server-side Radar geocoding + Represent API for reliable postal code searches
+ * Backend Search Service - Local Database-Powered Canadian Representative Finder
+ * Uses server-side local postal code database + Represent API for reliable postal code searches
  */
 
 import type { Representative } from "@shared/schema";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://rep-finder-api.onrender.com'
+    : 'http://localhost:5001');
 
 /**
- * Search representatives by postal code using Radar geocoding + Represent API
+ * Search representatives by postal code using local postal code database + Represent API
  * This is the main postal code search function that calls our backend
  */
 export async function fetchRepsByPostalBackend(postalCode: string): Promise<Representative[]> {
@@ -97,7 +100,7 @@ export async function fetchRepsByRidingBackend(ridingName: string): Promise<Repr
 
 /**
  * Get geocoding information for a postal code (coordinates, address, etc.)
- * Uses Radar geocoding API via our backend
+ * Uses local postal code database via our backend
  */
 export async function getPostalCodeGeocoding(postalCode: string): Promise<{
   postalCode: string;
@@ -149,7 +152,7 @@ export async function getLocationDataWithGeocoding(postalCode: string): Promise<
   try {
     console.log(`[BackendSearch] Starting enhanced search for postal code: ${postalCode}`);
 
-    // Get representatives using Radar + Represent API
+    // Get representatives using local database + Represent API
     const representatives = await fetchRepsByPostalBackend(postalCode);
     console.log(`[BackendSearch] Found ${representatives.length} representatives`);
 

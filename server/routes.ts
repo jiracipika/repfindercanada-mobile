@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertRepresentativeSchema, insertSearchSchema, insertSavedRepresentativeSchema } from "@shared/schema";
 import { z } from "zod";
-import { getCoordinatesFromPostalCode } from "./radarGeocoder";
+import { getCoordinatesFromPostalCodeBinary, isBinaryDataLoaded } from "./binaryPostalLookup";
 
 interface OpenParliamentRepresentative {
   name: string;
@@ -20,6 +20,9 @@ interface OpenParliamentRepresentative {
   };
   image?: string;
   url?: string;
+  email?: string;
+  phone?: string;
+  extra?: Record<string, any>;
 }
 
 // Postal code to riding mapping for major Canadian postal codes
@@ -538,20 +541,30 @@ async function searchOpenParliament(query: string, type: 'postal_code' | 'name' 
 }
 
 /**
- * Search representatives by postal code using Radar geocoding + Represent API
- * This replaces the client-side geocoding with server-side Radar API calls
+ * Search representatives by postal code using local CSV data + Represent API
+ * This replaces the Radar API with our compressed postal code database
  */
-async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParliamentRepresentative[]> {
+async function searchByPostalCodeWithLocalData(postalCode: string): Promise<OpenParliamentRepresentative[]> {
   try {
-    console.log(`[RadarSearch] Starting search for postal code: ${postalCode}`);
+    console.log(`[LocalSearch] Starting search for postal code: ${postalCode}`);
 
-    // Step 1: Convert postal code to coordinates using Radar
-    const coordinates = await getCoordinatesFromPostalCode(postalCode);
-    console.log(`[RadarSearch] Got coordinates: ${coordinates.latitude}, ${coordinates.longitude}`);
+    // Check if binary data is loaded
+    if (!isBinaryDataLoaded()) {
+      throw new Error('Postal code database not loaded. Please run compressPostalData.ts first.');
+    }
+
+    // Step 1: Get coordinates from local postal code database
+    const coordinates = getCoordinatesFromPostalCodeBinary(postalCode);
+    if (!coordinates) {
+      console.log(`[LocalSearch] No coordinates found for postal code: ${postalCode}`);
+      return [];
+    }
+
+    console.log(`[LocalSearch] Got coordinates from local DB: ${coordinates.latitude}, ${coordinates.longitude}`);
 
     // Step 2: Use coordinates to query Represent API for representatives
     const representUrl = `https://represent.opennorth.ca/boundaries/?contains=${coordinates.latitude},${coordinates.longitude}`;
-    console.log(`[RadarSearch] Querying Represent API: ${representUrl}`);
+    console.log(`[LocalSearch] Querying Represent API: ${representUrl}`);
 
     const boundaryResponse = await fetch(representUrl, {
       headers: {
@@ -567,11 +580,11 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
     const boundaryData = await boundaryResponse.json();
 
     if (!boundaryData.objects || boundaryData.objects.length === 0) {
-      console.log(`[RadarSearch] No boundaries found for coordinates`);
+      console.log(`[LocalSearch] No boundaries found for coordinates`);
       return [];
     }
 
-    console.log(`[RadarSearch] Found ${boundaryData.objects.length} total boundaries`);
+    console.log(`[LocalSearch] Found ${boundaryData.objects.length} total boundaries`);
 
     // Step 3: Get representatives for each boundary found
     let allRepresentatives: OpenParliamentRepresentative[] = [];
@@ -579,7 +592,7 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
     for (const boundary of boundaryData.objects) {
       try {
         // Log boundary details for debugging
-        console.log(`[RadarSearch] Boundary: ${boundary.name || boundary.id} - has representatives_url: ${!!boundary.representatives_url}`);
+        console.log(`[LocalSearch] Boundary: ${boundary.name || boundary.id} - has representatives_url: ${!!boundary.representatives_url}`);
 
         // Check if boundary has representatives_url
         if (!boundary.representatives_url) {
@@ -587,7 +600,7 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
         }
 
         const representativesUrl = boundary.representatives_url.replace('represent.opennorth.ca', 'represent.opennorth.ca');
-        console.log(`[RadarSearch] Getting representatives from: ${representativesUrl}`);
+        console.log(`[LocalSearch] Getting representatives from: ${representativesUrl}`);
 
         const repResponse = await fetch(representativesUrl, {
           headers: {
@@ -597,7 +610,7 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
         });
 
         if (!repResponse.ok) {
-          console.warn(`[RadarSearch] Failed to get representatives for boundary ${boundary.id}: ${repResponse.status}`);
+          console.warn(`[LocalSearch] Failed to get representatives for boundary ${boundary.id}: ${repResponse.status}`);
           continue;
         }
 
@@ -611,7 +624,7 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
             rep.url?.includes('house-of-commons')
           );
 
-          console.log(`[RadarSearch] Found ${federalReps.length} federal representatives for boundary ${boundary.name}`);
+          console.log(`[LocalSearch] Found ${federalReps.length} federal representatives for boundary ${boundary.name}`);
 
           // Transform to our OpenParliamentRepresentative format
           const transformedReps = federalReps.map((rep: any): OpenParliamentRepresentative => ({
@@ -640,7 +653,7 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
           allRepresentatives.push(...transformedReps);
         }
       } catch (error) {
-        console.warn(`[RadarSearch] Error processing boundary ${boundary.name}:`, error);
+        console.warn(`[LocalSearch] Error processing boundary ${boundary.name}:`, error);
         continue;
       }
     }
@@ -699,23 +712,23 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
             parliamentId: detailedInfo?.other_info?.parl_mp_id?.[0] || rep.name.toLowerCase().replace(/\s+/g, '-')
           };
         } catch (error) {
-          console.warn(`[RadarSearch] Failed to enhance data for ${rep.name}:`, error);
+          console.warn(`[LocalSearch] Failed to enhance data for ${rep.name}:`, error);
           return rep;
         }
       })
     );
 
-    console.log(`[RadarSearch] Returning ${enhancedReps.length} enhanced representatives for ${postalCode}`);
+    console.log(`[LocalSearch] Returning ${enhancedReps.length} enhanced representatives for ${postalCode}`);
 
-    // If Radar approach found no representatives, fall back to direct postal code search
+    // If local approach found no representatives, fall back to direct postal code search
     if (enhancedReps.length === 0) {
-      console.log(`[RadarSearch] No representatives found via boundaries, falling back to direct postal code search`);
+      console.log(`[LocalSearch] No representatives found via boundaries, falling back to direct postal code search`);
       try {
         const fallbackResults = await searchByPostalCode(postalCode);
-        console.log(`[RadarSearch] Fallback search returned ${fallbackResults.length} results for ${postalCode}`);
+        console.log(`[LocalSearch] Fallback search returned ${fallbackResults.length} results for ${postalCode}`);
         return fallbackResults;
       } catch (fallbackError) {
-        console.error(`[RadarSearch] Fallback search also failed:`, fallbackError);
+        console.error(`[LocalSearch] Fallback search also failed:`, fallbackError);
         return [];
       }
     }
@@ -723,16 +736,16 @@ async function searchByPostalCodeWithRadar(postalCode: string): Promise<OpenParl
     return enhancedReps;
 
   } catch (error: any) {
-    console.error(`[RadarSearch] Search failed for postal code ${postalCode}:`, error);
+    console.error(`[LocalSearch] Search failed for postal code ${postalCode}:`, error);
 
-    // Fall back to the original postal code search method if Radar approach fails
-    console.log(`[RadarSearch] Falling back to Represent API direct postal code search`);
+    // Fall back to the original postal code search method if local approach fails
+    console.log(`[LocalSearch] Falling back to Represent API direct postal code search`);
     try {
       const fallbackResults = await searchByPostalCode(postalCode);
-      console.log(`[RadarSearch] Fallback search returned ${fallbackResults.length} results for ${postalCode}`);
+      console.log(`[LocalSearch] Fallback search returned ${fallbackResults.length} results for ${postalCode}`);
       return fallbackResults;
     } catch (fallbackError) {
-      console.error(`[RadarSearch] Fallback search also failed:`, fallbackError);
+      console.error(`[LocalSearch] Fallback search also failed:`, fallbackError);
       return [];
     }
   }
@@ -809,8 +822,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let apiResults = [];
 
       if (type === 'postal_code') {
-        // Use Radar geocoding + Represent API for postal codes
-        apiResults = await searchByPostalCodeWithRadar(query);
+        // Use local postal code database + Represent API for postal codes
+        apiResults = await searchByPostalCodeWithLocalData(query);
       } else {
         // For name/riding searches, use existing OpenParliament API
         apiResults = await searchOpenParliament(query, type);
@@ -934,7 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Geocoding endpoint for postal code to coordinates conversion using Radar
+  // Geocoding endpoint for postal code to coordinates conversion using local database
   app.post("/api/geocode", async (req, res) => {
     try {
       const { postalCode } = req.body;
@@ -943,16 +956,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Postal code is required" });
       }
 
-      // Use Radar to convert postal code to coordinates
-      const coordinates = await getCoordinatesFromPostalCode(postalCode);
+      // Check if binary data is loaded
+      if (!isBinaryDataLoaded()) {
+        return res.status(503).json({ message: "Postal code database not loaded. Please try again." });
+      }
+
+      // Use local postal code database to get coordinates
+      const coordinates = getCoordinatesFromPostalCodeBinary(postalCode);
+
+      if (!coordinates) {
+        return res.status(404).json({ message: "Postal code not found in database" });
+      }
 
       res.json({
         postalCode: postalCode.toUpperCase().replace(/\s+/g, '').replace(/^(.{3})/, '$1 '),
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        formattedAddress: coordinates.formattedAddress,
-        confidence: coordinates.confidence,
-        source: coordinates.source
+        formattedAddress: `${postalCode.toUpperCase().replace(/\s+/g, '').replace(/^(.{3})/, '$1 ')}, Canada`,
+        confidence: 1.0,
+        source: 'local_database'
       });
     } catch (error) {
       console.error('Geocoding error:', error);

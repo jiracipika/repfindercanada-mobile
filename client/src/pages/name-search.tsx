@@ -9,11 +9,11 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fetchRepsByNameR } from "@/lib/rSearchService";
+import { fetchRepsByNameBackend } from "@/lib/backendSearchService";
 import { logActivity } from "@/lib/storage/activityRepository";
 
 // R-based name search already handles sorting using R logic (Federal -> Provincial -> Municipal)
-// No additional sorting needed as fetchRepsByNameR returns properly sorted results
+// No additional sorting needed as fetchRepsByNameBackend returns properly sorted results
 
 export default function NameSearch() {
   const [, setLocation] = useLocation();
@@ -37,7 +37,7 @@ export default function NameSearch() {
     setSearchResults([]);
 
     try {
-      const results = await fetchRepsByNameR(trimmedQuery);
+      const results = await fetchRepsByNameBackend(trimmedQuery);
 
       if (results.length === 0) {
         setSearchError(`No representatives found matching "${trimmedQuery}"`);
