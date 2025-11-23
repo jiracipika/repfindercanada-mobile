@@ -1019,6 +1019,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Represent API proxy for mobile app (CORS workaround)
+  app.get("/api/represent/proxy/*", async (req, res) => {
+    try {
+      const apiUrl = req.url.replace('/api/represent/proxy/', 'https://represent.opennorth.ca/');
+      console.log('Proxying Represent API call:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Canadian-Rep-Finder/1.0'
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`Represent API proxy error: ${response.status} for ${apiUrl}`);
+        throw new Error(`Represent API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Represent API proxy error:', error);
+      res.status(500).json({ message: "Failed to proxy Represent API call" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

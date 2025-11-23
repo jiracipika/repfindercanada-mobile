@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostalBackend } from "@/lib/backendSearchService";
+import { fetchRepsByPostalLocal } from "@/lib/localSearchService";
 import type { Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
@@ -89,9 +89,9 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     onSearchStart();
 
     try {
-      // Use backend local database + Represent API approach
-      console.log('[SearchForm] Using backend local database + Represent API search');
-      const results = await fetchRepsByPostalBackend(trimmedQuery);
+      // Use local postal data + Represent API approach (completely offline-first)
+      console.log('[SearchForm] Using local postal data + Represent API search');
+      const results = await fetchRepsByPostalLocal(trimmedQuery);
       onSearchComplete(results);
 
       // Log the search activity with representatives
@@ -116,8 +116,8 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     } catch (error) {
       console.error('[SearchForm] Search error:', error);
 
-      // Provide specific error messages for local database + Represent API
-      let errorMessage = "Could not retrieve representatives using local postal code database. Please check your connection and try again.";
+      // Provide specific error messages for local postal data + Represent API
+      let errorMessage = "Could not retrieve representatives using local postal data. Please ensure you have internet access for the Represent API and try again.";
       let errorTitle = "Search failed";
 
       // Check for specific error patterns

@@ -7,7 +7,7 @@ import type { Representative } from "@shared/schema";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === 'production'
-    ? 'https://rep-finder-api.onrender.com'
+    ? 'https://repfinderforcanadadev.onrender.com'
     : 'http://localhost:5001');
 
 /**
