@@ -13,8 +13,13 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         versionCode 502000
         versionName "3.0.0"
+=======
+        versionCode 502001
+        versionName "3.1.0"
+>>>>>>> Stashed changes
 =======
         versionCode 502001
         versionName "3.1.0"
