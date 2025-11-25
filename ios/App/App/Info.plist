@@ -20,9 +20,15 @@
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
 	<string>3</string>
+=======
+	<string>3.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>7</string>
+>>>>>>> Stashed changes
 =======
 	<string>3.1.0</string>
 	<key>CFBundleVersion</key>
