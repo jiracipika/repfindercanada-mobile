@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchRepsByNameLocal } from "@/lib/localSearchService";
+import { fetchRepsByNameBackend } from "@/lib/backendSearchService";
 import { logActivity } from "@/lib/storage/activityRepository";
 
 // Local name search already handles sorting using Represent API logic (Federal -> Provincial -> Municipal)
@@ -37,7 +38,15 @@ export default function NameSearch() {
     setSearchResults([]);
 
     try {
-      const results = await fetchRepsByNameLocal(trimmedQuery);
+      // Try the backend-powered search first to avoid CORS issues and keep
+      // the same data transformation logic used across the app.
+      let results = await fetchRepsByNameBackend(trimmedQuery);
+
+      // Fallback to direct Represent API search if the backend returns no
+      // matches (e.g., for non-federal results) so name search stays useful.
+      if (results.length === 0) {
+        results = await fetchRepsByNameLocal(trimmedQuery);
+      }
 
       if (results.length === 0) {
         setSearchError(`No representatives found matching "${trimmedQuery}"`);
