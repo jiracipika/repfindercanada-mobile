@@ -110,7 +110,7 @@ export function SourcesDisclaimer() {
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 mt-4 space-y-4">
           <h2 className="text-lg font-semibold">Credits</h2>
           <p>
-            Created in collaboration with <span className="font-semibold">Layla Sharif</span> (Concept) and <span className="font-semibold">Rajin Santos Gajadhar</span> (Development).
+            Created by <span className="font-semibold">Rajin Santos Gajadhar</span> (Development).
           </p>
         </div>
       </main>
