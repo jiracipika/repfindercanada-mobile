@@ -11,7 +11,7 @@ android {
         applicationId "com.marcelsabas.canadarepfinder"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 502002
+        versionCode 502003
         versionName "3.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

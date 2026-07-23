@@ -28,6 +28,9 @@ workflows:
       - name: Install npm deps
         script: |
           npm install
+      - name: Install Android SDK 36
+        script: |
+          sdkmanager "platforms;android-36"
       - name: Build web + sync Capacitor (iOS & Android)
         script: |
           npm run build
@@ -152,6 +155,9 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm install
+      - name: Install Android SDK 36
+        script: |
+          sdkmanager "platforms;android-36"
       - name: Build web app and sync with Capacitor
         script: |
           npm run build
