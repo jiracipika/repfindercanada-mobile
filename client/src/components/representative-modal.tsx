@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart, Share2, Map, Loader2 } from "lucide-react";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,7 @@ import { SafeArea } from "@/components/ui/safe-area";
 import { RidingMap } from "@/components/riding-map";
 
 interface RepresentativeModalProps {
-  representative: Representative;
+  representative: ApiRepresentative;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -345,7 +345,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                     <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
                       <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <button
-                        onClick={() => handleCall(representative.phone)}
+                        onClick={() => handleCall(representative.phone || '')}
                         className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1 text-left"
                       >
                         {representative.phone}

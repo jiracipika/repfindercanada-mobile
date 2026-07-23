@@ -1,5 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 
 const CACHE_KEY = "SEARCH_CACHE_R_V2";
 const CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

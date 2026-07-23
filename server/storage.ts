@@ -65,7 +65,20 @@ export class MemStorage implements IStorage {
     };
     
     const representative: Representative = { 
-      ...cleanedRepresentative, 
+      ...cleanedRepresentative,
+      email: cleanedRepresentative.email ?? null,
+      electedOffice: cleanedRepresentative.electedOffice ?? null,
+      phone: cleanedRepresentative.phone ?? null,
+      photo: cleanedRepresentative.photo ?? null,
+      website: cleanedRepresentative.website ?? null,
+      personalWebsite: cleanedRepresentative.personalWebsite ?? null,
+      socialMedia: cleanedRepresentative.socialMedia ?? null,
+      biography: cleanedRepresentative.biography ?? null,
+      offices: cleanedRepresentative.offices ?? null,
+      fax: cleanedRepresentative.fax ?? null,
+      parliamentId: cleanedRepresentative.parliamentId ?? null,
+      boundaryUrl: cleanedRepresentative.boundaryUrl ?? null,
+      boundaryData: cleanedRepresentative.boundaryData ?? null,
       id,
       createdAt: new Date()
     };
@@ -86,7 +99,10 @@ export class MemStorage implements IStorage {
   async createSearch(insertSearch: InsertSearch): Promise<Search> {
     const id = this.currentSearchId++;
     const search: Search = { 
-      ...insertSearch, 
+      ...insertSearch,
+      results: insertSearch.results ?? null,
+      location: insertSearch.location ?? null,
+      postalCode: insertSearch.postalCode ?? null,
       id,
       createdAt: new Date()
     };
@@ -103,7 +119,8 @@ export class MemStorage implements IStorage {
   async saveRepresentative(insertSaved: InsertSavedRepresentative): Promise<SavedRepresentative> {
     const id = this.currentSavedId++;
     const saved: SavedRepresentative = { 
-      ...insertSaved, 
+      ...insertSaved,
+      representativeId: insertSaved.representativeId ?? null,
       id,
       createdAt: new Date()
     };

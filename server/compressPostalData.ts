@@ -40,7 +40,7 @@ function compressPostalData() {
   }
 
   // Convert map to arrays
-  for (const [postalCode, coords] of postalCodeMap.entries()) {
+  for (const [postalCode, coords] of Array.from(postalCodeMap.entries())) {
     postalCodes.push(postalCode);
     tempCoords.push(coords.lat);
     tempCoords.push(coords.lng);

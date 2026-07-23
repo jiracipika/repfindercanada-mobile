@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Phone, Mail, User, MapPin, Flag, Heart, ExternalLink, Trash2 } from "lucide-react";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { useState, useEffect } from "react";
 
 interface RepresentativeCardProps {
-  representative: Representative;
+  representative: ApiRepresentative;
   onViewProfile: () => void;
   showSaveButton?: boolean;
   showDeleteButton?: boolean;

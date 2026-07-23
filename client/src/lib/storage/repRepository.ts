@@ -1,5 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
-import type { Representative } from "@shared/schema";
+import type { Representative, ApiRepresentative } from "@shared/schema";
 
 const KEY = 'SAVED_REPS_V2';
 const OLD_KEY_V1 = 'SAVED_REPS_V1';
@@ -42,14 +42,14 @@ const migrateOldData = async (): Promise<void> => {
   }
 };
 
-const getSavedReps = async (): Promise<Representative[]> => {
+const getSavedReps = async (): Promise<(Representative | ApiRepresentative)[]> => {
   await migrateOldData();
   const { value } = await Preferences.get({ key: KEY });
   const reps = value ? JSON.parse(value) : [];
 
   // Deduplicate by ID in case of corrupt data
   const seen = new Set<string>();
-  const deduplicated = reps.filter((rep: Representative) => {
+  const deduplicated = reps.filter((rep: Representative | ApiRepresentative) => {
     const id = normalizeId(rep.id);
     if (seen.has(id)) {
       console.warn('[repRepository] getSavedReps: Removing duplicate ID:', id);
@@ -63,7 +63,7 @@ const getSavedReps = async (): Promise<Representative[]> => {
   return deduplicated;
 };
 
-const saveReps = async (reps: Representative[]): Promise<void> => {
+const saveReps = async (reps: (Representative | ApiRepresentative)[]): Promise<void> => {
   console.log('[repRepository] saveReps: Saving', reps.length, 'reps');
   await Preferences.set({ key: KEY, value: JSON.stringify(reps) });
   console.log('[repRepository] saveReps: Preferences write completed, emitting event');
@@ -71,11 +71,11 @@ const saveReps = async (reps: Representative[]): Promise<void> => {
 };
 
 export const repRepository = {
-  listSavedReps: async (): Promise<Representative[]> => {
+  listSavedReps: async (): Promise<(Representative | ApiRepresentative)[]> => {
     return getSavedReps();
   },
 
-  saveRep: async (repToSave: Representative): Promise<void> => {
+  saveRep: async (repToSave: Representative | ApiRepresentative): Promise<void> => {
     console.log('[repRepository] saveRep: Attempting to save rep:', repToSave.name, 'ID:', repToSave.id, 'Type:', typeof repToSave.id);
     const savedReps = await getSavedReps();
     console.log('[repRepository] saveRep: Current saved reps before save:', savedReps.length);
@@ -151,7 +151,7 @@ export const repRepository = {
     return found;
   },
 
-  toggleSaved: async (rep: Representative): Promise<void> => {
+  toggleSaved: async (rep: Representative | ApiRepresentative): Promise<void> => {
     const saved = await repRepository.isSaved(rep.id);
     if (saved) {
       await repRepository.removeRep(rep.id);

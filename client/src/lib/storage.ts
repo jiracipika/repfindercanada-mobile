@@ -19,7 +19,7 @@ export const saveRep = async (rep: Representative): Promise<void> => {
 
 export const removeRep = async (repUrl: string): Promise<void> => {
   const reps = await getSavedReps();
-  const newReps = reps.filter((r) => r.url !== repUrl);
+  const newReps = reps.filter((r) => (r as any).url !== repUrl);
   await Preferences.set({
     key: SAVED_REPS_KEY,
     value: JSON.stringify(newReps),

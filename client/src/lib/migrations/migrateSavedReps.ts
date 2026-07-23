@@ -81,7 +81,7 @@ export async function migrateSavedRepsV2(): Promise<void> {
           name: rep.name,
           district_name: rep.constituency,
           party_name: rep.party,
-          email: rep.email,
+          email: rep.email || undefined,
         });
 
         // Check for duplicates in the migrated set

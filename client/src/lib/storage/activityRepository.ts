@@ -1,5 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 
 const KEY = "activityLog";
 const EVT = "activityLogChanged";

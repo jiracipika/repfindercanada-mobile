@@ -6,7 +6,7 @@ import { Clock, Users } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 
 // Helper function to sort representatives by government level
 const sortRepresentatives = (representatives: Representative[]): Representative[] => {

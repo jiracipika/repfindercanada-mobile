@@ -3,7 +3,7 @@
  * Uses Represent API directly for finding representatives by coordinates
  */
 
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative } from "@shared/schema";
 
 const REPRESENT_API_BASE = process.env.NODE_ENV === 'development'
   ? 'http://localhost:5001/api/represent/proxy'
@@ -15,7 +15,7 @@ const REPRESENT_API_BASE = process.env.NODE_ENV === 'development'
 export async function fetchRepsByCoordinatesDirect(
   latitude: number,
   longitude: number
-): Promise<Representative[]> {
+): Promise<ApiRepresentative[]> {
   try {
     console.log(`[RepresentAPI] Searching for representatives at coordinates: ${latitude}, ${longitude}`);
 
@@ -31,7 +31,7 @@ export async function fetchRepsByCoordinatesDirect(
     const repsData = await repsResponse.json();
     console.log(`[RepresentAPI] Found ${repsData.objects?.length || 0} representatives directly`);
 
-    const allRepresentatives: Representative[] = [];
+    const allRepresentatives: ApiRepresentative[] = [];
     if (repsData.objects) {
       for (const rep of repsData.objects) {
         const representative = await transformRepresentative(rep);
@@ -82,7 +82,7 @@ async function fetchRepresentativeDetails(repUrl: string): Promise<any | null> {
 /**
  * Transform Represent API representative object to our Representative interface
  */
-async function transformRepresentative(rep: any): Promise<Representative | null> {
+async function transformRepresentative(rep: any): Promise<ApiRepresentative | null> {
   try {
     if (!rep.name) {
       return null;
@@ -244,7 +244,7 @@ async function transformRepresentative(rep: any): Promise<Representative | null>
     }
 
     // Create representative object with all available fields
-    const representative: Representative = {
+    const representative: ApiRepresentative = {
       id: rep.url || `${rep.name}-${rep.representative_set_name || ''}`,
       name: rep.name,
       party: party,
@@ -290,7 +290,7 @@ async function transformRepresentative(rep: any): Promise<Representative | null>
  * Search representatives by postal code using local coordinates + Represent API
  */
 export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
-  representatives: Representative[];
+  representatives: ApiRepresentative[];
   geocoding: {
     postalCode: string;
     latitude: number;
@@ -323,7 +323,7 @@ export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
 /**
  * Search representatives by name using Represent API directly
  */
-export async function fetchRepsByNameDirect(name: string): Promise<Representative[]> {
+export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresentative[]> {
   try {
     console.log(`[RepresentAPI] Searching for representatives by name: ${name}`);
 
@@ -338,7 +338,7 @@ export async function fetchRepsByNameDirect(name: string): Promise<Representativ
     const data = await response.json();
     console.log(`[RepresentAPI] Found ${data.objects?.length || 0} representatives`);
 
-    const representatives: Representative[] = [];
+    const representatives: ApiRepresentative[] = [];
     if (data.objects) {
       for (const rep of data.objects) {
         const representative = await transformRepresentative(rep);
@@ -366,7 +366,7 @@ export async function fetchRepsByNameDirect(name: string): Promise<Representativ
 /**
  * Search representatives by riding/constituency name using Represent API directly
  */
-export async function fetchRepsByRidingDirect(ridingName: string): Promise<Representative[]> {
+export async function fetchRepsByRidingDirect(ridingName: string): Promise<ApiRepresentative[]> {
   try {
     console.log(`[RepresentAPI] Searching for representatives by riding: ${ridingName}`);
 
@@ -387,7 +387,7 @@ export async function fetchRepsByRidingDirect(ridingName: string): Promise<Repre
     }
 
     // Get representatives for each boundary
-    const allRepresentatives: Representative[] = [];
+    const allRepresentatives: ApiRepresentative[] = [];
 
     for (const boundary of boundariesData.objects) {
       if (boundary.related && boundary.related.representatives_url) {

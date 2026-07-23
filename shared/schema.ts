@@ -61,3 +61,25 @@ export type Search = typeof searches.$inferSelect;
 export type InsertSearch = z.infer<typeof insertSearchSchema>;
 export type SavedRepresentative = typeof savedRepresentatives.$inferSelect;
 export type InsertSavedRepresentative = z.infer<typeof insertSavedRepresentativeSchema>;
+
+/**
+ * Extended Representative type that includes runtime-only fields
+ * populated by the Represent API transform layer.
+ * These fields do NOT exist in the database schema.
+ * Note: API reps use string IDs (URLs) and may lack createdAt.
+ */
+export type ApiRepresentative = Omit<Representative, 'id' | 'createdAt'> & {
+  id: number | string;
+  createdAt?: Date | null;
+  level?: 'federal' | 'provincial' | 'municipal' | 'other';
+  riding?: string;
+  office?: string;
+  source?: string;
+  extra?: {
+    url?: string;
+    representativeSetName?: string;
+    firstName?: string;
+    lastName?: string;
+    hasDetails?: boolean;
+  };
+};

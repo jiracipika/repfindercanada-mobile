@@ -39,7 +39,7 @@ class LocalPostalLookup {
       this.coordinates = new Float32Array(arrayBuffer);
 
       this.loaded = true;
-      console.log(`[LocalPostalLookup] Successfully loaded ${Object.keys(this.index).length} postal codes`);
+      console.log(`[LocalPostalLookup] Successfully loaded ${Object.keys(this.index || {}).length} postal codes`);
     } catch (error) {
       console.error('[LocalPostalLookup] Error loading postal data:', error);
       throw error;

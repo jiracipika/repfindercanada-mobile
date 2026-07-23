@@ -22,7 +22,7 @@ import {
 } from '../lib/constants/appCopy';
 import { Section } from "@/components/ui/section";
 import { Link } from "wouter";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 import { getCacheManagementStatus, forceClearAllCaches } from "@/lib/cacheManager";
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";

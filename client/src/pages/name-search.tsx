@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
 import { Search, Loader2, UserSearch, ArrowLeft } from "lucide-react";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

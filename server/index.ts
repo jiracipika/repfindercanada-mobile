@@ -69,7 +69,7 @@ app.use((req, res, next) => {
       });
       break; // Success, exit the loop
     } catch (error) {
-      console.warn(`Failed to start server on port ${port}:`, error.message);
+      console.warn(`Failed to start server on port ${port}:`, (error as Error).message);
       if (port === possiblePorts[possiblePorts.length - 1]) {
         // Last port, rethrow the error
         throw error;

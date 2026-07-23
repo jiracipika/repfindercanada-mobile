@@ -3,7 +3,7 @@
  * Uses local postal code database + Represent API for offline-first functionality
  */
 
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative } from "@shared/schema";
 import {
   fetchRepsByPostalCodeDirect,
   fetchRepsByNameDirect,
@@ -18,7 +18,7 @@ import {
  * Search representatives by postal code using local database + Represent API
  * This is completely offline-first except for the Represent API call
  */
-export async function fetchRepsByPostalLocal(postalCode: string): Promise<Representative[]> {
+export async function fetchRepsByPostalLocal(postalCode: string): Promise<ApiRepresentative[]> {
   try {
     console.log(`[LocalSearch] Searching postal code: ${postalCode}`);
 
@@ -43,7 +43,7 @@ export async function fetchRepsByPostalLocal(postalCode: string): Promise<Repres
 /**
  * Search representatives by name using Represent API directly
  */
-export async function fetchRepsByNameLocal(name: string): Promise<Representative[]> {
+export async function fetchRepsByNameLocal(name: string): Promise<ApiRepresentative[]> {
   try {
     console.log(`[LocalSearch] Searching by name: ${name}`);
 
@@ -63,7 +63,7 @@ export async function fetchRepsByNameLocal(name: string): Promise<Representative
 /**
  * Search representatives by riding/constituency name using Represent API directly
  */
-export async function fetchRepsByRidingLocal(ridingName: string): Promise<Representative[]> {
+export async function fetchRepsByRidingLocal(ridingName: string): Promise<ApiRepresentative[]> {
   try {
     console.log(`[LocalSearch] Searching by riding: ${ridingName}`);
 
@@ -127,7 +127,7 @@ export async function getPostalCodeGeocodingLocal(postalCode: string): Promise<{
  * Returns both representatives and geocoding details using local data
  */
 export async function getLocationDataWithLocalGeocoding(postalCode: string): Promise<{
-  representatives: Representative[];
+  representatives: ApiRepresentative[];
   geocoding: {
     postalCode: string;
     latitude: number;
@@ -157,7 +157,8 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
     console.log(`[LocalSearch] Found coordinates: ${coordinates.latitude}, ${coordinates.longitude}`);
 
     // Search representatives using coordinates
-    const representatives = await fetchRepsByPostalCodeDirect(normalizedCode);
+    const searchResult = await fetchRepsByPostalCodeDirect(normalizedCode);
+    const representatives = searchResult.representatives;
     console.log(`[LocalSearch] Found ${representatives.length} representatives`);
 
     return {
@@ -182,7 +183,7 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
 export async function fetchRepsByCoordinatesLocal(
   latitude: number,
   longitude: number
-): Promise<Representative[]> {
+): Promise<ApiRepresentative[]> {
   try {
     console.log(`[LocalSearch] Searching by coordinates: [${latitude}, ${longitude}]`);
 

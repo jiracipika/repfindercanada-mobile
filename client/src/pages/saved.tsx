@@ -3,7 +3,7 @@ import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, Search as SearchIcon } from "lucide-react";
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";

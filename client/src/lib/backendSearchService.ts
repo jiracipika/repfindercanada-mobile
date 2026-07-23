@@ -3,7 +3,7 @@
  * Uses server-side local postal code database + Represent API for reliable postal code searches
  */
 
-import type { Representative } from "@shared/schema";
+import type { ApiRepresentative as Representative } from "@shared/schema";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === 'production'

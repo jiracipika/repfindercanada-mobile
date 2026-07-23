@@ -1,13 +1,13 @@
 import { Geolocation, PositionOptions } from '@capacitor/geolocation';
 
-export async function getCurrentLocation(): Promise<GeolocationPosition> {
+export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
   try {
     // Check permissions
     let permissionStatus = await Geolocation.checkPermissions();
 
     // Request permissions if not granted
     if (permissionStatus.location !== 'granted') {
-      permissionStatus = await Geolocation.requestPermissions({ permissions: ['fine', 'coarse'] });
+      permissionStatus = await Geolocation.requestPermissions({ permissions: ['location'] });
     }
 
     // If permission is not granted after request, throw an error
@@ -22,7 +22,7 @@ export async function getCurrentLocation(): Promise<GeolocationPosition> {
       maximumAge: 300000 // 5 minutes
     };
     const position = await Geolocation.getCurrentPosition(options);
-    return position;
+    return { latitude: position.coords.latitude, longitude: position.coords.longitude };
 
   } catch (error) {
     console.error("Geolocation error:", error);
