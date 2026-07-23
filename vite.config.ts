@@ -27,6 +27,37 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "wouter"],
+          ui: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-accordion",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-select",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-separator",
+            "class-variance-authority",
+            "clsx",
+            "tailwind-merge",
+            "cmdk",
+            "vaul",
+            "embla-carousel-react",
+          ],
+          map: ["leaflet", "react-leaflet"],
+          motion: ["framer-motion"],
+          forms: ["react-hook-form", "zod", "@hookform/resolvers"],
+          icons: ["lucide-react", "react-icons"],
+          charts: ["recharts"],
+          query: ["@tanstack/react-query"],
+        },
+      },
+    },
   },
   optimizeDeps: {
     include: ['@capacitor/app'],

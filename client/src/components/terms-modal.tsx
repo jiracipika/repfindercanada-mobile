@@ -1,6 +1,6 @@
 import { FC, useRef, useEffect } from 'react';
 import { Browser } from '@capacitor/browser';
-import { isPlatform } from '@ionic/react';
+import { Capacitor } from '@capacitor/core';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +45,7 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
 
   const handleCloseApp = () => {
     console.log('[TermsModal] User declined terms - closing app');
-    if (isPlatform('capacitor')) {
+    if (Capacitor.isNativePlatform()) {
       (window as any).Capacitor.Plugins.App.exitApp();
     } else {
       window.close(); // Fallback for web environment

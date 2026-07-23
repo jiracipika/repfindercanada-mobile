@@ -3,13 +3,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Building, Menu, Home, User, Heart, Info, Shield, FileText, MessageSquare } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Browser } from '@capacitor/browser';
-import { isPlatform } from '@ionic/react';
+import { Capacitor } from '@capacitor/core';
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
 
 const openExternal = async (url: string) => {
   const fullUrl = url.startsWith('http') ? url : `${BASE_WEB_URL}${url}`;
-  if (isPlatform('capacitor')) {
+  if (Capacitor.isNativePlatform()) {
     await Browser.open({ url: fullUrl });
   } else {
     window.open(fullUrl, '_blank');

@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, MapPin, Clock, Heart, Info, Save, GitBranch, Loader2, Play, CheckCircle, XCircle } from "lucide-react";
 import { Browser } from '@capacitor/browser';
-import { isPlatform } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { repRepository } from "@/lib/storage/repRepository";
 import { getSearchCount, subscribeActivityChanges } from "@/lib/storage/activityRepository";
@@ -64,7 +63,7 @@ interface TestResult {
 
 const openExternal = async (url: string) => {
   const fullUrl = url.startsWith('http') ? url : `${BASE_WEB_URL}${url}`;
-  if (isPlatform('capacitor')) {
+  if (Capacitor.isNativePlatform()) {
     await Browser.open({ url: fullUrl });
   } else {
     window.open(fullUrl, '_blank');
