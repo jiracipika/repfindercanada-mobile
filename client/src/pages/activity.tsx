@@ -60,9 +60,11 @@ export default function Activity() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-32">
-        <Section className="pt-8 pb-4">
-          <h2 className="text-3xl font-bold text-center">Recent Searches</h2>
+      <div className="civic-page space-y-6">
+        <Section className="civic-page-header">
+          <span className="civic-kicker">Local lookup history</span>
+          <h2 className="civic-title">Recent searches.</h2>
+          <p className="civic-lede">Return to districts you have looked up without rebuilding your context.</p>
         </Section>
 
         <Section>
@@ -73,7 +75,7 @@ export default function Activity() {
               ))}
             </div>
           ) : items.length === 0 ? (
-            <Card className="text-center py-12">
+            <Card className="civic-panel text-center py-12">
               <CardContent className="flex flex-col items-center justify-center">
                 <Clock className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No search history</h3>
@@ -87,7 +89,8 @@ export default function Activity() {
               {items.map((activity: ActivityItem) => (
                 <Card
                   key={activity.id}
-                  className="overflow-hidden cursor-pointer hover:bg-accent/50 transition-colors"
+                  data-civic-card="true"
+                  className="overflow-hidden border-0 bg-transparent cursor-pointer transition-colors"
                   onClick={() => handleSearchClick(activity)}
                 >
                   <CardContent className="p-3">

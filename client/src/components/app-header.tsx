@@ -1,40 +1,37 @@
 import { useEffect, useState } from "react";
 import { Preferences } from "@capacitor/preferences";
-import { Sun, Moon } from "lucide-react";
+import { Landmark, Moon, ShieldCheck, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const THEME_KEY = "theme"; // "dark" | "light" | "system"
-
+const THEME_KEY = "theme";
 type Theme = "dark" | "light" | "system";
 
 export default function AppHeader() {
   const [theme, setTheme] = useState<Theme>("system");
 
-  useEffect(() => {
-    (async () => {
-      const { value } = await Preferences.get({ key: THEME_KEY });
-      const initial = (value as Theme) || "system";
-      setTheme(initial);
-      applyTheme(initial);
-    })();
+  const applyTheme = (value: Theme) => {
+    const root = document.documentElement;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = value === "dark" || (value === "system" && prefersDark);
+    root.classList.toggle("dark", isDark);
+    root.classList.toggle("light", !isDark);
+  };
 
-    // Listen for system theme changes
+  useEffect(() => {
+    let currentTheme: Theme = "system";
+    void Preferences.get({ key: THEME_KEY }).then(({ value }) => {
+      currentTheme = (value as Theme) || "system";
+      setTheme(currentTheme);
+      applyTheme(currentTheme);
+    });
+
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = () => {
-      if (theme === "system") {
-        applyTheme("system");
-      }
+      if (currentTheme === "system") applyTheme("system");
     };
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
-
-  const applyTheme = (val: Theme) => {
-    const root = document.documentElement;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = val === "dark" || (val === "system" && prefersDark);
-    root.classList.toggle("dark", isDark);
-  };
 
   const onToggle = async () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
@@ -44,29 +41,39 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="bg-background">
+    <header className="relative z-30 border-b border-border/70 bg-background/80 backdrop-blur-xl">
       <div
-        className="mx-auto max-w-screen-md px-4 flex items-end justify-between pb-3"
+        className="mx-auto flex max-w-screen-md items-end justify-between gap-3 px-4 pb-3"
         style={{
-          paddingTop: 'max(1rem, env(safe-area-inset-top))',
-          minHeight: 'calc(3.5rem + env(safe-area-inset-top))'
+          paddingTop: "max(.7rem, env(safe-area-inset-top))",
+          minHeight: "calc(4rem + env(safe-area-inset-top))",
         }}
       >
-        <h1 className="text-lg sm:text-xl font-bold text-foreground">
-          Rep Finder
-        </h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="civic-maple-mark" aria-hidden="true">
+            <Landmark className="h-5 w-5" strokeWidth={2.4} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h1 className="truncate text-base font-extrabold tracking-tight text-foreground sm:text-lg">
+                Rep Finder
+              </h1>
+              <ShieldCheck className="h-4 w-4 text-[var(--civic-mint)]" aria-label="Sources linked for verification" />
+            </div>
+            <p className="truncate text-[10px] font-bold uppercase tracking-[.14em] text-muted-foreground">
+              Independent civic tool
+            </p>
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Toggle dark mode"
+          aria-label={theme === "dark" ? "Use light appearance" : "Use dark appearance"}
           onClick={onToggle}
-          className="h-10 w-10 rounded-full"
+          className="h-11 w-11 shrink-0 rounded-full border border-border bg-card/70"
         >
-          {theme === "dark" ? (
-            <Moon className="h-5 w-5" />
-          ) : (
-            <Sun className="h-5 w-5" />
-          )}
+          {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </Button>
       </div>
     </header>

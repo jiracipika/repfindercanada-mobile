@@ -70,14 +70,16 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
 
   return (
     <>
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"></div>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold mb-4">Privacy Policy for Canada Rep Finder</h1>
+      <div className="fixed inset-0 z-50 bg-background/88 backdrop-blur-xl"></div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 safe-pt safe-pb">
+        <div className="civic-modal-card w-full max-w-md p-5 sm:p-6">
+          <span className="civic-kicker">Before you begin</span>
+          <h1 className="mb-2 mt-3 text-2xl font-extrabold tracking-tight">Your privacy, in plain language.</h1>
+          <p className="mb-4 text-sm leading-relaxed text-muted-foreground">Review how Rep Finder handles postal codes and public representative data.</p>
           <div
             ref={termsRef}
             onScroll={handleScroll}
-            className="text-sm text-neutral-600 mb-6 overflow-y-auto max-h-[60vh] p-2 border rounded-md"
+            className="mb-5 max-h-[54vh] overflow-y-auto rounded-2xl border border-border bg-background/45 p-4 text-sm leading-relaxed text-muted-foreground"
           >
             <p className="mb-2"><b>Last updated: September 24, 2025</b></p>
 
@@ -102,11 +104,11 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
             <p className="mb-2">Canada Rep Finder is an independent application developed for informational and educational purposes only. It is not affiliated with, endorsed by, or officially connected to the Government of Canada, the House of Commons, the Senate of Canada, Elections Canada, or any other government entity. All information is provided "as is" and users are encouraged to verify details with official sources.</p>
           </div>
 
-          <div className="flex justify-end space-x-4">
-            <Button variant="outline" onClick={() => setShowDisagreeAlert(true)}>
+          <div className="grid grid-cols-[auto_1fr] gap-3">
+            <Button variant="ghost" className="min-h-12 rounded-xl" onClick={() => setShowDisagreeAlert(true)}>
               Decline
             </Button>
-            <Button onClick={handleAccept} disabled={!canAccept}>
+            <Button className="civic-primary-button" onClick={handleAccept} disabled={!canAccept}>
               Accept {!canAccept && '(scroll to bottom)'}
             </Button>
           </div>

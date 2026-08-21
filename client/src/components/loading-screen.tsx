@@ -1,23 +1,19 @@
-import { motion } from "framer-motion";
-import { Compass } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Landmark } from "lucide-react";
 
 export default function LoadingScreen() {
+  const reduceMotion = useReducedMotion();
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-white">
+    <div className="civic-shell flex min-h-screen flex-col items-center justify-center bg-background px-6 text-foreground">
       <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.8, 1, 0.8],
-        }}
-        transition={{
-          duration: 1.5,
-          ease: "easeInOut",
-          repeat: Infinity,
-        }}
+        className="civic-maple-mark !h-20 !w-20 !rounded-3xl"
+        animate={reduceMotion ? undefined : { y: [0, -7, 0], rotate: [0, -2, 0] }}
+        transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity }}
       >
-        <Compass className="h-24 w-24 text-primary" />
+        <Landmark className="h-9 w-9" strokeWidth={2.2} />
       </motion.div>
-      <p className="text-neutral-600 mt-4">Finding your location...</p>
+      <p className="mt-6 text-lg font-extrabold tracking-tight">Rep Finder</p>
+      <p className="mt-1 text-sm text-muted-foreground">Preparing your civic map…</p>
     </div>
   );
 }

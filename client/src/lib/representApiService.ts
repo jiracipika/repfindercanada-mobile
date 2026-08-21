@@ -5,7 +5,7 @@
 
 import type { ApiRepresentative } from "@shared/schema";
 
-const REPRESENT_API_BASE = process.env.NODE_ENV === 'development'
+const REPRESENT_API_BASE = import.meta.env.DEV
   ? 'http://localhost:5001/api/represent/proxy'
   : 'https://represent.opennorth.ca';
 

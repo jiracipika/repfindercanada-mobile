@@ -202,23 +202,23 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   const dropdownContent = showDropdown ? getDropdownContent() : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <form onSubmit={(e) => { e.preventDefault(); handleManualSearch(); }}>
         <div className="relative" ref={dropdownRef}>
           <Input
             type="text"
-            placeholder="Enter your postal code (e.g., K1A 0A9)"
+            placeholder="Postal code — K1A 0A9"
             value={query}
             onChange={(e) => setQuery(e.target.value.toUpperCase())}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setTimeout(() => setInputFocused(false), 200)}
-            className="pl-14 pr-4 h-14 text-lg font-medium rounded-xl border-2 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 bg-background text-foreground placeholder:text-muted-foreground"
+            className="civic-search-input pl-14 pr-4 font-semibold text-foreground placeholder:text-muted-foreground"
           />
           <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
 
           {/* Dropdown feedback */}
           {showDropdown && dropdownContent && (
-            <div className="absolute z-50 w-full mt-2 p-4 bg-background border-2 border-border rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-border bg-card p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">{dropdownContent.icon}</div>
                 <div className="flex-1 space-y-1">
@@ -237,14 +237,14 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
         <Button
           type="submit"
           disabled={isSearching || !query.trim()}
-          className="w-full h-14 rounded-xl text-base font-semibold shadow-sm active:shadow-none mt-3"
+          className="civic-primary-button mt-3 w-full text-base font-bold active:translate-y-px"
         >
           {isSearching ? (
             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
           ) : (
             <Search className="h-5 w-5 mr-2" />
           )}
-          Search
+          Find my representatives
         </Button>
       </form>
     </div>

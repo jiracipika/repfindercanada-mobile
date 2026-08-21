@@ -48,9 +48,11 @@ export default function Saved() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-32">
-        <Section className="pt-8 pb-4">
-          <h2 className="text-3xl font-bold text-center">Saved Representatives</h2>
+      <div className="civic-page space-y-6">
+        <Section className="civic-page-header">
+          <span className="civic-kicker">Your civic shortlist</span>
+          <h2 className="civic-title">Saved representatives.</h2>
+          <p className="civic-lede">Keep the people and offices you contact most within easy reach.</p>
         </Section>
 
       {isLoading ? (
@@ -87,7 +89,7 @@ export default function Saved() {
         </Section>
       ) : (
         <Section>
-          <Card className="text-center py-8">
+          <Card className="civic-panel text-center py-8">
             <CardContent className="flex flex-col items-center justify-center">
               <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <CardTitle className="text-xl font-semibold mb-2">No Saved Representatives</CardTitle>

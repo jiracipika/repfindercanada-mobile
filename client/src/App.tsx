@@ -43,7 +43,7 @@ function Router() {
   // Handle special routes that aren't part of the main pager
   if (location === '/sources-disclaimer') {
     return (
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <div className="civic-shell min-h-screen flex flex-col bg-background text-foreground">
         <AppHeader />
         <div className="flex-1 flex flex-col overflow-hidden">
           <SourcesDisclaimer />
@@ -55,7 +55,7 @@ function Router() {
 
   if (location === '/name-search') {
     return (
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <div className="civic-shell min-h-screen flex flex-col bg-background text-foreground">
         <AppHeader />
         <div className="flex-1 flex flex-col overflow-hidden">
           <NameSearch />
@@ -73,7 +73,7 @@ function Router() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="civic-shell min-h-screen flex flex-col bg-background text-foreground">
       <AppHeader />
       <div className="flex-1 flex flex-col" style={{ overflow: 'hidden' }}>
         <SwipePager
@@ -117,9 +117,10 @@ function AppContent() {
           await StatusBar.setOverlaysWebView({ overlay: true });
         }
 
-        // Get current app version
-        const info = await CapApp.getInfo();
-        const currentVersion = info.version ?? '0.0.0';
+        // Capacitor App.getInfo is native-only. Keep web/PWA startup deterministic.
+        const currentVersion = Capacitor.isNativePlatform()
+          ? (await CapApp.getInfo()).version ?? '0.0.0'
+          : '3.2.0';
         setAppVersion(currentVersion);
         console.log('[Startup] Current app version:', currentVersion);
 

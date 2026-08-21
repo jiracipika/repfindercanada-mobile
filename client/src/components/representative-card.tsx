@@ -150,10 +150,10 @@ export function RepresentativeCard({
   };
 
   return (
-    <Card className="rounded-xl border bg-card shadow-sm p-4 mb-3 transition-all hover:shadow-md">
+    <Card data-civic-card="true" className="mb-3 overflow-hidden border-0 bg-transparent p-4 shadow-none transition-transform active:scale-[.995]">
       <CardContent className="p-0">
         <div className="flex items-start space-x-4">
-          <Avatar className="!w-16 !h-16 border-2 border-border shadow-sm">
+          <Avatar className="!h-16 !w-16 border-2 border-[color:var(--civic-blue)]/40 shadow-lg">
             <AvatarImage
               src={representative.photo || undefined}
               alt={`${representative.name} photo`}
@@ -164,7 +164,7 @@ export function RepresentativeCard({
                 (e.target as HTMLImageElement).src = '';
               }}
             />
-            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-semibold text-lg">
+            <AvatarFallback className="bg-gradient-to-br from-[var(--civic-blue)] to-[var(--civic-mint)] text-neutral-900 font-bold text-lg">
               {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </AvatarFallback>
           </Avatar>
@@ -178,9 +178,10 @@ export function RepresentativeCard({
                 {showSaveButton && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={handleSave}
-                    className="p-1 h-auto"
+                    aria-label={isSaved ? `Remove ${representative.name} from saved representatives` : `Save ${representative.name}`}
+                    className="h-11 w-11 rounded-full border border-border bg-background/40"
                   >
                     {isSaved ? (
                       <Heart className="h-5 w-5 text-red-500 fill-current" />
@@ -192,9 +193,10 @@ export function RepresentativeCard({
                 {showDeleteButton && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={handleDelete}
-                    className="p-1 h-auto"
+                    aria-label={`Delete ${representative.name} from saved representatives`}
+                    className="h-11 w-11 rounded-full border border-border bg-background/40"
                   >
                     <Trash2 className="h-5 w-5 text-red-500" />
                   </Button>
@@ -232,28 +234,28 @@ export function RepresentativeCard({
         </div>
 
         {/* Contact Actions */}
-        <div className="mt-5 pt-4 border-t border-border">
+        <div className="mt-5 border-t border-border pt-4">
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className={`flex flex-col items-center justify-center p-4 h-auto rounded-xl ${!representative.phone ? 'opacity-50' : ''}`}
+              className={`min-h-14 rounded-xl border-border bg-background/35 font-bold ${!representative.phone ? 'opacity-50' : ''}`}
               onClick={handleCall}
               disabled={!representative.phone}
             >
-              <Phone className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">
+              <Phone className="mr-2 h-4 w-4" />
+              <span className="text-sm font-bold">
                 {representative.phone ? 'Call' : 'No Phone'}
               </span>
             </Button>
 
             <Button
               variant="outline"
-              className={`flex flex-col items-center justify-center p-4 h-auto rounded-xl ${!representative.email ? 'opacity-50' : ''}`}
+              className={`min-h-14 rounded-xl border-border bg-background/35 font-bold ${!representative.email ? 'opacity-50' : ''}`}
               onClick={handleEmail}
               disabled={!representative.email}
             >
-              <Mail className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">
+              <Mail className="mr-2 h-4 w-4" />
+              <span className="text-sm font-bold">
                 {representative.email ? 'Email' : 'No Email'}
               </span>
             </Button>
@@ -263,7 +265,7 @@ export function RepresentativeCard({
         <div className="mt-3">
             <Button
               variant="outline"
-              className="flex w-full items-center justify-center p-3 h-auto rounded-xl"
+              className="flex min-h-12 w-full items-center justify-center rounded-xl border-border bg-background/20"
               onClick={onViewProfile}
             >
               <User className="h-4 w-4 mr-2" />

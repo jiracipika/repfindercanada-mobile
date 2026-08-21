@@ -97,7 +97,7 @@ export default function Profile() {
   const [lastTapTime, setLastTapTime] = useState(0);
 
   // Development environment check
-  const isDevelopment = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+  const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
 
   useEffect(() => {
     if (userData) {
@@ -324,14 +324,16 @@ export default function Profile() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-32">
-        <Section className="pt-8 pb-4">
+      <div className="civic-page space-y-6">
+        <Section className="civic-page-header">
+          <span className="civic-kicker">Preferences and privacy</span>
           <h2
-            className="text-3xl font-bold text-center cursor-pointer select-none active:scale-95 transition-transform"
+            className="civic-title cursor-pointer select-none active:scale-[.98] transition-transform"
             onClick={handleProfileTitleTap}
           >
-            Profile
+            Your profile.
           </h2>
+          <p className="civic-lede">Save a home postal code on this device and manage your local activity.</p>
         </Section>
 
         {/* Edit Profile Form */}
