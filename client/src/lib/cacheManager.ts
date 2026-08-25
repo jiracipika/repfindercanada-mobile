@@ -1,5 +1,6 @@
 import { Preferences } from "@capacitor/preferences";
 import { App as CapApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 /**
  * Version-based cache management
@@ -275,8 +276,12 @@ export async function getCacheManagementStatus(): Promise<{
   shouldPreserveCache: boolean;
 }> {
   try {
-    const appInfo = await CapApp.getInfo();
-    const currentVersion = appInfo.version ?? '0.0.0';
+    // Capacitor App.getInfo is native-only; on web it throws and the catch
+    // below would report "0.0.0" to the Profile page. Mirror App.tsx and fall
+    // back to the package version on web.
+    const currentVersion = Capacitor.isNativePlatform()
+      ? (await CapApp.getInfo()).version ?? '3.2.0'
+      : '3.2.0';
     const { value: lastProcessedVersion } = await Preferences.get({
       key: CACHE_VERSION_KEY
     });
