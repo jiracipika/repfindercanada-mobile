@@ -91,7 +91,7 @@ workflows:
       events:
         - push
       branch_patterns:
-        - pattern: '*'
+        - pattern: main
           include: true
     scripts:
       - name: Set up code signing
@@ -167,6 +167,11 @@ workflows:
           npx cap sync android
       - name: Build Android App Bundle
         script: |
+          # Keystore was generated with a newer keytool; zulu-17 cannot parse it.
+          # Use the newest Zulu JDK present on the image, keep zulu-17 as fallback.
+          JDK=$(ls -d /Library/Java/JavaVirtualMachines/zulu-2*.jdk/Contents/Home 2>/dev/null | sort -V | tail -1)
+          if [ -n "$JDK" ]; then export JAVA_HOME="$JDK"; fi
+          echo "Gradle JAVA_HOME=$JAVA_HOME"
           cd android
           ./gradlew assembleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
           ./gradlew bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
