@@ -157,7 +157,10 @@ workflows:
           npm install
       - name: Install Android SDK 36
         script: |
-          sdkmanager "platforms;android-36"
+          SDKMGR=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
+          echo "Using sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platforms;android-36"
       - name: Build web app and sync with Capacitor
         script: |
           npm run build
