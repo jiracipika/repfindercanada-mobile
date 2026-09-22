@@ -87,12 +87,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.marcelsabas.repfinderforcanada
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: nightly-no-match
-          include: true
     scripts:
       - name: Set up code signing
         script: |
@@ -140,14 +134,6 @@ workflows:
       node: 20
       android_signing:
         - akey
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: 'main'
-          include: true
-        - pattern: 'master'
-          include: true
     scripts:
       - name: Set up keystore
         script: |
