@@ -138,7 +138,11 @@ export function RepCard({
 
   const handleCall = () => {
     if (!representative.phone) {
-      alert('No phone number available for this representative');
+      // Buttons are disabled when the field is missing; toast as a safety net.
+      toast({
+        title: "Not available",
+        description: "No phone number is listed for this representative",
+      });
       return;
     }
     const phoneNumber = representative.phone;
@@ -150,8 +154,11 @@ export function RepCard({
     if (representative.email) {
       window.open(`mailto:${representative.email}`, '_self');
     } else {
-      // Show message that no email is available
-      alert('No email address available for this representative');
+      // Buttons are disabled when the field is missing; toast as a safety net.
+      toast({
+        title: "Not available",
+        description: "No email address is listed for this representative",
+      });
     }
   };
 

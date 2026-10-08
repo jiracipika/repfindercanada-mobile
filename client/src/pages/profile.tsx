@@ -1,28 +1,34 @@
 import { useState, useEffect } from "react";
 import { useUserData } from "@/hooks/use-user-data";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { User, MapPin, Clock, Heart, Info, Save, GitBranch, Loader2, Play, CheckCircle, XCircle } from "lucide-react";
+import {
+  Clock,
+  GitBranch,
+  Heart,
+  Info,
+  Loader2,
+  MapPin,
+  Play,
+  Save,
+  User,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { repRepository } from "@/lib/storage/repRepository";
 import { getSearchCount, subscribeActivityChanges } from "@/lib/storage/activityRepository";
 import { fetchRepsByPostalCodeDirect } from "@/lib/representApiService";
-import {
-  APP_DISCLAIMER,
-  DATA_SOURCE_SINGLE,
-  OFFICIAL_LINKS,
-  PRIVACY_NOTE,
-  ABOUT_PARAGRAPH_1,
-} from '../lib/constants/appCopy';
 import { Section } from "@/components/ui/section";
 import { Link } from "wouter";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { getCacheManagementStatus, forceClearAllCaches } from "@/lib/cacheManager";
+import { ListGroup, ListRow, ListSectionLabel, Skeleton } from "@/components/civic";
 import { APP_VERSION } from "@/version";
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
@@ -307,17 +313,27 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <Section className="pt-8 pb-4 text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-        <p className="text-muted-foreground mt-2">Loading profile...</p>
-      </Section>
+      <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="civic-page space-y-4" aria-busy="true">
+          <Section className="civic-page-header">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-3 h-9 w-56" />
+          </Section>
+          <Section>
+            <Skeleton className="h-48 w-full rounded-xl" />
+          </Section>
+          <Section>
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </Section>
+        </div>
+      </div>
     );
   }
 
   if (!userData) {
     return (
       <Section className="pt-8 pb-4 text-center">
-        <p className="text-destructive">Error: No user data found.</p>
+        <p className="text-subheadline" style={{ color: "var(--destructive)" }}>Error: No user data found.</p>
       </Section>
     );
   }
@@ -338,14 +354,8 @@ export default function Profile() {
 
         {/* Edit Profile Form */}
         <Section>
-          <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Edit Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <ListSectionLabel>Edit profile</ListSectionLabel>
+          <Card className="space-y-4 p-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" />
@@ -354,74 +364,69 @@ export default function Profile() {
               <Label htmlFor="postalCode">Home Postal Code</Label>
               <Input id="postalCode" value={homePostalCode} onChange={(e) => setHomePostalCode(e.target.value)} placeholder="A1A 1A1" />
             </div>
-            <Button onClick={handleSave} className="w-full">
-              <Save className="h-4 w-4 mr-2" />
+            <Button onClick={handleSave} className="civic-primary-button w-full gap-2">
+              <Save className="h-4 w-4" />
               Save Profile
             </Button>
-          </CardContent>
           </Card>
         </Section>
 
         {/* User Stats */}
         <Section>
-          <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Your Activity — {searchCount} searches
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">{searchCount}</div>
-                <div className="text-sm text-muted-foreground">Searches</div>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">{savedRepCount}</div>
-                <div className="text-sm text-muted-foreground">Saved</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span>Last search: {userData.lastPostalCodeSearch || userData.lastNameSearch || "No recent search"}</span>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4 shrink-0" />
-              <span>Member since: {new Date(userData.joinDate).toLocaleDateString()}</span>
-            </div>
-          </CardContent>
-          </Card>
+          <ListSectionLabel>Your activity</ListSectionLabel>
+          <ListGroup>
+            <ListRow
+              icon={<MapPin className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Searches"
+              detail={String(searchCount)}
+            />
+            <ListRow
+              divider
+              icon={<Heart className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Saved representatives"
+              detail={String(savedRepCount)}
+            />
+            <ListRow
+              divider
+              icon={<Clock className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Last search"
+              detail={userData.lastPostalCodeSearch || userData.lastNameSearch || "None yet"}
+              labelClassName="text-subheadline"
+            />
+            <ListRow
+              divider
+              icon={<User className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Member since"
+              detail={new Date(userData.joinDate).toLocaleDateString()}
+              labelClassName="text-subheadline"
+            />
+          </ListGroup>
         </Section>
 
         {/* App Information */}
         <Section>
-          <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
-              App Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <GitBranch className="h-4 w-4 shrink-0" />
-              <span>Version: {cacheStatus?.currentVersion || APP_VERSION}</span>
-            </div>
-
-            {/* Cache Management Status */}
+          <ListSectionLabel>App information</ListSectionLabel>
+          <ListGroup>
+            <ListRow
+              icon={<GitBranch className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Version"
+              detail={cacheStatus?.currentVersion || APP_VERSION}
+            />
             {cacheStatus && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Info className="h-4 w-4 shrink-0" />
-                  <span>Cache Status:</span>
+              <ListRow
+                divider
+                icon={<Info className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+                label="Cache status"
+                detail={
                   <Badge variant={cacheStatus.shouldPreserveCache ? "default" : "secondary"}>
                     {cacheStatus.shouldPreserveCache ? "Preserved" : "Clearable"}
                   </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground">
+                }
+              />
+            )}
+            {cacheStatus && (
+              <div className="px-4 py-2.5">
+                <div className="text-caption1 text-muted-foreground">
                   <div>Last processed: {cacheStatus.lastProcessedVersion || 'Never'}</div>
                   <div>
                     {cacheStatus.shouldPreserveCache
@@ -429,224 +434,215 @@ export default function Profile() {
                       : "Cache will be cleared for v≤3.0.0"}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleClearCache}
-                  disabled={isClearingCache}
-                >
-                  {isClearingCache ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Clearing Cache...
-                    </>
-                  ) : (
-                    <>
-                      <GitBranch className="h-4 w-4 mr-2" />
-                      Clear All Caches
-                    </>
-                  )}
-                </Button>
               </div>
             )}
-
+            {cacheStatus && (
+              <ListRow
+                divider
+                icon={isClearingCache
+                  ? <Loader2 className="h-[22px] w-[22px] animate-spin" strokeWidth={1.8} />
+                  : <GitBranch className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+                label={isClearingCache ? "Clearing caches…" : "Clear all caches"}
+                onClick={handleClearCache}
+                disabled={isClearingCache}
+              />
+            )}
             <Link href="/sources-disclaimer">
-              <Button variant="outline" className="w-full justify-start">
-                <Info className="h-4 w-4 mr-2" />
-                Sources & Disclaimers
-              </Button>
+              <ListRow
+                divider
+                icon={<Info className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+                label="Sources & Disclaimers"
+                chevron
+              />
             </Link>
-            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/privacy')}>
-              <Heart className="h-4 w-4 mr-2" />
-              Privacy Policy
-            </Button>
-            <Button variant="outline" className="w-full justify-start" onClick={() => openExternal('/terms')}>
-              <Info className="h-4 w-4 mr-2" />
-              Terms of Service
-            </Button>
-          </CardContent>
-          </Card>
+            <ListRow
+              divider
+              icon={<Heart className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Privacy Policy"
+              chevron
+              onClick={() => openExternal('/privacy')}
+            />
+            <ListRow
+              divider
+              icon={<Info className="h-[22px] w-[22px]" strokeWidth={1.8} />}
+              label="Terms of Service"
+              chevron
+              onClick={() => openExternal('/terms')}
+            />
+          </ListGroup>
         </Section>
 
         {/* Developer Options - Hidden until enabled */}
         {showDevOptions && (
           <Section>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="h-5 w-5" />
-                  Developer Options
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <Info className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">
-                    Developer options enabled! These tools are for testing and debugging purposes.
-                  </span>
-                </div>
+            <ListSectionLabel>Developer options</ListSectionLabel>
+            <Card className="space-y-5 p-4">
+              <div className="flex items-center gap-2 rounded-xl p-3" style={{ backgroundColor: "color-mix(in srgb, var(--primary) 12%, transparent)" }}>
+                <Info className="h-4 w-4 shrink-0 text-primary" />
+                <span className="text-subheadline text-foreground">
+                  Developer options enabled! These tools are for testing and debugging purposes.
+                </span>
+              </div>
 
-                {/* Development Auto Tester */}
-                {(isDevelopment || showDevOptions) && (
-                  <div className="space-y-4">
-                    <div className="border-t pt-4">
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <Play className="h-4 w-4" />
-                        Auto Tester
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Test local postal database + Represent API implementation (same as mobile app) with sample postal codes from across Canada.
-                      </p>
+              {/* Development Auto Tester */}
+              {(isDevelopment || showDevOptions) && (
+                <div className="space-y-4">
+                  <div className="border-t border-border pt-4">
+                    <h4 className="mb-3 flex items-center gap-2 text-subheadline font-semibold text-foreground">
+                      <Play className="h-4 w-4" />
+                      Auto Tester
+                    </h4>
+                    <p className="mb-4 text-subheadline text-muted-foreground">
+                      Test local postal database + Represent API implementation (same as mobile app) with sample postal codes from across Canada.
+                    </p>
 
-                      <Button
-                        onClick={runAutoTest}
-                        disabled={isTesting}
-                        className="w-full"
-                        variant={isTesting ? "secondary" : "default"}
-                      >
-                        {isTesting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Testing... ({testProgress.current}/{testProgress.total})
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            Run Auto Test ({TEST_POSTAL_CODES.length} postal codes)
-                          </>
-                        )}
-                      </Button>
+                    <Button
+                      onClick={runAutoTest}
+                      disabled={isTesting}
+                      className="w-full gap-2"
+                      variant={isTesting ? "secondary" : "default"}
+                    >
+                      {isTesting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Testing... ({testProgress.current}/{testProgress.total})
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4" />
+                          Run Auto Test ({TEST_POSTAL_CODES.length} postal codes)
+                        </>
+                      )}
+                    </Button>
 
-                      {testResults.length > 0 && (
-                        <div className="mt-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <h3 className="text-sm font-semibold">Test Results</h3>
-                            <Badge variant="outline">
-                              {testResults.filter(r => r.passed).length}/{testResults.length} passed
-                            </Badge>
-                          </div>
+                    {testResults.length > 0 && (
+                      <div className="mt-4">
+                        <div className="mb-3 flex items-center gap-2">
+                          <h3 className="text-subheadline font-semibold text-foreground">Test Results</h3>
+                          <Badge variant="outline">
+                            {testResults.filter(r => r.passed).length}/{testResults.length} passed
+                          </Badge>
+                        </div>
 
-                          <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-3">
-                            {testResults.map((result, index) => (
-                              <div
-                                key={index}
-                                className={`p-3 rounded-lg border text-sm ${
-                                  result.passed
-                                    ? 'bg-green-50 border-green-200'
-                                    : 'bg-red-50 border-red-200'
-                                }`}
-                              >
-                                <div className="flex items-start gap-2">
-                                  <div className="mt-0.5">
-                                    {result.passed ? (
-                                      <CheckCircle className="h-4 w-4 text-green-600" />
-                                    ) : (
-                                      <XCircle className="h-4 w-4 text-red-600" />
-                                    )}
+                        <div className="max-h-96 space-y-2 overflow-y-auto rounded-xl p-3" style={{ background: "var(--muted)" }}>
+                          {testResults.map((result, index) => (
+                            <div
+                              key={index}
+                              className="rounded-xl p-3 text-subheadline"
+                              style={{
+                                background: result.passed
+                                  ? "color-mix(in srgb, var(--civic-mint) 12%, transparent)"
+                                  : "color-mix(in srgb, var(--destructive) 12%, transparent)",
+                              }}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className="mt-0.5">
+                                  {result.passed ? (
+                                    <CheckCircle className="h-4 w-4" style={{ color: "var(--civic-mint)" }} />
+                                  ) : (
+                                    <XCircle className="h-4 w-4" style={{ color: "var(--destructive)" }} />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="mb-1 flex items-center gap-2">
+                                    <span className="font-mono font-semibold">{result.code}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {result.province}
+                                    </Badge>
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-mono font-semibold">{result.code}</span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {result.province}
-                                      </Badge>
+
+                                  <div className="space-y-1">
+                                    <div>
+                                      <span className="text-xs text-muted-foreground">Expected: </span>
+                                      <span className="text-xs font-medium">{result.expected}</span>
                                     </div>
 
-                                    <div className="space-y-1">
+                                    {result.actual && (
                                       <div>
-                                        <span className="text-xs text-muted-foreground">Expected: </span>
-                                        <span className="text-xs font-medium">{result.expected}</span>
+                                        <span className="text-xs text-muted-foreground">Actual: </span>
+                                        <span className="text-xs font-medium">{result.actual}</span>
                                       </div>
+                                    )}
 
-                                      {result.actual && (
-                                        <div>
-                                          <span className="text-xs text-muted-foreground">Actual: </span>
-                                          <span className="text-xs font-medium">{result.actual}</span>
-                                        </div>
-                                      )}
+                                    {result.repName && (
+                                      <div>
+                                        <span className="text-xs text-muted-foreground">Rep: </span>
+                                        <span className="text-xs">{result.repName}</span>
+                                      </div>
+                                    )}
 
-                                      {result.repName && (
-                                        <div>
-                                          <span className="text-xs text-muted-foreground">Rep: </span>
-                                          <span className="text-xs">{result.repName}</span>
-                                        </div>
-                                      )}
+                                    {result.coordinates && (
+                                      <div>
+                                        <span className="text-xs text-muted-foreground">Coords: </span>
+                                        <span className="font-mono text-xs">
+                                          {result.coordinates.lat.toFixed(4)}, {result.coordinates.lon.toFixed(4)}
+                                        </span>
+                                      </div>
+                                    )}
 
-                                      {result.coordinates && (
-                                        <div>
-                                          <span className="text-xs text-muted-foreground">Coords: </span>
-                                          <span className="text-xs font-mono">
-                                            {result.coordinates.lat.toFixed(4)}, {result.coordinates.lon.toFixed(4)}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {result.error && (
-                                        <div className="text-xs text-red-600 mt-1">
-                                          Error: {result.error}
-                                        </div>
-                                      )}
-                                    </div>
+                                    {result.error && (
+                                      <div className="mt-1 text-xs" style={{ color: "var(--destructive)" }}>
+                                        Error: {result.error}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Force Clear Cache Button */}
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <GitBranch className="h-4 w-4" />
-                    Cache Management
-                  </h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Force clear all caches for testing purposes.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleClearCache}
-                    disabled={isClearingCache}
-                  >
-                    {isClearingCache ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Clearing All Caches...
-                      </>
-                    ) : (
-                      <>
-                        <GitBranch className="h-4 w-4 mr-2" />
-                        Force Clear All Caches
-                      </>
+                      </div>
                     )}
-                  </Button>
+                  </div>
                 </div>
+              )}
 
-                {/* Disable Developer Options */}
-                <div className="border-t pt-4">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setShowDevOptions(false);
-                      toast({
-                        title: "Developer Options Disabled",
-                        description: "Tap the Profile title 7 times to re-enable",
-                        duration: 2000,
-                      });
-                    }}
-                  >
-                    Disable Developer Options
-                  </Button>
-                </div>
-              </CardContent>
+              {/* Force Clear Cache Button */}
+              <div className="border-t border-border pt-4">
+                <h4 className="mb-3 flex items-center gap-2 text-subheadline font-semibold text-foreground">
+                  <GitBranch className="h-4 w-4" />
+                  Cache Management
+                </h4>
+                <p className="mb-4 text-subheadline text-muted-foreground">
+                  Force clear all caches for testing purposes.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleClearCache}
+                  disabled={isClearingCache}
+                >
+                  {isClearingCache ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Clearing All Caches...
+                    </>
+                  ) : (
+                    <>
+                      <GitBranch className="h-4 w-4" />
+                      Force Clear All Caches
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Disable Developer Options */}
+              <div className="border-t border-border pt-4">
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => {
+                    setShowDevOptions(false);
+                    toast({
+                      title: "Developer Options Disabled",
+                      description: "Tap the Profile title 7 times to re-enable",
+                      duration: 2000,
+                    });
+                  }}
+                >
+                  Disable Developer Options
+                </Button>
+              </div>
             </Card>
           </Section>
         )}

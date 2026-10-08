@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
 import { Search, Loader2, UserSearch, ArrowLeft } from "lucide-react";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { EmptyState, ErrorState, Skeleton } from "@/components/civic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchRepsByNameLocal } from "@/lib/localSearchService";
@@ -72,79 +72,98 @@ export default function NameSearch() {
 
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="space-y-6 px-4 pt-8 pb-32">
-        <Section className="pt-8 pb-4">
+      <div className="civic-page space-y-6">
+        <Section className="civic-page-header">
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => setLocation("/")}
-            className="mb-4"
+            className="mb-3 h-11 gap-2 rounded-full px-3 text-subheadline text-primary"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
             Back to Postal Code Search
           </Button>
 
-          <h2 className="text-3xl font-bold text-center mb-2">Search by Name</h2>
-          <p className="text-center text-muted-foreground text-sm mb-6">
-            Find representatives by first name, last name, or full name
-          </p>
+          <span className="civic-kicker">All levels of government</span>
+          <h2 className="civic-title mt-1">Search by name.</h2>
+          <p className="civic-lede">Find representatives by first name, last name, or full name.</p>
+        </Section>
 
-          <form onSubmit={handleSearch} className="space-y-4">
+        <Section>
+          <form onSubmit={handleSearch} className="civic-search-panel space-y-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Enter representative's name..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-9"
+                className="civic-search-input pl-9"
                 disabled={isSearching}
               />
             </div>
 
-            <Button
+            <motion.button
               type="submit"
-              className="w-full"
+              whileTap={{ scale: 0.97 }}
+              className="civic-primary-button flex w-full items-center justify-center gap-2 disabled:opacity-60"
               disabled={isSearching || !query.trim()}
             >
               {isSearching ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Searching...
                 </>
               ) : (
                 <>
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="h-4 w-4" />
                   Search
                 </>
               )}
-            </Button>
+            </motion.button>
           </form>
+        </Section>
 
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground">
-              <strong>Tip:</strong> You can search by first name only (e.g., "Justin"),
-              last name only (e.g., "Trudeau"), or full name (e.g., "Justin Trudeau")
-            </p>
-          </div>
+        <Section>
+          <p className="px-1 text-footnote text-muted-foreground">
+            <strong className="font-semibold text-foreground">Tip:</strong> You can search by first
+            name only (e.g., "Justin"), last name only (e.g., "Trudeau"), or full name (e.g.,
+            "Justin Trudeau")
+          </p>
         </Section>
 
         {searchError && (
           <Section>
-            <Alert variant="destructive">
-              <UserSearch className="h-4 w-4" />
-              <AlertTitle>Search Error</AlertTitle>
-              <AlertDescription>{searchError}</AlertDescription>
-            </Alert>
+            <ErrorState title="Search error" description={searchError} />
+          </Section>
+        )}
+
+        {/* Searching skeletons */}
+        {isSearching && (
+          <Section className="space-y-4" aria-busy="true" aria-live="polite">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="civic-panel p-4">
+                <div className="flex items-start space-x-4">
+                  <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                </div>
+                <Skeleton className="mt-4 h-12 w-full rounded-xl" />
+              </div>
+            ))}
           </Section>
         )}
 
         {/* Search Results */}
         {searchResults.length > 0 && !isSearching && (
-          <Section className="space-y-4">
-            <h3 className="text-lg font-semibold">
-              Found {searchResults.length} representative{searchResults.length !== 1 ? 's' : ''}
-            </h3>
+          <Section className="space-y-4" aria-live="polite">
+            <div className="flex items-end justify-between gap-3 px-1">
+              <h3 className="text-title3 text-foreground">
+                Found {searchResults.length} representative{searchResults.length !== 1 ? 's' : ''}
+              </h3>
+            </div>
             {searchResults.map((representative) => (
               <RepresentativeCard
                 key={representative.id}
@@ -158,15 +177,11 @@ export default function NameSearch() {
         {/* Empty State */}
         {searchResults.length === 0 && !isSearching && !searchError && (
           <Section>
-            <Card className="text-center py-8">
-              <CardContent className="flex flex-col items-center justify-center">
-                <UserSearch className="h-12 w-12 text-muted-foreground mb-4" />
-                <CardTitle className="text-xl font-semibold mb-2">Ready to Search</CardTitle>
-                <p className="text-muted-foreground text-sm">
-                  Enter a representative's name above to find them across all levels of government
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={<UserSearch className="h-7 w-7" />}
+              title="Ready to search"
+              description="Enter a representative's name above to find them across all levels of government"
+            />
           </Section>
         )}
 

@@ -1,16 +1,43 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, MapPin, ExternalLink, Globe, Building2, Printer, Heart, Share2, Map, Loader2 } from "lucide-react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Building2,
+  ExternalLink,
+  Globe,
+  Heart,
+  Landmark,
+  Link2,
+  Loader2,
+  Mail,
+  Map as MapIcon,
+  MapPin,
+  Phone,
+  Printer,
+  Share2,
+  X,
+} from "lucide-react";
 import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
-import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SafeArea } from "@/components/ui/safe-area";
-import { RidingMap } from "@/components/riding-map";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  BottomSheet,
+  LevelChip,
+  ListGroup,
+  ListRow,
+  ListSectionLabel,
+  PartyBadge,
+  Skeleton,
+  getPositionLabel,
+  hasPartyAffiliation,
+} from "@/components/civic";
+
+// RidingMap pulls in Leaflet and the map bundle — load it on first render
+// of a sheet that actually shows a boundary.
+const RidingMap = lazy(() =>
+  import("@/components/riding-map").then((m) => ({ default: m.RidingMap })),
+);
 
 interface RepresentativeModalProps {
   representative: ApiRepresentative;
@@ -80,21 +107,13 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     window.open(`mailto:${email}`, '_self');
   };
 
-  const handleWebsite = (url: string) => {
-    window.open(url, '_blank');
-  };
-
   const handleMap = () => {
     const ottawaAddress = `House of Commons, Ottawa, ON, Canada`;
     const constituencyAddress = `${representative.constituency}, ${representative.province}, Canada`;
-    
+
     // Open multiple maps showing both office locations
-    const ottawaUrl = `https://maps.google.com/maps?q=${encodeURIComponent(ottawaAddress)}`;
-    const constituencyUrl = `https://maps.google.com/maps?q=${encodeURIComponent(constituencyAddress)}`;
-    
-    // Create a combined view showing both locations
     const combinedUrl = `https://maps.google.com/maps/dir/${encodeURIComponent(ottawaAddress)}/${encodeURIComponent(constituencyAddress)}`;
-    
+
     window.open(combinedUrl, '_blank');
   };
 
@@ -114,7 +133,10 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
       }).catch(() => {
         // Fallback if native sharing fails
         navigator.clipboard.writeText(shareText).then(() => {
-          alert('Contact information copied to clipboard!');
+          toast({
+            title: "Copied to clipboard",
+            description: "Contact information copied — paste it anywhere to share.",
+          });
         });
       });
     } else {
@@ -124,65 +146,22 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
       // Show sharing options (simplified - just copy to clipboard for now)
       navigator.clipboard.writeText(shareText).then(() => {
-        alert('Contact information copied to clipboard! You can now paste it anywhere to share.');
+        toast({
+          title: "Copied to clipboard",
+          description: "Contact information copied — paste it anywhere to share.",
+        });
       });
     }
   };
 
-  const getPartyColor = (party: string) => {
-    if (party.toLowerCase().includes('liberal')) return 'bg-red-100 text-red-800';
-    if (party.toLowerCase().includes('conservative')) return 'bg-blue-100 text-blue-800';
-    if (party.toLowerCase().includes('ndp') || party.toLowerCase().includes('new democratic')) return 'bg-orange-100 text-orange-800';
-    if (party.toLowerCase().includes('bloc')) return 'bg-cyan-100 text-cyan-800';
-    if (party.toLowerCase().includes('green')) return 'bg-green-100 text-green-800';
-    return 'bg-neutral-100 text-neutral-800';
-  };
-
-  const getPositionLabel = (electedOffice?: string | null) => {
-    if (!electedOffice) return 'Representative';
-
-    const office = electedOffice.toLowerCase();
-
-    // Federal
-    if (office === 'mp') return 'Member of Parliament';
-
-    // Provincial
-    if (office === 'mla') return 'Member of Legislative Assembly';
-    if (office === 'mpp') return 'Member of Provincial Parliament';
-    if (office === 'mna') return 'Member of National Assembly';
-
-    // Municipal
-    if (office === 'mayor') return 'Mayor';
-    if (office === 'councillor') return 'City Councillor';
-    if (office.includes('councillor')) return 'Councillor';
-    if (office.includes('councilor')) return 'Councilor';
-
-    // Default: capitalize first letter of each word
-    return electedOffice.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
-  const getAboutText = () => {
-    if (representative.biography) {
-      return representative.biography;
-    }
-
-    const position = getPositionLabel(representative.electedOffice);
-    const level = representative.electedOffice?.toLowerCase() === 'mp' ? 'federal' :
-                  (representative.electedOffice?.toLowerCase() === 'mpp' ||
-                   representative.electedOffice?.toLowerCase() === 'mla' ||
-                   representative.electedOffice?.toLowerCase() === 'mna') ? 'provincial' : 'municipal';
-
-    const hasParty = representative.party && representative.party.toLowerCase() !== 'independent';
-    const partyText = hasParty ? ` of the ${representative.party}` : '';
-
-    return `${representative.name} serves as the ${position} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}. As a ${level} representative${partyText}, they work to address the needs and concerns of their constituents.`;
-  };
+  // A real biography only — no synthesized placeholder copy.
+  const biography = representative.biography?.trim() ?? "";
+  // Source link shown when we cannot provide a biography, so details can
+  // be verified upstream.
+  const sourceUrl = representative.source || representative.website || "";
 
   // Parse offices from the representative data
   const offices = representative.offices as any[] || [];
-  const socialMedia = representative.socialMedia as any || {};
 
   // Helper functions to get office contact information
   const getLegislatureOffice = () => {
@@ -220,318 +199,276 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     return '';
   };
 
+  const iconProps = { className: "h-[22px] w-[22px]", strokeWidth: 1.8 } as const;
+
+  const sectionLabel = (text: string) => <ListSectionLabel>{text}</ListSectionLabel>;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-[14px] border-0 p-0 overflow-hidden">
-        {/* Header - Responsive */}
-        <DialogHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 shrink-0 border-b">
-          <DialogTitle className="text-lg sm:text-xl">Representative Details</DialogTitle>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-              ) : isSaved ? (
-                <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 fill-current" />
-              ) : (
-                <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              )}
-              <span className="hidden sm:inline">Save</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
-              onClick={handleShare}
-            >
-              <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Share</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
-              onClick={handleMap}
-            >
-              <Map className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Map</span>
-            </Button>
-          </div>
-        </DialogHeader>
-
-        {/* Scrollable Content Area */}
-        <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="space-y-4 sm:space-y-5 px-4 sm:px-6 py-4 sm:py-5">
-            {/* Profile Section */}
-            <Card>
-              <CardContent className="p-4 sm:p-6">
-                {/* Avatar and Basic Info - Centered */}
-                <div className="flex flex-col items-center text-center">
-                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 mb-3 sm:mb-4 border-2 sm:border-4 border-background shadow-lg">
-                    <AvatarImage
-                      src={representative.photo || undefined}
-                      alt={`${representative.name} photo`}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="text-xl sm:text-2xl font-semibold text-muted-foreground bg-muted">
-                      {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 break-words px-2">{representative.name}</h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">{getPositionLabel(representative.electedOffice)}</p>
-
-                  {representative.party && representative.party.toLowerCase() !== 'independent' && (
-                    <Badge variant="secondary" className={`${getPartyColor(representative.party)} mb-3 sm:mb-4 text-xs sm:text-sm`}>
-                      {representative.party}
-                    </Badge>
-                  )}
-
-                  <div className="flex items-center justify-center text-muted-foreground text-xs sm:text-sm px-2">
-                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 shrink-0" />
-                    <span className="break-words text-center">{representative.constituency}, {representative.province}</span>
-                  </div>
-                </div>
-
-                <Separator className="my-4 sm:my-5" />
-
-                {/* Quick Contact Actions */}
-                <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-5">
-                  <Button
-                    variant="outline"
-                    size="default"
-                    onClick={() => handleCall(representative.phone || '')}
-                    disabled={!representative.phone}
-                    className="w-full h-10 sm:h-11 text-sm sm:text-base"
-                  >
-                    <Phone className="h-4 w-4 mr-1.5 sm:mr-2" />
-                    Call
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    onClick={() => handleEmail(representative.email || '')}
-                    disabled={!representative.email}
-                    className="w-full h-10 sm:h-11 text-sm sm:text-base"
-                  >
-                    <Mail className="h-4 w-4 mr-1.5 sm:mr-2" />
-                    Email
-                  </Button>
-                </div>
-
-                {/* Contact Details */}
-                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
-                  {representative.email && (
-                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
-                      <Mail className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <a
-                        href={`mailto:${representative.email}`}
-                        className="text-primary hover:underline break-all flex-1"
-                      >
-                        {representative.email}
-                      </a>
-                    </div>
-                  )}
-
-                  {representative.phone && (
-                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
-                      <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <button
-                        onClick={() => handleCall(representative.phone || '')}
-                        className="text-primary hover:underline break-all flex-1 text-left"
-                      >
-                        {representative.phone}
-                      </button>
-                    </div>
-                  )}
-
-                  {representative.website && (
-                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg bg-muted/50">
-                      <Globe className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <a
-                        href={representative.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline break-all flex-1"
-                      >
-                        Official Website
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* About Section */}
-            <Card>
-              <CardHeader className="p-4 sm:p-5">
-                <h3 className="text-base sm:text-lg font-semibold">About</h3>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0">
-                <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line break-words leading-relaxed">
-                  {getAboutText()}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Electoral District Boundary Map */}
-            {representative.boundaryUrl && (
-              <Card>
-                <CardHeader className="p-4 sm:p-5">
-                  <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                    <Map className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Electoral District: {representative.constituency}
-                  </h3>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0">
-                  <RidingMap
-                    boundaryUrl={representative.boundaryUrl}
-                    ridingName={representative.constituency}
-                    province={representative.province}
-                    className="relative w-full h-64 sm:h-80 rounded-lg overflow-hidden border"
-                  />
-                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
-                      className="flex-1 h-9 sm:h-10 text-xs sm:text-sm"
-                    >
-                      <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      View on Google Maps
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+    <BottomSheet
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      label={`${representative.name} — representative details`}
+      header={
+        <div className="relative flex items-center justify-center px-2 pb-2 pt-1">
+          <h2 className="truncate px-12 text-center text-headline text-foreground">
+            {representative.name}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            // Keep the header's drag-to-dismiss zone from swallowing this press.
+            onPointerDown={(event) => event.stopPropagation()}
+            aria-label="Close"
+            className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition-colors active:bg-muted"
+          >
+            <X className="h-7 w-7" strokeWidth={1.8} />
+          </button>
+        </div>
+      }
+      footer={
+        <SafeArea bottom className="px-4 pb-4 pt-3">
+          <motion.button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            whileTap={{ scale: 0.97 }}
+            className="civic-primary-button flex w-full items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {isSaving ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Heart className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
             )}
-
-            {/* Offices Section */}
-            <Card>
-              <CardHeader className="p-4 sm:p-5">
-                <h3 className="text-base sm:text-lg font-semibold">Office Information</h3>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-5 pt-0 sm:pt-0 space-y-3 sm:space-y-4">
-                {/* Display all available offices */}
-                {offices.length > 0 ? (
-                  offices.map((office: any, index: number) => {
-                    const phone = getOfficePhone(office);
-                    const fax = getOfficeFax(office);
-                    const address = getOfficeAddress(office);
-
-                    return (
-                      <div key={index} className="border rounded-lg p-3 sm:p-4 bg-muted/30">
-                        <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
-                          <Building2 className="h-4 w-4 shrink-0" />
-                          {office.type || 'Office'}
-                        </h4>
-
-                        {address && (
-                          <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed whitespace-pre-line">
-                            {address}
-                          </p>
-                        )}
-
-                        <div className="space-y-2">
-                          {phone && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
-                              <button
-                                onClick={() => handleCall(phone)}
-                                className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium bg-muted px-2 py-1 rounded"
-                              >
-                                {phone}
-                              </button>
-                            </div>
-                          )}
-
-                          {fax && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                              <span className="text-xs sm:text-sm text-muted-foreground">Fax: {fax}</span>
-                            </div>
-                          )}
-
-                          {office.email && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
-                              <a
-                                href={`mailto:${office.email}`}
-                                className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium bg-muted px-2 py-1 rounded break-all"
-                              >
-                                {office.email}
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <p className="text-sm">No office information available</p>
-                  </div>
-                )}
-
-                {/* Fallback for federal MPs showing basic Parliament info */}
-                {representative.level === 'federal' && offices.length === 0 && (
-                  <div className="border rounded-lg p-3 sm:p-4 bg-muted/30">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
-                      <Building2 className="h-4 w-4 shrink-0" />
-                      Parliament Office
-                    </h4>
-
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 break-words leading-relaxed">
-                      House of Commons<br/>
-                      Ottawa, ON K1A 0A6<br/>
-                      Canada
-                    </p>
-
-                    <div className="text-xs sm:text-sm text-muted-foreground">
-                      <p>Contact information not available. Please check the official website for details.</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Official Profile Button */}
-            <Button
-              variant="outline"
-              className="w-full h-10 sm:h-11 text-sm sm:text-base"
-              onClick={() => representative.website && handleWebsite(representative.website)}
-              disabled={!representative.website}
+            {isSaved ? "Unsave Representative" : "Save Representative"}
+          </motion.button>
+        </SafeArea>
+      }
+    >
+      <div className="space-y-5 px-4 pb-6 pt-2">
+        {/* Identity */}
+        <div className="flex flex-col items-center pb-1 pt-2 text-center">
+          <Avatar className="h-20 w-20">
+            {representative.photo && (
+              <AvatarImage
+                src={representative.photo}
+                alt={`${representative.name} photo`}
+                className="object-cover"
+              />
+            )}
+            <AvatarFallback
+              className="text-xl font-semibold text-muted-foreground"
+              style={{ background: "var(--muted)" }}
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Official Profile
-            </Button>
+              {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+
+          <h3 className="mt-3 text-title3 text-foreground">{representative.name}</h3>
+          <p className="mt-0.5 text-subheadline text-muted-foreground">
+            {getPositionLabel(representative.electedOffice)}
+          </p>
+
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            {hasPartyAffiliation(representative.party) && representative.party && (
+              <PartyBadge party={representative.party} />
+            )}
+            {representative.level && representative.level !== "other" && (
+              <LevelChip level={representative.level} electedOffice={representative.electedOffice} />
+            )}
           </div>
+
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-subheadline text-muted-foreground">
+            <MapPin className="h-4 w-4 shrink-0" />
+            <span className="break-words">{representative.constituency}{representative.province ? `, ${representative.province}` : ""}</span>
+          </p>
         </div>
 
-        {/* Footer with Save Action */}
-        <DialogFooter className="border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
-          <SafeArea bottom className="w-full">
-            <Button
-              className="w-full h-11 sm:h-12 text-sm sm:text-base"
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
-              ) : isSaved ? (
-                <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 fill-current" />
-              ) : (
-                <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+        {/* Contact — inset-grouped rows */}
+        <section>
+          {sectionLabel("Contact")}
+          <ListGroup>
+            <ListRow
+              icon={<Phone {...iconProps} />}
+              label={representative.phone || "Phone not available"}
+              disabled={!representative.phone}
+              onClick={() => representative.phone && handleCall(representative.phone)}
+            />
+            <ListRow
+              divider
+              icon={<Mail {...iconProps} />}
+              label={representative.email || "Email not available"}
+              disabled={!representative.email}
+              href={representative.email ? `mailto:${representative.email}` : undefined}
+            />
+            <ListRow
+              divider
+              icon={<Globe {...iconProps} />}
+              label="Official website"
+              detail={representative.website ? undefined : "Not available"}
+              chevron={Boolean(representative.website)}
+              disabled={!representative.website}
+              href={representative.website || undefined}
+              external
+            />
+            <ListRow
+              divider
+              icon={<Share2 {...iconProps} />}
+              label="Share contact"
+              chevron
+              onClick={handleShare}
+            />
+            <ListRow
+              divider
+              icon={<MapIcon {...iconProps} />}
+              label="Directions to both offices"
+              chevron
+              onClick={handleMap}
+            />
+          </ListGroup>
+        </section>
+
+        {/* About */}
+        <section>
+          {sectionLabel("About")}
+          <ListGroup>
+            <div className="px-4 py-3">
+              <p className="whitespace-pre-line break-words text-subheadline leading-relaxed text-muted-foreground">
+                {biography || "Biography not available."}
+              </p>
+            </div>
+            {sourceUrl && (
+              <ListRow
+                divider
+                icon={<Link2 {...iconProps} />}
+                label="View source"
+                chevron
+                href={sourceUrl}
+                external
+              />
+            )}
+          </ListGroup>
+        </section>
+
+        {/* Electoral district boundary map (lazy — Leaflet loads on demand) */}
+        {representative.boundaryUrl && (
+          <section>
+            {sectionLabel(`Electoral district: ${representative.constituency}`)}
+            <ListGroup className="p-3">
+              <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
+                <RidingMap
+                  boundaryUrl={representative.boundaryUrl}
+                  ridingName={representative.constituency}
+                  province={representative.province}
+                  className="relative h-64 w-full overflow-hidden rounded-lg"
+                />
+              </Suspense>
+            </ListGroup>
+            <ListGroup className="mt-3">
+              <ListRow
+                icon={<MapPin {...iconProps} />}
+                label="View on Google Maps"
+                chevron
+                onClick={() => window.open(`https://maps.google.com/maps?q=${encodeURIComponent(representative.constituency + ', ' + representative.province + ', Canada')}`, '_blank')}
+              />
+            </ListGroup>
+          </section>
+        )}
+
+        {/* Offices */}
+        <section>
+          {sectionLabel("Office information")}
+          {offices.length === 0 && (
+            <ListGroup>
+              <div className="px-4 py-6 text-center text-subheadline text-muted-foreground">
+                No office information available
+              </div>
+            </ListGroup>
+          )}
+          {offices.map((office: any, index: number) => {
+            const phone = getOfficePhone(office);
+            const fax = getOfficeFax(office);
+            const address = getOfficeAddress(office);
+
+            return (
+              <ListGroup key={index} className={index > 0 ? "mt-3" : undefined}>
+                <div className="flex items-center gap-2 px-4 pb-1 pt-3">
+                  <Building2 className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.8} />
+                  <h4 className="text-subheadline font-semibold text-foreground">
+                    {office.type || 'Office'}
+                  </h4>
+                </div>
+
+                {address && (
+                  <p className="whitespace-pre-line break-words px-4 pb-2 text-footnote leading-relaxed text-muted-foreground">
+                    {address}
+                  </p>
+                )}
+
+                {phone && (
+                  <ListRow
+                    divider
+                    icon={<Phone {...iconProps} />}
+                    label={phone}
+                    onClick={() => handleCall(phone)}
+                  />
+                )}
+
+                {fax && (
+                  <ListRow
+                    divider={Boolean(phone)}
+                    icon={<Printer {...iconProps} />}
+                    label={`Fax: ${fax}`}
+                  />
+                )}
+
+                {office.email && (
+                  <ListRow
+                    divider
+                    icon={<Mail {...iconProps} />}
+                    label={office.email}
+                    href={`mailto:${office.email}`}
+                  />
+                )}
+              </ListGroup>
+            );
+          })}
+
+          {/* Default Parliament contact — shown only for federal
+              representatives with no reported offices, and labelled
+              honestly as a default. */}
+          {representative.level === 'federal' && offices.length === 0 && (
+            <ListGroup className="mt-3">
+              <div className="flex items-center gap-2 px-4 pb-1 pt-3">
+                <Landmark className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.8} />
+                <h4 className="text-subheadline font-semibold text-foreground">
+                  Default constituency office
+                </h4>
+              </div>
+              <p className="break-words px-4 pb-2 text-footnote leading-relaxed text-muted-foreground">
+                House of Commons<br />
+                Ottawa, ON K1A 0A6<br />
+                Canada
+              </p>
+              <p className="px-4 pb-3 text-footnote leading-relaxed text-muted-foreground">
+                Specific contact details are not available from our sources yet — this is
+                the default Parliament address.
+              </p>
+              {representative.website && (
+                <ListRow
+                  divider
+                  icon={<ExternalLink {...iconProps} />}
+                  label="Check the official website"
+                  chevron
+                  href={representative.website}
+                  external
+                />
               )}
-              {isSaved ? "Unsave Representative" : "Save Representative"}
-            </Button>
-          </SafeArea>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            </ListGroup>
+          )}
+        </section>
+      </div>
+    </BottomSheet>
   );
 }

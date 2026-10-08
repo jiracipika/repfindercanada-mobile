@@ -1,4 +1,4 @@
-import type { Transition, Variants } from "framer-motion";
+import type { Transition, ValueAnimationTransition, Variants } from "framer-motion";
 
 /**
  * Shared motion language for RepFinder Canada (iOS/HIG tuning).
@@ -13,8 +13,13 @@ export const springSoft: Transition = { type: "spring", bounce: 0, duration: 0.4
 export const springSnappy: Transition = springSoft;
 export const springPage: Transition = springSoft;
 
-/** Momentum-driven gestures only (drag release). Bounce stays ≤ 0.2. */
-export const springMomentum: Transition = { type: "spring", bounce: 0.2, duration: 0.4 };
+/** Momentum-driven gestures only (drag release). Bounce stays ≤ 0.2.
+ *  Typed for imperative `animate(value, target, springMomentum)` use. */
+export const springMomentum: ValueAnimationTransition<number> = {
+  type: "spring",
+  bounce: 0.2,
+  duration: 0.4,
+};
 
 /** Short cross-fade for selection/color/icon swaps (no movement). */
 export const fadeTween: Transition = { duration: 0.15, ease: "easeOut" };

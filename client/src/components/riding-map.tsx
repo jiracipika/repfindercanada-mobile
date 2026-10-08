@@ -114,95 +114,107 @@ export function RidingMap({ boundaryUrl, ridingName, province, className }: Ridi
 
         // If shape didn't load, fall back to metadata with extent rectangle
         if (!shapeLoaded) {
-          const metadataUrl = `https://represent.opennorth.ca${boundaryUrl}`;
-          const response = await fetch(metadataUrl);
+          let metadataLoaded = false;
 
-          if (response.ok) {
-            const data = await response.json();
-            const centroid = data.centroid;
-            const extent = data.extent; // [west, south, east, north]
+          try {
+            const metadataUrl = `https://represent.opennorth.ca${boundaryUrl}`;
+            const response = await fetch(metadataUrl);
 
-            // Center on the riding
-            const lat = centroid.coordinates[1];
-            const lng = centroid.coordinates[0];
-            map.setView([lat, lng], 12);
+            if (response.ok) {
+              const data = await response.json();
+              const centroid = data.centroid;
+              const extent = data.extent; // [west, south, east, north]
 
-            // Create a custom marker icon
-            const customIcon = L.divIcon({
-              html: `
-                <div style="position: relative;">
-                  <div style="
-                    background: #3b82f6;
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 50% 50% 50% 0;
-                    transform: rotate(-45deg);
-                    border: 3px solid white;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                  "></div>
-                  <div style="
-                    position: absolute;
-                    top: 6px;
-                    left: 6px;
-                    background: white;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
-                  "></div>
-                </div>
-              `,
-              className: '',
-              iconSize: [24, 24],
-              iconAnchor: [12, 24],
-            });
+              // Center on the riding
+              const lat = centroid.coordinates[1];
+              const lng = centroid.coordinates[0];
+              map.setView([lat, lng], 12);
 
-            // Add marker
-            L.marker([lat, lng], { icon: customIcon })
-              .addTo(map)
-              .bindPopup(`
-                <div style="text-align: center; padding: 4px;">
-                  <strong style="font-size: 14px;">${ridingName}</strong>
-                  ${province ? `<br/><span style="font-size: 12px; color: #666;">${province}</span>` : ''}
-                </div>
-              `)
-              .openPopup();
+              // Create a custom marker icon
+              const customIcon = L.divIcon({
+                html: `
+                  <div style="position: relative;">
+                    <div style="
+                      background: #3b82f6;
+                      width: 24px;
+                      height: 24px;
+                      border-radius: 50% 50% 50% 0;
+                      transform: rotate(-45deg);
+                      border: 3px solid white;
+                      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    "></div>
+                    <div style="
+                      position: absolute;
+                      top: 6px;
+                      left: 6px;
+                      background: white;
+                      width: 12px;
+                      height: 12px;
+                      border-radius: 50%;
+                    "></div>
+                  </div>
+                `,
+                className: '',
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
+              });
 
-            // If we have extent, draw a rectangle to show the approximate riding boundary
-            if (extent && extent.length === 4) {
-              const bounds = L.latLngBounds(
-                [extent[1], extent[0]], // southwest
-                [extent[3], extent[2]]  // northeast
-              );
-
-              L.rectangle(bounds, {
-                color: '#3b82f6',
-                weight: 2,
-                opacity: 0.6,
-                fillColor: '#3b82f6',
-                fillOpacity: 0.1,
-              }).addTo(map);
-
-              // Fit map to the boundary with some padding
-              map.fitBounds(bounds, { padding: [30, 30] });
-            }
-          }
-        } else {
-          // Fallback: geocode the riding name
-          const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ridingName + ', ' + (province || '') + ', Canada')}`;
-          const geocodeResponse = await fetch(geocodeUrl);
-
-          if (geocodeResponse.ok) {
-            const geocodeData = await geocodeResponse.json();
-            if (geocodeData && geocodeData.length > 0) {
-              const lat = parseFloat(geocodeData[0].lat);
-              const lon = parseFloat(geocodeData[0].lon);
-
-              map.setView([lat, lon], 11);
-
-              L.marker([lat, lon])
+              // Add marker
+              L.marker([lat, lng], { icon: customIcon })
                 .addTo(map)
-                .bindPopup(`<strong>${ridingName}</strong>`)
+                .bindPopup(`
+                  <div style="text-align: center; padding: 4px;">
+                    <strong style="font-size: 14px;">${ridingName}</strong>
+                    ${province ? `<br/><span style="font-size: 12px; color: #666;">${province}</span>` : ''}
+                  </div>
+                `)
                 .openPopup();
+
+              // If we have extent, draw a rectangle to show the approximate riding boundary
+              if (extent && extent.length === 4) {
+                const bounds = L.latLngBounds(
+                  [extent[1], extent[0]], // southwest
+                  [extent[3], extent[2]]  // northeast
+                );
+
+                L.rectangle(bounds, {
+                  color: '#3b82f6',
+                  weight: 2,
+                  opacity: 0.6,
+                  fillColor: '#3b82f6',
+                  fillOpacity: 0.1,
+                }).addTo(map);
+
+                // Fit map to the boundary with some padding
+                map.fitBounds(bounds, { padding: [30, 30] });
+              }
+
+              metadataLoaded = true;
+            }
+          } catch {
+            // Metadata unavailable — fall through to geocoding below
+          }
+
+          // Last resort: geocode the riding name. This must only run when
+          // NEITHER the boundary shape NOR the metadata produced a marker,
+          // otherwise the map ends up with a second, stray pin.
+          if (!metadataLoaded && ridingName) {
+            const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ridingName + ', ' + (province || '') + ', Canada')}`;
+            const geocodeResponse = await fetch(geocodeUrl);
+
+            if (geocodeResponse.ok) {
+              const geocodeData = await geocodeResponse.json();
+              if (geocodeData && geocodeData.length > 0) {
+                const lat = parseFloat(geocodeData[0].lat);
+                const lon = parseFloat(geocodeData[0].lon);
+
+                map.setView([lat, lon], 11);
+
+                L.marker([lat, lon])
+                  .addTo(map)
+                  .bindPopup(`<strong>${ridingName}</strong>`)
+                  .openPopup();
+              }
             }
           }
         }
