@@ -1,5 +1,6 @@
 import { useState, useEffect, ReactNode, useRef } from "react";
 import { motion, AnimatePresence, PanInfo, useMotionValue, animate } from "framer-motion";
+import { pagerVariants, springPage } from "@/components/civic/motion";
 
 interface SwipePagerProps {
   pages: ReactNode[];
@@ -18,10 +19,13 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
   const [isDragIntentional, setIsDragIntentional] = useState(false);
   const dragStartPos = useRef(0);
   const lastIndexRef = useRef(currentIndex);
+  const directionRef = useRef(1);
 
   // Reset position when index changes
   useEffect(() => {
     if (lastIndexRef.current !== currentIndex) {
+      // Direction the incoming page slides in from
+      directionRef.current = currentIndex > lastIndexRef.current ? 1 : -1;
       x.set(0);
       setIsDragIntentional(false);
       lastIndexRef.current = currentIndex;
@@ -117,13 +121,15 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
         style={{ x }}
         className="w-full h-full"
       >
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="wait" initial={false} custom={directionRef.current}>
           <motion.div
             key={currentIndex}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            custom={directionRef.current}
+            variants={pagerVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={springPage}
             className="w-full h-full"
           >
             {pages[currentIndex]}

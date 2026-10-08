@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "framer-motion";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapApp } from "@capacitor/app";
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -179,12 +180,14 @@ function AppContent() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <UserDataProvider>
-        <TooltipProvider>
-          <AppContent />
-          <Toaster />
-        </TooltipProvider>
-      </UserDataProvider>
+      <MotionConfig reducedMotion="user">
+        <UserDataProvider>
+          <TooltipProvider>
+            <AppContent />
+            <Toaster />
+          </TooltipProvider>
+        </UserDataProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

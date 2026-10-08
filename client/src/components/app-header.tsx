@@ -1,20 +1,24 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Preferences } from "@capacitor/preferences";
 import { Landmark, Moon, ShieldCheck, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { iconSwap, springSnappy } from "./civic/motion";
 
 const THEME_KEY = "theme";
 type Theme = "dark" | "light" | "system";
 
 export default function AppHeader() {
   const [theme, setTheme] = useState<Theme>("system");
+  const [isDark, setIsDark] = useState(true);
 
   const applyTheme = (value: Theme) => {
     const root = document.documentElement;
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = value === "dark" || (value === "system" && prefersDark);
-    root.classList.toggle("dark", isDark);
-    root.classList.toggle("light", !isDark);
+    const dark = value === "dark" || (value === "system" && prefersDark);
+    setIsDark(dark);
+    root.classList.toggle("dark", dark);
+    root.classList.toggle("light", !dark);
   };
 
   useEffect(() => {
@@ -50,7 +54,7 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="relative z-30 border-b border-border/70 bg-background/80 backdrop-blur-xl">
+    <header className="civic-glass relative z-30 border-x-0 border-t-0">
       <div
         className="mx-auto flex max-w-screen-md items-end justify-between gap-3 px-4 pb-3"
         style={{
@@ -67,7 +71,10 @@ export default function AppHeader() {
               <h1 className="truncate text-base font-extrabold tracking-tight text-foreground sm:text-lg">
                 RepFinder Canada
               </h1>
-              <ShieldCheck className="h-4 w-4 text-[var(--civic-mint)]" aria-label="Sources linked for verification" />
+              <ShieldCheck
+                className="h-4 w-4 text-[var(--civic-mint)]"
+                aria-label="Sources linked for verification"
+              />
             </div>
             <p className="truncate text-[10px] font-bold uppercase tracking-[.14em] text-muted-foreground">
               Independent civic tool
@@ -78,11 +85,23 @@ export default function AppHeader() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label={theme === "dark" ? "Use light appearance" : "Use dark appearance"}
+          aria-label={isDark ? "Use light appearance" : "Use dark appearance"}
           onClick={onToggle}
-          className="h-11 w-11 shrink-0 rounded-full border border-border bg-card/70"
+          className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-border bg-card/70"
         >
-          {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={isDark ? "moon" : "sun"}
+              className="flex"
+              variants={iconSwap}
+              initial="hidden"
+              animate="show"
+              exit="exit"
+              transition={springSnappy}
+            >
+              {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </motion.span>
+          </AnimatePresence>
         </Button>
       </div>
     </header>

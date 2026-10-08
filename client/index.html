@@ -7,6 +7,34 @@
     <meta name="description" content="Find your federal, provincial and municipal representatives by postal code. Private, independent, Canada-wide.">
     <meta name="theme-color" content="#0a0a0f">
     <base href="./">
+    <script>
+      // Blocking theme bootstrap — runs before first paint, before any CSS,
+      // so there is no dark/light flash. Reads the key the app already uses
+      // (Capacitor Preferences on web = localStorage "CapacitorStorage.theme";
+      // legacy "@capacitor/preferences" builds used "_cap_theme"), then falls
+      // back to the system preference.
+      (function () {
+        var theme = null;
+        try {
+          theme = window.localStorage.getItem("CapacitorStorage.theme");
+          if (theme == null) theme = window.localStorage.getItem("_cap_theme");
+        } catch (e) { /* storage blocked */ }
+        // Legacy builds JSON-encoded values: strip surrounding quotes.
+        if (theme && theme.length > 1 && theme.charAt(0) === '"') {
+          theme = theme.slice(1, -1);
+        }
+        if (theme !== "dark" && theme !== "light") {
+          theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        }
+        var root = document.documentElement;
+        root.classList.add(theme);
+        root.classList.remove(theme === "dark" ? "light" : "dark");
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", theme === "dark" ? "#0a0a0f" : "#f7f6f3");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

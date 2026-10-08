@@ -2,71 +2,138 @@
 @tailwind components;
 @tailwind utilities;
 
-:root,
-.dark {
+/*
+ * RepFinder Canada — token system 2.0
+ * Dark is the default theme (`:root`, mirrored on `.dark`).
+ * `.light` redefines the full token set — including every civic-* brand token.
+ * No `!important` anywhere; component styles below beat utilities by
+ * source order (and doubled specificity where a tie-break is required).
+ */
+
+:root {
   --s-top: env(safe-area-inset-top);
   --s-bottom: env(safe-area-inset-bottom);
   --s-left: env(safe-area-inset-left);
   --s-right: env(safe-area-inset-right);
-
-  color-scheme: dark;
-  --background: hsl(222 38% 6%);
-  --foreground: hsl(45 28% 95%);
-  --muted: hsl(222 24% 13%);
-  --muted-foreground: hsl(218 13% 67%);
-  --popover: hsl(222 28% 10%);
-  --popover-foreground: hsl(45 28% 95%);
-  --card: hsl(222 28% 10%);
-  --card-foreground: hsl(45 28% 95%);
-  --border: hsl(220 19% 22%);
-  --input: hsl(222 25% 12%);
-  --primary: hsl(354 100% 65%);
-  --primary-foreground: hsl(222 38% 6%);
-  --secondary: hsl(211 100% 66%);
-  --secondary-foreground: hsl(222 38% 6%);
-  --accent: hsl(222 22% 17%);
-  --accent-foreground: hsl(45 28% 95%);
-  --destructive: hsl(0 78% 58%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --ring: hsl(354 100% 65%);
-  --radius: 1rem;
-  --primary-dark: hsl(354 86% 56%);
-  --neutral-50: hsl(222 20% 95%);
-  --neutral-100: hsl(222 16% 90%);
-  --neutral-200: hsl(222 14% 82%);
-  --neutral-300: hsl(222 12% 72%);
-  --neutral-400: hsl(222 10% 62%);
-  --neutral-500: hsl(222 10% 52%);
-  --neutral-600: hsl(222 14% 38%);
-  --neutral-700: hsl(222 18% 27%);
-  --neutral-800: hsl(222 22% 16%);
-  --neutral-900: hsl(222 32% 8%);
-  --civic-blue: #4fb3ff;
-  --civic-mint: #68e0b5;
-  --civic-red: #ff4d63;
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* ---------------------------------------------------------- dark (default) */
+:root,
+.dark {
+  color-scheme: dark;
+
+  --background: #0a0a0f;
+  --foreground: #ffffff;
+  --card: #1c1c2e;
+  --card-foreground: #ffffff;
+  --popover: #14141f;
+  --popover-foreground: #ffffff;
+  --muted: #15151f;
+  --muted-foreground: #9c9cb2;
+  --accent: #1e1e30;
+  --accent-foreground: #ffffff;
+  --border: #262637;
+  --input: #12121c;
+  --primary: #ff4d63;
+  --primary-foreground: #0a0a0f;
+  --secondary: #4fb3ff;
+  --secondary-foreground: #07101a;
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+  --ring: #ff4d63;
+  --radius: 1rem;
+  --primary-dark: #e63b52;
+
+  --neutral-50: #eceef4;
+  --neutral-100: #d7dae6;
+  --neutral-200: #b4b8cb;
+  --neutral-300: #9296ad;
+  --neutral-400: #71748d;
+  --neutral-500: #565870;
+  --neutral-600: #3d3e53;
+  --neutral-700: #2b2c3d;
+  --neutral-800: #1c1c2e;
+  --neutral-900: #0a0a0f;
+
+  /* civic brand — dark */
+  --civic-blue: #4fb3ff;
+  --civic-mint: #3ddc97;
+  --civic-red: #ff4d63;
+  --civic-purple: #b48cff;
+
+  /* charts + sidebar (referenced by tailwind.config theme tokens) */
+  --chart-1: #ff4d63;
+  --chart-2: #4fb3ff;
+  --chart-3: #3ddc97;
+  --chart-4: #b48cff;
+  --chart-5: #ffc24b;
+  --sidebar-background: #0e0e16;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ff4d63;
+  --sidebar-primary-foreground: #0a0a0f;
+  --sidebar-accent: #1e1e30;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #262637;
+  --sidebar-ring: #ff4d63;
+}
+
+/* ------------------------------------------------------------------- light */
 .light {
   color-scheme: light;
-  --background: hsl(42 30% 97%);
-  --foreground: hsl(222 38% 10%);
-  --muted: hsl(214 25% 92%);
-  --muted-foreground: hsl(218 13% 42%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(222 38% 10%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(222 38% 10%);
-  --border: hsl(215 24% 84%);
-  --input: hsl(0 0% 100%);
-  --primary: hsl(354 83% 55%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(211 84% 46%);
-  --secondary-foreground: hsl(0 0% 100%);
-  --accent: hsl(214 28% 91%);
-  --accent-foreground: hsl(222 38% 10%);
-  --destructive: hsl(0 75% 52%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --ring: hsl(354 83% 55%);
+
+  --background: #f7f6f3;
+  --foreground: #1b1b26;
+  --card: #ffffff;
+  --card-foreground: #1b1b26;
+  --popover: #ffffff;
+  --popover-foreground: #1b1b26;
+  --muted: #eeece6;
+  --muted-foreground: #5d5d6e;
+  --accent: #f0eee8;
+  --accent-foreground: #1b1b26;
+  --border: #e3e0d8;
+  --input: #ffffff;
+  --primary: #e63950;
+  --primary-foreground: #ffffff;
+  --secondary: #1e7fd0;
+  --secondary-foreground: #ffffff;
+  --destructive: #d13438;
+  --destructive-foreground: #ffffff;
+  --ring: #e63950;
+  --primary-dark: #c72a41;
+
+  --neutral-50: #1b1b26;
+  --neutral-100: #33333f;
+  --neutral-200: #565664;
+  --neutral-300: #6f6f7e;
+  --neutral-400: #8a8a98;
+  --neutral-500: #a5a5b1;
+  --neutral-600: #c2c2ca;
+  --neutral-700: #dcdbd4;
+  --neutral-800: #edebe5;
+  --neutral-900: #f7f6f3;
+
+  /* civic brand — light (deepened for contrast on warm paper) */
+  --civic-blue: #1170c2;
+  --civic-mint: #0c8f62;
+  --civic-red: #e63950;
+  --civic-purple: #7a52c7;
+
+  --chart-1: #e63950;
+  --chart-2: #1170c2;
+  --chart-3: #0c8f62;
+  --chart-4: #7a52c7;
+  --chart-5: #c77800;
+  --sidebar-background: #ffffff;
+  --sidebar-foreground: #1b1b26;
+  --sidebar-primary: #e63950;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0eee8;
+  --sidebar-accent-foreground: #1b1b26;
+  --sidebar-border: #e3e0d8;
+  --sidebar-ring: #e63950;
 }
 
 @layer base {
@@ -85,10 +152,17 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     margin: 0;
-    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-sans);
     background:
-      radial-gradient(800px 460px at 0% -10%, rgba(79, 179, 255, 0.12), transparent 56%),
-      radial-gradient(620px 420px at 110% 16%, rgba(255, 77, 99, 0.1), transparent 58%),
+      radial-gradient(800px 460px at 0% -10%, color-mix(in srgb, var(--civic-blue) 12%, transparent), transparent 56%),
+      radial-gradient(620px 420px at 110% 16%, color-mix(in srgb, var(--civic-red) 10%, transparent), transparent 58%),
+      var(--background);
+  }
+
+  .light body {
+    background:
+      radial-gradient(800px 460px at 0% -10%, color-mix(in srgb, var(--civic-blue) 9%, transparent), transparent 56%),
+      radial-gradient(620px 420px at 110% 16%, color-mix(in srgb, var(--civic-red) 7%, transparent), transparent 58%),
       var(--background);
   }
 
@@ -111,12 +185,16 @@
     body { @apply text-sm; }
   }
 
+  /* Reduced motion: still applied without `!important` — the `html` prefix
+     gives these rules higher specificity than any single-class utility. */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      scroll-behavior: auto !important;
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+    html *,
+    html *::before,
+    html *::after {
+      scroll-behavior: auto;
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.01ms;
     }
   }
 }
@@ -128,6 +206,8 @@
   .safe-pr { padding-right: max(1rem, var(--s-right)); }
   .touch-manipulation { touch-action: manipulation; }
 }
+
+/* ------------------------------------------------------------------ shell */
 
 .civic-shell {
   position: relative;
@@ -142,10 +222,17 @@
   content: "";
   opacity: 0.24;
   background-image:
-    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.light .civic-shell::before {
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(20, 20, 40, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 20, 40, 0.045) 1px, transparent 1px);
 }
 
 .civic-page {
@@ -156,24 +243,24 @@
 }
 
 .civic-page-header {
-  margin: .5rem 0 1.25rem;
+  margin: 0.5rem 0 1.25rem;
 }
 
 .civic-kicker {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
+  gap: 0.45rem;
   color: var(--civic-mint);
-  font-size: .68rem;
+  font-size: 0.68rem;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: .16em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .civic-kicker::before {
-  width: .45rem;
-  height: .45rem;
+  width: 0.45rem;
+  height: 0.45rem;
   border-radius: 999px;
   background: currentColor;
   box-shadow: 0 0 14px currentColor;
@@ -181,26 +268,26 @@
 }
 
 .civic-title {
-  margin-top: .65rem;
+  margin-top: 0.65rem;
   max-width: 16ch;
   font-size: clamp(2rem, 9vw, 3.35rem);
   font-weight: 850;
-  line-height: .98;
-  letter-spacing: -.045em;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
 }
 
 .civic-lede {
-  margin-top: .9rem;
+  margin-top: 0.9rem;
   max-width: 40rem;
   color: var(--muted-foreground);
-  font-size: .95rem;
+  font-size: 0.95rem;
   line-height: 1.65;
 }
 
 .civic-trust-row {
   display: flex;
   flex-wrap: wrap;
-  gap: .5rem;
+  gap: 0.5rem;
   margin-top: 1rem;
 }
 
@@ -208,15 +295,17 @@
   display: inline-flex;
   min-height: 32px;
   align-items: center;
-  gap: .4rem;
-  padding: .4rem .65rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.65rem;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--muted-foreground);
   background: color-mix(in srgb, var(--card) 86%, transparent);
-  font-size: .7rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
+
+/* cards + panels */
 
 .civic-panel,
 .civic-empty,
@@ -224,9 +313,18 @@
   border: 1px solid var(--border);
   border-radius: 1.35rem;
   background:
-    linear-gradient(145deg, rgba(255,255,255,.055), transparent 42%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 42%),
     color-mix(in srgb, var(--card) 92%, transparent);
-  box-shadow: 0 18px 50px rgba(0,0,0,.22);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.light .civic-panel,
+.light .civic-empty,
+.light [data-civic-card="true"] {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.85), transparent 46%),
+    color-mix(in srgb, var(--card) 96%, transparent);
+  box-shadow: 0 14px 38px rgba(27, 27, 38, 0.08);
 }
 
 .civic-empty {
@@ -234,31 +332,50 @@
   text-align: center;
 }
 
+/* glass surfaces (header + bottom nav) */
+
+.civic-glass {
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.light .civic-glass {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+}
+
 .civic-nav-shell {
   position: fixed;
   z-index: 40;
-  right: .75rem;
-  bottom: calc(.7rem + env(safe-area-inset-bottom));
-  left: .75rem;
-  padding: .4rem;
+  right: 0.75rem;
+  bottom: calc(0.7rem + env(safe-area-inset-bottom));
+  left: 0.75rem;
+  padding: 0.4rem;
   border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 1.25rem;
-  background: color-mix(in srgb, var(--card) 90%, transparent);
-  box-shadow: 0 18px 42px rgba(0,0,0,.4);
+  border-radius: 1.35rem;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.light .civic-nav-shell {
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  box-shadow: 0 16px 36px rgba(27, 27, 38, 0.14);
 }
 
 .civic-nav-item {
   min-width: 64px;
   min-height: 52px;
-  border-radius: .95rem;
+  border-radius: 0.95rem;
 }
 
 .civic-nav-item[data-active="true"] {
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 24%, transparent);
 }
+
+/* brand mark */
 
 .civic-maple-mark {
   display: grid;
@@ -266,35 +383,43 @@
   height: 2.5rem;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: .9rem;
+  border-radius: 0.9rem;
   color: #07101a;
   background: linear-gradient(135deg, var(--civic-red), #ff8c67);
-  box-shadow: 0 8px 24px rgba(255,77,99,.25);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--civic-red) 28%, transparent);
 }
+
+/* search */
 
 .civic-search-panel {
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 1.35rem;
   background: color-mix(in srgb, var(--card) 94%, transparent);
-  box-shadow: 0 20px 60px rgba(0,0,0,.28);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
 }
 
-.civic-search-input {
-  height: 3.75rem !important;
-  border-radius: 1rem !important;
-  border-color: color-mix(in srgb, var(--civic-blue) 26%, var(--border)) !important;
-  background: color-mix(in srgb, var(--input) 94%, transparent) !important;
-  font-size: 1.05rem !important;
-  letter-spacing: .03em;
+.light .civic-search-panel {
+  box-shadow: 0 16px 44px rgba(27, 27, 38, 0.1);
 }
 
-.civic-primary-button {
+/* Doubled class = specificity (0,2,0): wins ties with single-class
+   utilities (`h-10`, `bg-primary`, …) without `!important`. */
+.civic-search-input.civic-search-input {
+  height: 3.75rem;
+  border-radius: 1rem;
+  border-color: color-mix(in srgb, var(--civic-blue) 26%, var(--border));
+  background: color-mix(in srgb, var(--input) 94%, transparent);
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+
+.civic-primary-button.civic-primary-button {
   min-height: 3.5rem;
-  border-radius: 1rem !important;
-  color: var(--primary-foreground) !important;
-  background: linear-gradient(135deg, var(--primary), #ff8465) !important;
-  box-shadow: 0 12px 28px rgba(255,77,99,.24);
+  border-radius: 1rem;
+  color: var(--primary-foreground);
+  background: linear-gradient(135deg, var(--primary), #ff8465);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 26%, transparent);
 }
 
 .civic-modal-card {
@@ -302,13 +427,40 @@
   border-radius: 1.5rem;
   color: var(--foreground);
   background: var(--card);
-  box-shadow: 0 28px 80px rgba(0,0,0,.52);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.52);
 }
 
-.spinner { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* shimmer skeleton */
+
+.civic-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.civic-skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--foreground) 9%, transparent),
+    transparent
+  );
+  animation: civic-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes civic-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
 
 @media (min-width: 700px) {
   .civic-page { padding-inline: 1.5rem; }
-  .civic-nav-shell { right: max(.75rem, calc((100vw - 720px) / 2)); left: max(.75rem, calc((100vw - 720px) / 2)); }
+  .civic-nav-shell {
+    right: max(0.75rem, calc((100vw - 720px) / 2));
+    left: max(0.75rem, calc((100vw - 720px) / 2));
+  }
 }
