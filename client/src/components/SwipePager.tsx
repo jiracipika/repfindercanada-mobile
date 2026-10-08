@@ -21,11 +21,19 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
   const lastIndexRef = useRef(currentIndex);
   const directionRef = useRef(1);
 
+  // Direction for the page transition, derived during render so AnimatePresence
+  // sees it on the exact commit where the page key changes (effects run later).
+  const direction =
+    currentIndex === lastIndexRef.current
+      ? directionRef.current
+      : currentIndex > lastIndexRef.current
+        ? 1
+        : -1;
+  directionRef.current = direction;
+
   // Reset position when index changes
   useEffect(() => {
     if (lastIndexRef.current !== currentIndex) {
-      // Direction the incoming page slides in from
-      directionRef.current = currentIndex > lastIndexRef.current ? 1 : -1;
       x.set(0);
       setIsDragIntentional(false);
       lastIndexRef.current = currentIndex;
@@ -121,10 +129,10 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
         style={{ x }}
         className="w-full h-full"
       >
-        <AnimatePresence mode="wait" initial={false} custom={directionRef.current}>
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.div
             key={currentIndex}
-            custom={directionRef.current}
+            custom={direction}
             variants={pagerVariants}
             initial="enter"
             animate="center"
