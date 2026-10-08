@@ -12,7 +12,7 @@ export default function LoadingScreen() {
       >
         <Landmark className="h-9 w-9" strokeWidth={2.2} />
       </motion.div>
-      <p className="mt-6 text-lg font-extrabold tracking-tight">Rep Finder</p>
+      <p className="mt-6 text-lg font-extrabold tracking-tight">RepFinder Canada</p>
       <p className="mt-1 text-sm text-muted-foreground">Preparing your civic map…</p>
     </div>
   );

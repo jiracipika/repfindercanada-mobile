@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Rep Finder for Canada</string>
-    <string name="title_activity_main">Rep Finder for Canada</string>
+    <string name="app_name">RepFinder Canada</string>
+    <string name="title_activity_main">RepFinder Canada</string>
     <string name="package_name">com.marcelsabas.canadarepfinder</string>
     <string name="custom_url_scheme">com.marcelsabas.canadarepfinder</string>
 

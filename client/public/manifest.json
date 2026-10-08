@@ -1,6 +1,6 @@
 {
-  "name": "Find My Rep - Canadian Parliament Representatives",
-  "short_name": "Find My Rep",
+  "name": "RepFinder Canada",
+  "short_name": "RepFinder",
   "description": "Find your Canadian Parliament representatives by location",
   "start_url": "/",
   "display": "standalone",

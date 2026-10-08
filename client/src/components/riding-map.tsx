@@ -108,8 +108,8 @@ export function RidingMap({ boundaryUrl, ridingName, province, className }: Ridi
 
             shapeLoaded = true;
           }
-        } catch (shapeError) {
-          console.log('Could not load GeoJSON shape, falling back to extent rectangle');
+        } catch {
+          // Shape unavailable — fall through to the extent-rectangle fallback below
         }
 
         // If shape didn't load, fall back to metadata with extent rectangle

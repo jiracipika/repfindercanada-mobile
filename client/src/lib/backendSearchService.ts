@@ -150,15 +150,12 @@ export async function getLocationDataWithGeocoding(postalCode: string): Promise<
   };
 }> {
   try {
-    console.log(`[BackendSearch] Starting enhanced search for postal code: ${postalCode}`);
 
     // Get representatives using local database + Represent API
     const representatives = await fetchRepsByPostalBackend(postalCode);
-    console.log(`[BackendSearch] Found ${representatives.length} representatives`);
 
     // Get geocoding details
     const geocoding = await getPostalCodeGeocoding(postalCode);
-    console.log(`[BackendSearch] Geocoded to: ${geocoding.latitude}, ${geocoding.longitude} via ${geocoding.source}`);
 
     return {
       representatives,
@@ -200,7 +197,6 @@ export async function fetchRepsByCoordinatesBackend(
 
     // This is a simplified implementation - the full coordinate search
     // would need to query representatives for each boundary
-    console.log(`[BackendSearch] Found ${boundaryData.objects.length} boundaries for coordinates`);
 
     // For now, return an empty array - this would need more implementation
     // to query representatives for each boundary found

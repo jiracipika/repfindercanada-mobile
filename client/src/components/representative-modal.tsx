@@ -277,9 +277,6 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                       src={representative.photo || undefined}
                       alt={`${representative.name} photo`}
                       className="object-cover"
-                      onError={(e) => {
-                        console.log('Modal avatar image failed to load:', representative.photo);
-                      }}
                     />
                     <AvatarFallback className="text-xl sm:text-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
                       {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}

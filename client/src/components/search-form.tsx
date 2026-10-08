@@ -37,12 +37,10 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   // Update query when initialQuery prop changes (from parent)
   useEffect(() => {
     if (initialQuery !== undefined && initialQuery !== null) {
-      console.log('[SearchForm] Received initialQuery:', initialQuery, 'shouldAutoSearch:', shouldAutoSearch);
       setQuery(initialQuery);
 
       // Automatically trigger search if shouldAutoSearch is true
       if (shouldAutoSearch && initialQuery.trim()) {
-        console.log('[SearchForm] Setting up auto-search for:', initialQuery);
         setPendingAutoSearch(initialQuery);
       }
     }
@@ -90,7 +88,6 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
 
     try {
       // Use local postal data + Represent API approach (completely offline-first)
-      console.log('[SearchForm] Using local postal data + Represent API search');
       const results = await fetchRepsByPostalLocal(trimmedQuery);
       onSearchComplete(results);
 
@@ -163,7 +160,6 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   // Handle pending auto-search after performSearch is available
   useEffect(() => {
     if (pendingAutoSearch && !isSearching) {
-      console.log('[SearchForm] Executing auto-search for:', pendingAutoSearch);
       performSearch(pendingAutoSearch);
       setPendingAutoSearch(null); // Clear after triggering
     }

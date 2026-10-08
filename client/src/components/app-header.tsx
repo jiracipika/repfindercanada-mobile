@@ -19,11 +19,16 @@ export default function AppHeader() {
 
   useEffect(() => {
     let currentTheme: Theme = "system";
-    void Preferences.get({ key: THEME_KEY }).then(({ value }) => {
-      currentTheme = (value as Theme) || "system";
-      setTheme(currentTheme);
-      applyTheme(currentTheme);
-    });
+    Preferences.get({ key: THEME_KEY })
+      .then(({ value }) => {
+        currentTheme = (value as Theme) || "system";
+        setTheme(currentTheme);
+        applyTheme(currentTheme);
+      })
+      .catch(() => {
+        // Preferences unavailable (e.g. storage blocked) — fall back to system theme
+        applyTheme(currentTheme);
+      });
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = () => {
@@ -37,7 +42,11 @@ export default function AppHeader() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
-    await Preferences.set({ key: THEME_KEY, value: next });
+    try {
+      await Preferences.set({ key: THEME_KEY, value: next });
+    } catch {
+      // Persistence is best-effort; the in-session theme is already applied
+    }
   };
 
   return (
@@ -56,7 +65,7 @@ export default function AppHeader() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h1 className="truncate text-base font-extrabold tracking-tight text-foreground sm:text-lg">
-                Rep Finder
+                RepFinder Canada
               </h1>
               <ShieldCheck className="h-4 w-4 text-[var(--civic-mint)]" aria-label="Sources linked for verification" />
             </div>

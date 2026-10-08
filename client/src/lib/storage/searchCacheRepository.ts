@@ -80,10 +80,6 @@ export const searchCacheRepository = {
     };
 
     await saveCache(cache);
-    console.log(
-      `[searchCacheRepository] Cached ${representatives.length} representatives for postal code:`,
-      normalizedPostal
-    );
   },
 
   /**
@@ -97,27 +93,14 @@ export const searchCacheRepository = {
 
     const cached = cache[normalizedPostal];
     if (!cached) {
-      console.log(
-        "[searchCacheRepository] No cached results for postal code:",
-        normalizedPostal
-      );
       return null;
     }
 
     const age = Date.now() - cached.timestamp;
     if (age > CACHE_EXPIRY_MS) {
-      console.log(
-        "[searchCacheRepository] Cached results expired for postal code:",
-        normalizedPostal
-      );
       return null;
     }
 
-    console.log(
-      `[searchCacheRepository] Found ${cached.representatives.length} cached representatives for postal code:`,
-      normalizedPostal,
-      `(cached ${Math.floor(age / 1000 / 60)} minutes ago)`
-    );
     return cached.representatives;
   },
 
@@ -140,11 +123,9 @@ export const searchCacheRepository = {
       if (cache[normalizedPostal]) {
         delete cache[normalizedPostal];
         await saveCache(cache);
-        console.log(`[searchCacheRepository] Cache cleared for postal code: ${normalizedPostal}`);
       }
     } else {
       await Preferences.remove({ key: CACHE_KEY });
-      console.log("[searchCacheRepository] Cache cleared");
     }
   },
 

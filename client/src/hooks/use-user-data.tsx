@@ -114,7 +114,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
         lastPostalCodeSearch: type === 'postalCode' ? search : userData.lastPostalCodeSearch,
         lastNameSearch: type === 'name' ? search : userData.lastNameSearch,
       };
-      console.log('[useUserData] Updating last search. search:', search, 'type:', type, 'updatedData:', updatedData);
       saveUserData(updatedData);
     }
   };

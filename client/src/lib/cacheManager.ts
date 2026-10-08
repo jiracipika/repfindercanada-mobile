@@ -1,6 +1,7 @@
 import { Preferences } from "@capacitor/preferences";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+import { APP_VERSION } from "../version";
 
 /**
  * Version-based cache management
@@ -9,7 +10,7 @@ import { Capacitor } from "@capacitor/core";
  */
 
 const CACHE_VERSION_KEY = 'cache_version_processed';
-const CURRENT_CACHE_VERSION = '3.0.0';
+const CURRENT_CACHE_VERSION = APP_VERSION;
 
 /**
  * Compare two version strings
@@ -49,67 +50,56 @@ async function shouldClearCache(currentVersion: string): Promise<boolean> {
       key: CACHE_VERSION_KEY
     });
 
-    console.log(`[CacheManager] Current version: ${currentVersion}, Last processed: ${lastProcessedVersion || 'none'}`);
 
     // If we've never processed cache version before, check if we should clear
     if (!lastProcessedVersion) {
       // For fresh installs with version < 3.0, we need to clear any existing cache
       if (compareVersions(currentVersion, '3.0.0') < 0) {
-        console.log(`[CacheManager] Version ${currentVersion} < 3.0.0, clearing any existing cache`);
         return true;
       }
       // Version exactly 3.0.0 should clear cache
       if (compareVersions(currentVersion, '3.0.0') === 0) {
-        console.log(`[CacheManager] Version ${currentVersion} === 3.0.0, clearing cache`);
         return true;
       }
       // Versions > 3.0.0 should preserve cache
-      console.log(`[CacheManager] Version ${currentVersion} > 3.0.0, preserving existing cache`);
       return false;
     }
 
     // If we've processed this version before, don't clear
     if (lastProcessedVersion === currentVersion) {
-      console.log(`[CacheManager] Version ${currentVersion} already processed, no cache clearing needed`);
       return false;
     }
 
     // If upgrading from < 3.0 to exactly 3.0.0, clear cache
     if (compareVersions(lastProcessedVersion, '3.0.0') < 0 &&
         compareVersions(currentVersion, '3.0.0') === 0) {
-      console.log(`[CacheManager] Upgrading from ${lastProcessedVersion} to exactly 3.0.0, clearing cache`);
       return true;
     }
 
     // If upgrading from < 3.0 to > 3.0.0, preserve cache (skipping 3.0.0)
     if (compareVersions(lastProcessedVersion, '3.0.0') < 0 &&
         compareVersions(currentVersion, '3.0.0') > 0) {
-      console.log(`[CacheManager] Upgrading from ${lastProcessedVersion} to ${currentVersion} > 3.0.0, preserving cache`);
       return false;
     }
 
     // If current version is exactly 3.0.0, clear cache (regardless of previous version)
     if (compareVersions(currentVersion, '3.0.0') === 0) {
-      console.log(`[CacheManager] Current version is exactly 3.0.0, clearing cache`);
       return true;
     }
 
     // For version changes where both are > 3.0.0, preserve cache
     if (compareVersions(lastProcessedVersion, '3.0.0') > 0 &&
         compareVersions(currentVersion, '3.0.0') > 0) {
-      console.log(`[CacheManager] Version change from ${lastProcessedVersion} to ${currentVersion} (both > 3.0.0), preserving cache`);
       return false;
     }
 
     // For version changes where both are < 3.0.0, clear cache
     if (compareVersions(lastProcessedVersion, '3.0.0') < 0 &&
         compareVersions(currentVersion, '3.0.0') < 0) {
-      console.log(`[CacheManager] Version change from ${lastProcessedVersion} to ${currentVersion} (both < 3.0.0), clearing cache`);
       return true;
     }
 
     // Default: preserve cache
-    console.log(`[CacheManager] Default case for ${lastProcessedVersion} to ${currentVersion}, preserving cache`);
     return false;
 
   } catch (error) {
@@ -123,8 +113,6 @@ async function shouldClearCache(currentVersion: string): Promise<boolean> {
  * Clear all caches including service worker cache, search cache, and localStorage
  */
 async function clearAllCaches(): Promise<void> {
-  console.log('[CacheManager] === Clearing All Caches ===');
-
   try {
     // 1. Clear React Query cache (if accessible)
     try {
@@ -133,18 +121,9 @@ async function clearAllCaches(): Promise<void> {
         const keys = Object.keys(localStorage);
         const queryKeys = keys.filter(key => key.startsWith('react-query'));
         queryKeys.forEach(key => localStorage.removeItem(key));
-        console.log(`[CacheManager] Cleared ${queryKeys.length} React Query cache entries`);
       }
     } catch (error) {
       console.warn('[CacheManager] Error clearing React Query cache:', error);
-    }
-
-    // 2. Clear any remaining search-related caches (House of Commons functionality moved to R search)
-    try {
-      // R search doesn't use any cache anymore - all searches are live API calls
-      console.log('[CacheManager] R search does not use cache - all searches are live API calls');
-    } catch (error) {
-      console.warn('[CacheManager] Note on R search cache clearing:', error);
     }
 
     // 4. Clear any localStorage caches
@@ -158,7 +137,6 @@ async function clearAllCaches(): Promise<void> {
           key.includes('representatives')
         );
         cacheKeys.forEach(key => localStorage.removeItem(key));
-        console.log(`[CacheManager] Cleared ${cacheKeys.length} localStorage cache entries`);
       }
     } catch (error) {
       console.warn('[CacheManager] Error clearing localStorage caches:', error);
@@ -176,7 +154,6 @@ async function clearAllCaches(): Promise<void> {
       for (const key of cacheKeys) {
         await Preferences.remove({ key });
       }
-      console.log(`[CacheManager] Cleared ${cacheKeys.length} Preferences cache entries`);
     } catch (error) {
       console.warn('[CacheManager] Error clearing Preferences caches:', error);
     }
@@ -194,13 +171,10 @@ async function clearAllCaches(): Promise<void> {
         await Promise.all(
           targetCaches.map(cacheName => caches.delete(cacheName))
         );
-        console.log(`[CacheManager] Cleared ${targetCaches.length} service worker caches`);
       }
     } catch (error) {
       console.warn('[CacheManager] Error clearing service worker caches:', error);
     }
-
-    console.log('[CacheManager] === All Caches Cleared Successfully ===');
 
   } catch (error) {
     console.error('[CacheManager] Error during cache clearing:', error);
@@ -217,7 +191,6 @@ async function markVersionAsProcessed(version: string): Promise<void> {
       key: CACHE_VERSION_KEY,
       value: version
     });
-    console.log(`[CacheManager] Marked version ${version} as processed`);
   } catch (error) {
     console.error('[CacheManager] Error marking version as processed:', error);
   }
@@ -229,28 +202,20 @@ async function markVersionAsProcessed(version: string): Promise<void> {
  */
 export async function initializeCacheManagement(): Promise<void> {
   try {
-    console.log('[CacheManager] === Initializing Version-Based Cache Management ===');
-
     // Get current app version
     const appInfo = await CapApp.getInfo();
     const currentVersion = appInfo.version ?? '0.0.0';
-
-    console.log(`[CacheManager] App version: ${currentVersion}`);
 
     // Check if we should clear cache
     const shouldClear = await shouldClearCache(currentVersion);
 
     if (shouldClear) {
-      console.log(`[CacheManager] Clearing cache for version ${currentVersion}`);
       await clearAllCaches();
-    } else {
-      console.log(`[CacheManager] Preserving cache for version ${currentVersion}`);
     }
 
     // Mark this version as processed
     await markVersionAsProcessed(currentVersion);
 
-    console.log('[CacheManager] === Cache Management Initialization Complete ===');
 
   } catch (error) {
     console.error('[CacheManager] Error initializing cache management:', error);
@@ -263,7 +228,6 @@ export async function initializeCacheManagement(): Promise<void> {
  * Useful for testing or manual cache clearing
  */
 export async function forceClearAllCaches(): Promise<void> {
-  console.log('[CacheManager] Force clearing all caches');
   await clearAllCaches();
 }
 
@@ -280,8 +244,8 @@ export async function getCacheManagementStatus(): Promise<{
     // below would report "0.0.0" to the Profile page. Mirror App.tsx and fall
     // back to the package version on web.
     const currentVersion = Capacitor.isNativePlatform()
-      ? (await CapApp.getInfo()).version ?? '3.2.0'
-      : '3.2.0';
+      ? (await CapApp.getInfo()).version ?? APP_VERSION
+      : APP_VERSION;
     const { value: lastProcessedVersion } = await Preferences.get({
       key: CACHE_VERSION_KEY
     });

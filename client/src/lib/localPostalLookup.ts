@@ -21,7 +21,6 @@ class LocalPostalLookup {
 
   private async loadData(): Promise<void> {
     try {
-      console.log('[LocalPostalLookup] Loading postal data...');
 
       // Load index JSON
       const indexResponse = await fetch('/data/postal_index.json');
@@ -39,7 +38,6 @@ class LocalPostalLookup {
       this.coordinates = new Float32Array(arrayBuffer);
 
       this.loaded = true;
-      console.log(`[LocalPostalLookup] Successfully loaded ${Object.keys(this.index || {}).length} postal codes`);
     } catch (error) {
       console.error('[LocalPostalLookup] Error loading postal data:', error);
       throw error;
@@ -71,7 +69,6 @@ class LocalPostalLookup {
     const index = this.index[cleanCode];
 
     if (typeof index !== 'number') {
-      console.log(`[LocalPostalLookup] Postal code not found: ${postalCode}`);
       return null;
     }
 

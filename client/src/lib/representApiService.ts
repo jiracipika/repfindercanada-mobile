@@ -17,7 +17,6 @@ export async function fetchRepsByCoordinatesDirect(
   longitude: number
 ): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[RepresentAPI] Searching for representatives at coordinates: ${latitude}, ${longitude}`);
 
     // Direct representatives search by point (newer Represent API approach)
     const repsResponse = await fetch(
@@ -29,7 +28,6 @@ export async function fetchRepsByCoordinatesDirect(
     }
 
     const repsData = await repsResponse.json();
-    console.log(`[RepresentAPI] Found ${repsData.objects?.length || 0} representatives directly`);
 
     const allRepresentatives: ApiRepresentative[] = [];
     if (repsData.objects) {
@@ -53,7 +51,6 @@ export async function fetchRepsByCoordinatesDirect(
              (levelOrder[b.level as keyof typeof levelOrder] || 99);
     });
 
-    console.log(`[RepresentAPI] Returning ${sortedRepresentatives.length} unique representatives`);
     return sortedRepresentatives;
 
   } catch (error) {
@@ -163,9 +160,6 @@ async function transformRepresentative(rep: any): Promise<ApiRepresentative | nu
 
       if (officeWithPhone?.tel) {
         phone = officeWithPhone.tel;
-        console.log(`[RepresentAPI] Phone extracted for ${rep.name}: ${phone} (from ${officeWithPhone.type} office)`);
-      } else {
-        console.log(`[RepresentAPI] No phone found for ${rep.name} in offices:`, rep.offices);
       }
     }
     // 4. Try detailed offices - same prioritization logic
@@ -285,8 +279,6 @@ async function transformRepresentative(rep: any): Promise<ApiRepresentative | nu
 }
 
 /**
-
-/**
  * Search representatives by postal code using local coordinates + Represent API
  */
 export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
@@ -325,7 +317,6 @@ export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
  */
 export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[RepresentAPI] Searching for representatives by name: ${name}`);
 
     const response = await fetch(
       `${REPRESENT_API_BASE}/representatives/?name=${encodeURIComponent(name)}&limit=50`
@@ -336,7 +327,6 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
     }
 
     const data = await response.json();
-    console.log(`[RepresentAPI] Found ${data.objects?.length || 0} representatives`);
 
     const representatives: ApiRepresentative[] = [];
     if (data.objects) {
@@ -368,7 +358,6 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
  */
 export async function fetchRepsByRidingDirect(ridingName: string): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[RepresentAPI] Searching for representatives by riding: ${ridingName}`);
 
     // Search for boundaries by name
     const boundariesResponse = await fetch(
@@ -380,7 +369,6 @@ export async function fetchRepsByRidingDirect(ridingName: string): Promise<ApiRe
     }
 
     const boundariesData = await boundariesResponse.json();
-    console.log(`[RepresentAPI] Found ${boundariesData.objects?.length || 0} matching boundaries`);
 
     if (!boundariesData.objects || boundariesData.objects.length === 0) {
       return [];

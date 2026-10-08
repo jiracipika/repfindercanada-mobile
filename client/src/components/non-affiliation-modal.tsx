@@ -21,7 +21,7 @@ export default function NonAffiliationModal({ onAcknowledge }: NonAffiliationMod
         </DialogHeader>
         <div className="space-y-3 py-2 text-sm leading-relaxed text-muted-foreground">
           <p>
-            Rep Finder is an independent civic tool. It is not affiliated with, sponsored by, or endorsed by a government entity.
+            RepFinder Canada is an independent civic tool. It is not affiliated with, sponsored by, or endorsed by a government entity.
           </p>
           <p className="flex gap-2 rounded-xl border border-border bg-background/45 p-3">
             <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-[var(--civic-blue)]" />
@@ -29,7 +29,7 @@ export default function NonAffiliationModal({ onAcknowledge }: NonAffiliationMod
           </p>
         </div>
         <DialogFooter>
-          <Button className="civic-primary-button w-full" onClick={onAcknowledge}>Continue to Rep Finder</Button>
+          <Button className="civic-primary-button w-full" onClick={onAcknowledge}>Continue to RepFinder Canada</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

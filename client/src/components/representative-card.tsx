@@ -24,7 +24,13 @@ export function RepresentativeCard({
   onDelete
 }: RepresentativeCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const { toast } = useToast();
+
+  // Reset the avatar error flag when a different photo is rendered
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [representative.id, representative.photo]);
 
   useEffect(() => {
     const checkSavedStatus = async () => {
@@ -154,16 +160,14 @@ export function RepresentativeCard({
       <CardContent className="p-0">
         <div className="flex items-start space-x-4">
           <Avatar className="!h-16 !w-16 border-2 border-[color:var(--civic-blue)]/40 shadow-lg">
-            <AvatarImage
-              src={representative.photo || undefined}
-              alt={`${representative.name} photo`}
-              className="object-cover"
-              onError={(e) => {
-                console.log('Avatar image failed to load:', representative.photo);
-                // Set to empty string to show fallback when image fails
-                (e.target as HTMLImageElement).src = '';
-              }}
-            />
+            {!avatarFailed && representative.photo && (
+              <AvatarImage
+                src={representative.photo}
+                alt={`${representative.name} photo`}
+                className="object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
+            )}
             <AvatarFallback className="bg-gradient-to-br from-[var(--civic-blue)] to-[var(--civic-mint)] text-neutral-900 font-bold text-lg">
               {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </AvatarFallback>

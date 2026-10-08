@@ -23,6 +23,7 @@ import { Section } from "@/components/ui/section";
 import { Link } from "wouter";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { getCacheManagementStatus, forceClearAllCaches } from "@/lib/cacheManager";
+import { APP_VERSION } from "@/version";
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
 
@@ -182,7 +183,6 @@ export default function Profile() {
       };
 
       try {
-        console.log(`[AutoTest] Testing ${testCase.code} (${testCase.province})`);
 
         // Use direct local database + Represent API implementation (same as mobile app)
         const searchResult = await fetchRepsByPostalCodeDirect(testCase.code);
@@ -408,7 +408,7 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <GitBranch className="h-4 w-4 shrink-0" />
-              <span>Version: {cacheStatus?.currentVersion || '3.0.0'}</span>
+              <span>Version: {cacheStatus?.currentVersion || APP_VERSION}</span>
             </div>
 
             {/* Cache Management Status */}

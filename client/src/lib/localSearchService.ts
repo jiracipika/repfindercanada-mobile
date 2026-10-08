@@ -20,7 +20,6 @@ import {
  */
 export async function fetchRepsByPostalLocal(postalCode: string): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[LocalSearch] Searching postal code: ${postalCode}`);
 
     // Validate postal code format
     if (!LocalPostalLookup.isValidCanadianPostalCode(postalCode)) {
@@ -45,7 +44,6 @@ export async function fetchRepsByPostalLocal(postalCode: string): Promise<ApiRep
  */
 export async function fetchRepsByNameLocal(name: string): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[LocalSearch] Searching by name: ${name}`);
 
     if (!name.trim()) {
       throw new Error('Please enter a name to search');
@@ -65,7 +63,6 @@ export async function fetchRepsByNameLocal(name: string): Promise<ApiRepresentat
  */
 export async function fetchRepsByRidingLocal(ridingName: string): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[LocalSearch] Searching by riding: ${ridingName}`);
 
     if (!ridingName.trim()) {
       throw new Error('Please enter a riding name to search');
@@ -92,7 +89,6 @@ export async function getPostalCodeGeocodingLocal(postalCode: string): Promise<{
   source: string;
 }> {
   try {
-    console.log(`[LocalSearch] Getting coordinates for: ${postalCode}`);
 
     // Validate postal code format
     if (!LocalPostalLookup.isValidCanadianPostalCode(postalCode)) {
@@ -138,7 +134,6 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
   };
 }> {
   try {
-    console.log(`[LocalSearch] Starting enhanced search for postal code: ${postalCode}`);
 
     // Validate postal code format
     if (!LocalPostalLookup.isValidCanadianPostalCode(postalCode)) {
@@ -154,12 +149,9 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
       throw new Error(`Postal code not found in database: ${normalizedCode}`);
     }
 
-    console.log(`[LocalSearch] Found coordinates: ${coordinates.latitude}, ${coordinates.longitude}`);
-
     // Search representatives using coordinates
     const searchResult = await fetchRepsByPostalCodeDirect(normalizedCode);
     const representatives = searchResult.representatives;
-    console.log(`[LocalSearch] Found ${representatives.length} representatives`);
 
     return {
       representatives,
@@ -185,7 +177,6 @@ export async function fetchRepsByCoordinatesLocal(
   longitude: number
 ): Promise<ApiRepresentative[]> {
   try {
-    console.log(`[LocalSearch] Searching by coordinates: [${latitude}, ${longitude}]`);
 
     const { fetchRepsByCoordinatesDirect } = await import("./representApiService");
     const representatives = await fetchRepsByCoordinatesDirect(latitude, longitude);
@@ -220,7 +211,6 @@ export function getLocalDataStatus(): {
 export async function waitForLocalData(): Promise<void> {
   const { getCoordinatesFromPostalCodeLocal } = await import('./localPostalLookup');
   // This will wait for data to load automatically
-  console.log('[LocalSearch] Waiting for local postal data to load...');
 }
 
 /**

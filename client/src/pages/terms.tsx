@@ -13,12 +13,12 @@ export function TermsPage({ onAccept }: TermsPageProps) {
         <p className="font-bold">Effective date: August 14, 2025</p>
         <p className="mb-4 font-bold">Last updated: September 24, 2025</p>
         
-        <p className="mb-4">These Terms of Use explain the rules for using the Canada Rep Finder mobile app and website (together, the “Service”). By using the Service, you agree to these Terms and to our Privacy Policy at https://canadarepfinder.vercel.app/privacy. If you do not agree, please do not use the Service.</p>
+        <p className="mb-4">These Terms of Use explain the rules for using the RepFinder Canada mobile app and website (together, the “Service”). By using the Service, you agree to these Terms and to our Privacy Policy at https://canadarepfinder.vercel.app/privacy. If you do not agree, please do not use the Service.</p>
 
         <h2 className="text-lg font-semibold mt-4">1. Who we are</h2>
-        <p className="mb-4">Canada Rep Finder helps people in Canada find their federal and provincial representatives by postal code or approximate location. We are not a government entity.</p>
+        <p className="mb-4">RepFinder Canada helps people in Canada find their federal and provincial representatives by postal code or approximate location. We are not a government entity.</p>
         <p className="font-semibold">Disclaimer of affiliation</p>
-        <p className="mb-4">Canada Rep Finder is not affiliated with the Government of Canada or any provincial or territorial government.</p>
+        <p className="mb-4">RepFinder Canada is not affiliated with the Government of Canada or any provincial or territorial government.</p>
 
         <h2 className="text-lg font-semibold mt-4">2. What the Service does</h2>
         <p className="mb-4">The Service lets you search by postal code or, if you allow it, by approximate device location to show representative details such as name, role, and public contact information. The Service is for general information. It is not legal advice, policy advice, or an official communication channel with any government.</p>

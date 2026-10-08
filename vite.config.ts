@@ -52,7 +52,7 @@ export default defineConfig({
           map: ["leaflet", "react-leaflet"],
           motion: ["framer-motion"],
           forms: ["react-hook-form", "zod", "@hookform/resolvers"],
-          icons: ["lucide-react", "react-icons"],
+          icons: ["lucide-react"],
           charts: ["recharts"],
           query: ["@tanstack/react-query"],
         },

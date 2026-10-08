@@ -19,7 +19,6 @@ export default function Saved() {
     const fetchSavedReps = async () => {
       try {
         const reps = await repRepository.listSavedReps();
-        console.log('[Saved Page] Fetched saved reps:', reps.length, 'reps:', reps);
         setSavedRepresentatives(reps);
       } catch (error) {
         console.error('[Saved Page] Error fetching saved reps:', error);
@@ -34,14 +33,11 @@ export default function Saved() {
 
     // Subscribe to saved changes (don't set loading state for updates)
     const unsubscribe = repRepository.subscribeSavedChanges(async () => {
-      console.log('[Saved Page] Received savedRepsChanged event, refetching...');
       const reps = await repRepository.listSavedReps();
-      console.log('[Saved Page] Updated saved reps from event:', reps.length, 'reps:', reps);
       setSavedRepresentatives(reps);
     });
 
     return () => {
-      console.log('[Saved Page] Unsubscribing from saved changes');
       unsubscribe();
     };
   }, []);
@@ -81,7 +77,6 @@ export default function Saved() {
               showDeleteButton={true}
               onDelete={() => {
                 // Optimistic UI update: remove immediately from local state
-                console.log('[Saved Page] Optimistic delete for rep:', representative.id);
                 setSavedRepresentatives(prev => prev.filter(r => r.id !== representative.id));
               }}
             />

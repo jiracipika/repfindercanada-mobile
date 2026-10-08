@@ -41,7 +41,7 @@ export function SourcesDisclaimer() {
             Not Affiliated with the Government of Canada
           </h2>
           <p>
-            Rep Finder for Canada is an independent application and is not
+            RepFinder Canada is an independent application and is not
             affiliated with, sponsored by, or endorsed by any government or
             political entity. The app is designed to provide publicly available
             information in an accessible format.

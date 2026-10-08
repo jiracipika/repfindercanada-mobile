@@ -39,10 +39,6 @@ export default function Activity() {
   const handleSearchClick = async (activity: ActivityItem) => {
     if (!activity.query) return;
 
-    console.log('[Activity] Clicked search:', activity.query, '- performing fresh search (no caching)');
-
-    console.log('[Activity] Navigating to home for fresh search');
-
     // Navigate to home
     setLocation('/');
   };

@@ -10,4 +10,4 @@ export const OFFICIAL_LINKS = {
 
 export const PRIVACY_NOTE = `Privacy Note: We only use your postal code or approximate location to find your representatives. Location is processed ephemerally and not stored. Recent searches may be cached locally on your device for convenience.`;
 
-export const ABOUT_PARAGRAPH_1 = `Canada Rep Finder helps you discover your federal and provincial representatives in Canada.`;
+export const ABOUT_PARAGRAPH_1 = `RepFinder Canada helps you discover your federal and provincial representatives in Canada.`;
