@@ -10,6 +10,21 @@ Local: `/Users/rs/Documents/projects in progress/repfindercanada-mobile` (MacBoo
 - Baseline is green: `npm run typecheck` exit 0, `npm run build` ~3.3s, JS ≈ 430KB raw / ~128KB gzip across 3 chunks (135 + 145 + 150).
 - Phase 2a was **started and cancelled before any file changed** — working tree was verified clean. Nothing partial landed.
 
+## DESIGN LANGUAGE UPDATE (2026-10-08, supersedes the 2a visual brief)
+
+User verdict mid-Phase-2a: the maple/glass/gradient look was too "AI-looking". The app is now **iOS-native (Apple HIG)** — implemented in `cc171f7`, keep it EXACTLY for 2b/3/4:
+
+- **Tokens (both themes, verbatim):** light bg `#F2F2F7` / card `#FFFFFF` / label `#000` / secondary `rgba(60,60,67,.6)` / separator `rgba(60,60,67,.29)` / tint `#007AFF` / destructive `#FF3B30`; dark bg `#000` / card `#1C1C1E` / elevated `#2C2C2E` / label `#FFF` / secondary `rgba(235,235,245,.6)` / separator `rgba(84,84,88,.6)` / tint `#0A84FF` / destructive `#FF453A`. Level colors: Federal blue / Provincial purple `#AF52DE`·`#BF5AF2` / Municipal mint `#30D158`. **Single accent rule: tint is iOS blue; NO red UI tint** (red = destructive + party data only).
+- **Type:** system stack (`-apple-system` → bundled InterVariable fallback), iOS scale LargeTitle 34/700/−0.02em → Caption2 11/600, body 17.
+- **Surfaces:** cards 12px radius, NO shadows/borders (bg contrast separates), 16px insets, 8pt grid, hairline separators inset 16px in lists.
+- **Chrome:** translucent nav/tab bars (`blur(20px) saturate(180%)` + ~72% card), hairline edge, real iOS tab bar (NO sliding pill/layoutId, selection = 150ms color cross-fade), large title on Home.
+- **Controls:** solid-tint primary button (50px/14px radius/white 17px/600, whileTap scale 0.97), tinted secondary (tint 12% bg), iOS search field (`rgba(118,118,128,.12)`, inline 13px validation — no floating card).
+- **Motion:** default spring `bounce: 0, duration: 0.4` (critically damped, zero overshoot); bounce ≤0.2 ONLY on drag release; entrances = one fade + 8px rise 0.25s, stagger ≤0.03s/item capped 6.
+- **Still dead, keep dead:** gradients, glow shadows, conic, glass pills, shine sweeps, icon pop springs.
+- Phase 2b sheets = iOS sheet: grabber, drag-to-dismiss with velocity handoff, bounce ≤0.2 on release only.
+
+Ops notes: commits `4903f3e` + `eba5dc9` (fastlane/release lane) came from a PARALLEL session working in this same clone — `git pull` before slicing and commit only your own files. Playwright/CUA clicks time out in the ZCode in-app browser on this app because occluded tabs never fire rAF (framer entrances sit at ~0.5 opacity, stability check never settles) — **automation artifact, not an app bug**; hit-testing is clean, drive flows via `locator.evaluate(el => el.click())` and judge with screenshots.
+
 ## Take it to the server PC
 
 ```bash
