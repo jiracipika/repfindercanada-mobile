@@ -21,8 +21,20 @@ for var in "$STORE_FILE" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD"; do
 done
 [ -f "$STORE_FILE" ] || { echo "storeFile not found: $STORE_FILE"; exit 1; }
 
-# Gradle 8.x needs JDK 17 (system default is 25)
+# Android toolchain — CampaignGoal convention: SDK on ADATA, JDK 21 dev-cache, warm gradle cache.
+# (System JDK 25 breaks Gradle/AGP; do NOT use `java_home` defaults when env.sh exists.)
+if [ -f /Volumes/ADATA/Android/env.sh ]; then
+  source /Volumes/ADATA/Android/env.sh
+fi
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+
+if [ -n "${ANDROID_HOME:-}" ] && [ ! -f android/local.properties ]; then
+  echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+fi
+if [ -z "${ANDROID_HOME:-}" ] && [ ! -f android/local.properties ]; then
+  echo "No Android SDK found — source /Volumes/ADATA/Android/env.sh or create android/local.properties."
+  exit 1
+fi
 echo "Using JAVA_HOME=$JAVA_HOME"
 
 echo "==> build web + cap sync"

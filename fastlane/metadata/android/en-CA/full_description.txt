@@ -1,4 +1,4 @@
-Canada Rep Finder helps you discover your federal and provincial representatives in Canada.
+RepFinder Canada helps you discover your federal, provincial, and municipal representatives in Canada.
 
 Important Disclaimer: This app is not affiliated with the Government of Canada, the House of Commons, the Senate of Canada, Elections Canada, or any government entity. Information in this app is provided for general guidance only and is sourced exclusively from Represent by Open North (https://represent.opennorth.ca/). For official and up-to-date information, please refer to government websites directly.
 
@@ -15,7 +15,7 @@ Features
 • Share representative information
 • Works anywhere in Canada
 
-Why use Canada Rep Finder?
+Why use RepFinder Canada?
 • Simple, fast, and accurate
 • No account required
 • Location access is optional (you can always search by postal code)

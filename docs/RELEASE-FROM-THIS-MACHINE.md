@@ -23,6 +23,17 @@ Set up 2026-10-07. One-time secrets you must paste are marked **[USER]** — eve
 3. **[USER] App Store Connect Issuer ID** — App Store Connect → Users and Access → Integrations → App Store Connect API.
    → set `ASC_ISSUER_ID` in `fastlane/.env`.
 
+## Toolchain on this machine (proven)
+
+- **Source `/Volumes/ADATA/Android/env.sh` before any Android work** — it wires ANDROID_HOME (SDK on ADATA),
+  JDK 21 from `/Volumes/HARD/dev-cache/jdks` (system JDK 25 breaks Gradle/AGP), and the pre-warmed 10GB
+  Gradle cache. `scripts/release-android.sh` sources it automatically.
+- **fastlane is NOT installed yet** — brew is blocked by a `/usr/local/share/man/man8` permissions issue
+  (needs sudo) and the system Ruby (2.6) is too old for the gem. When at the keyboard:
+  `sudo chown -R $(whoami) /usr/local/share/man/man8 && brew install fastlane`
+  Until then the flow still works: `scripts/release-android.sh` produces the signed AAB, then either
+  drag-drop it in Play Console (choose the internal track) or run the `fastlane android deploy` lane after install.
+
 ## Android release flow (fully local)
 
 ```bash
