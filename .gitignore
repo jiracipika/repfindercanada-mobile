@@ -10,3 +10,10 @@ vite.config.ts.*
 .env.development.local
 .env.test.local
 .env.production.local
+# Release signing & store credentials — local only, NEVER commit
+android/keystore.properties
+fastlane/.env
+fastlane/report.xml
+*.jks
+*.keystore
+PlayServiceAccount*.json

@@ -1,0 +1,46 @@
+default_platform(:android)
+
+ASC_KEY_ID = "5647QV7H92"
+ASC_KEY_FILE = File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ASC_KEY_ID}.p8")
+
+platform :android do
+  desc "Upload an already-built signed AAB to Google Play (metadata refreshed from fastlane/metadata/android)"
+  lane :deploy do
+    aab = ENV["AAB_PATH"] || "android/app/build/outputs/bundle/release/app-release.aab"
+    UI.user_error!("AAB not found at #{aab} — run scripts/release-android.sh first") unless File.exist?(aab)
+    UI.user_error!("Set PLAY_SERVICE_ACCOUNT_JSON in fastlane/.env (see fastlane/.env.example)") unless ENV["PLAY_SERVICE_ACCOUNT_JSON"]
+
+    supply(
+      package_name: "com.marcelsabas.canadarepfinder",
+      json_key: ENV["PLAY_SERVICE_ACCOUNT_JSON"],
+      track: ENV.fetch("PLAY_TRACK", "internal"),
+      aab: aab,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      metadata_path: "fastlane/metadata/android"
+    )
+  end
+end
+
+platform :ios do
+  desc "Push App Store metadata (name/subtitle/description) — no binary upload"
+  lane :metadata do
+    UI.user_error!("Set ASC_ISSUER_ID in fastlane/.env (App Store Connect → Integrations → Issuer ID)") unless ENV["ASC_ISSUER_ID"]
+
+    api_key = app_store_connect_api_key(
+      key_id: ASC_KEY_ID,
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ASC_KEY_FILE,
+      duration: 1200,
+      in_house: false
+    )
+
+    deliver(
+      api_key: api_key,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      metadata_path: "fastlane/metadata/en-US",
+      force: true
+    )
+  end
+end

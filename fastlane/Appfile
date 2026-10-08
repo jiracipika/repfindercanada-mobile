@@ -1,0 +1,5 @@
+# iOS bundle id — matches codemagic.yaml BUNDLE_ID
+app_identifier("com.marcelsabas.repfinderforcanada")
+
+# Android applicationId — Play Store identity, NEVER change
+package_name("com.marcelsabas.canadarepfinder")
