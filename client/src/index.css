@@ -6,8 +6,9 @@
  * RepFinder Canada — token system 2.0
  * Dark is the default theme (`:root`, mirrored on `.dark`).
  * `.light` redefines the full token set — including every civic-* brand token.
- * No `!important` anywhere; component styles below beat utilities by
- * source order (and doubled specificity where a tie-break is required).
+ * No forced-important declarations anywhere; component styles below beat
+ * utilities by source order (and doubled specificity where a tie-break
+ * is required).
  */
 
 :root {
@@ -185,8 +186,9 @@
     body { @apply text-sm; }
   }
 
-  /* Reduced motion: still applied without `!important` — the `html` prefix
-     gives these rules higher specificity than any single-class utility. */
+  /* Reduced motion: still applies without forced-important declarations —
+     the `html` prefix gives these rules higher specificity than any
+     single-class utility. */
   @media (prefers-reduced-motion: reduce) {
     html *,
     html *::before,
@@ -404,7 +406,8 @@
 }
 
 /* Doubled class = specificity (0,2,0): wins ties with single-class
-   utilities (`h-10`, `bg-primary`, …) without `!important`. */
+   utilities (`h-10`, `bg-primary`, …) so no forced-important
+   declarations are needed. */
 .civic-search-input.civic-search-input {
   height: 3.75rem;
   border-radius: 1rem;
