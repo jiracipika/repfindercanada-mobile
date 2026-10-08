@@ -100,11 +100,11 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
       }
     }
 
-    // Animate back to center
+    // Animate back to center — momentum gesture, so a little bounce is allowed
     animate(x, 0, {
       type: "spring",
-      stiffness: 500,
-      damping: 40,
+      bounce: 0.2,
+      duration: 0.4,
       restDelta: 0.01
     });
 

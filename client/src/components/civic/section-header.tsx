@@ -25,18 +25,15 @@ export function SectionHeader({ title, count, level, className }: SectionHeaderP
         <span
           aria-hidden="true"
           className="h-2 w-2 rounded-full"
-          style={{
-            background: `var(${cssVar})`,
-            boxShadow: `0 0 12px color-mix(in srgb, var(${cssVar}) 60%, transparent)`,
-          }}
+          style={{ background: `var(${cssVar})` }}
         />
-        <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="text-caption1 font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           {title}
         </span>
       </span>
       <span aria-hidden="true" className="h-px flex-1 bg-border" />
       {typeof count === "number" && (
-        <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground">
+        <span className="text-caption1 font-semibold text-muted-foreground">
           {count}
         </span>
       )}

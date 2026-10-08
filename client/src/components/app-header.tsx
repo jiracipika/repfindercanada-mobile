@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Preferences } from "@capacitor/preferences";
-import { Landmark, Moon, ShieldCheck, Sun } from "lucide-react";
+import { Landmark, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { iconSwap, springSnappy } from "./civic/motion";
+import { iconSwap } from "./civic/motion";
 
 const THEME_KEY = "theme";
 type Theme = "dark" | "light" | "system";
@@ -54,40 +54,29 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="civic-glass relative z-30 border-x-0 border-t-0">
-      <div
-        className="mx-auto flex max-w-screen-md items-end justify-between gap-3 px-4 pb-3"
-        style={{
-          paddingTop: "max(.7rem, env(safe-area-inset-top))",
-          minHeight: "calc(4rem + env(safe-area-inset-top))",
-        }}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="civic-maple-mark" aria-hidden="true">
-            <Landmark className="h-5 w-5" strokeWidth={2.4} />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h1 className="truncate text-base font-extrabold tracking-tight text-foreground sm:text-lg">
-                RepFinder Canada
-              </h1>
-              <ShieldCheck
-                className="h-4 w-4 text-[var(--civic-mint)]"
-                aria-label="Sources linked for verification"
-              />
-            </div>
-            <p className="truncate text-[10px] font-bold uppercase tracking-[.14em] text-muted-foreground">
-              Independent civic tool
-            </p>
-          </div>
+    <header
+      className="civic-glass relative z-30 border-b border-border"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
+      <div className="relative mx-auto flex h-11 max-w-screen-md items-center justify-between px-2">
+        <div
+          className="civic-maple-mark"
+          style={{ width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem" }}
+          aria-hidden="true"
+        >
+          <Landmark className="h-4 w-4" strokeWidth={2} />
         </div>
+
+        <h1 className="text-headline absolute left-1/2 -translate-x-1/2 truncate text-foreground">
+          RepFinder Canada
+        </h1>
 
         <Button
           variant="ghost"
           size="icon"
           aria-label={isDark ? "Use light appearance" : "Use dark appearance"}
           onClick={onToggle}
-          className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-border bg-card/70"
+          className="h-11 w-11 shrink-0 rounded-full text-primary"
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
@@ -97,9 +86,8 @@ export default function AppHeader() {
               initial="hidden"
               animate="show"
               exit="exit"
-              transition={springSnappy}
             >
-              {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              {isDark ? <Moon className="h-[22px] w-[22px]" strokeWidth={1.8} /> : <Sun className="h-[22px] w-[22px]" strokeWidth={1.8} />}
             </motion.span>
           </AnimatePresence>
         </Button>

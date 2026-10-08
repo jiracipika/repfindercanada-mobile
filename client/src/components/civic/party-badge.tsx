@@ -1,35 +1,34 @@
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 /**
- * Single source of truth for party accent colours.
- * Used by RepCard now; RepresentativeModal adopts it in phase 2b.
+ * Single source of truth for party accent colours (text-tone classes only;
+ * the badge stays flat — the party color lives in the dot).
  */
 
 const PARTY_ACCENTS: Array<{ match: string; className: string }> = [
   {
     match: "liberal",
-    className: "bg-red-500/10 text-red-600 dark:text-red-400",
+    className: "text-red-600 dark:text-red-400",
   },
   {
     match: "conservative",
-    className: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    className: "text-blue-600 dark:text-blue-400",
   },
   {
     match: "ndp",
-    className: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    className: "text-orange-600 dark:text-orange-400",
   },
   {
     match: "new democratic",
-    className: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    className: "text-orange-600 dark:text-orange-400",
   },
   {
     match: "bloc",
-    className: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+    className: "text-cyan-600 dark:text-cyan-400",
   },
   {
     match: "green",
-    className: "bg-green-500/10 text-green-600 dark:text-green-400",
+    className: "text-green-600 dark:text-green-400",
   },
 ];
 
@@ -38,7 +37,7 @@ export function getPartyAccentClass(party: string): string {
   for (const accent of PARTY_ACCENTS) {
     if (value.includes(accent.match)) return accent.className;
   }
-  return "bg-muted text-muted-foreground";
+  return "text-muted-foreground";
 }
 
 /** True when the party should be surfaced at all (independents stay quiet). */
@@ -53,19 +52,18 @@ interface PartyBadgeProps {
 
 export function PartyBadge({ party, className }: PartyBadgeProps) {
   return (
-    <Badge
-      variant="secondary"
+    <span
       className={cn(
-        "gap-1.5 rounded-full border border-border/60 px-2.5 font-semibold",
+        "inline-flex items-center gap-1.5 text-[13px] leading-tight",
         getPartyAccentClass(party),
         className,
       )}
     >
       <span
         aria-hidden="true"
-        className="h-1.5 w-1.5 rounded-full bg-current opacity-80"
+        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
       />
-      {party}
-    </Badge>
+      <span className="text-muted-foreground">{party}</span>
+    </span>
   );
 }

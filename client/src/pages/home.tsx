@@ -15,7 +15,6 @@ import {
   fadeUp,
   fadeUpItem,
   staggerContainer,
-  springSoft,
 } from "@/components/civic/motion";
 
 const sortRepresentatives = (representatives: Representative[]): Representative[] => {
@@ -103,7 +102,6 @@ export default function Home() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          transition={springSoft}
         >
           <Section className="civic-search-panel">
             <SearchForm
@@ -161,19 +159,19 @@ export default function Home() {
           <Section className="mt-6" aria-live="polite">
             <motion.div
               className="space-y-4"
-              variants={staggerContainer}
+              variants={fadeUp}
               initial="hidden"
               animate="show"
             >
-              <motion.div variants={fadeUpItem} className="flex items-end justify-between gap-3">
+              <div className="flex items-end justify-between gap-3">
                 <div>
                   <span className="civic-kicker">District matched</span>
-                  <h3 className="mt-2 text-xl font-bold">Your representatives</h3>
+                  <h3 className="text-title3 mt-2 text-foreground">Your representatives</h3>
                 </div>
-                <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-bold text-muted-foreground">
+                <span className="text-footnote font-semibold text-muted-foreground">
                   {searchResults.length} found
                 </span>
-              </motion.div>
+              </div>
 
               {grouped.map((group) => (
                 <div key={group.key} className="space-y-3">
@@ -183,12 +181,12 @@ export default function Home() {
                     level={group.key}
                   />
                   {group.reps.map((representative) => (
-                    <motion.div key={representative.id} variants={fadeUpItem}>
+                    <div key={representative.id}>
                       <RepresentativeCard
                         representative={representative}
                         onViewProfile={() => setSelectedRepresentative(representative)}
                       />
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               ))}

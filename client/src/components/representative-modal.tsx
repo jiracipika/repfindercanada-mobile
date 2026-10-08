@@ -222,7 +222,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] sm:max-h-[85vh] flex flex-col rounded-[14px] border-0 p-0 overflow-hidden">
         {/* Header - Responsive */}
         <DialogHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 shrink-0 border-b">
           <DialogTitle className="text-lg sm:text-xl">Representative Details</DialogTitle>
@@ -278,7 +278,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                       alt={`${representative.name} photo`}
                       className="object-cover"
                     />
-                    <AvatarFallback className="text-xl sm:text-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
+                    <AvatarFallback className="text-xl sm:text-2xl font-semibold text-muted-foreground bg-muted">
                       {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
@@ -331,7 +331,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                       <Mail className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <a
                         href={`mailto:${representative.email}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                        className="text-primary hover:underline break-all flex-1"
                       >
                         {representative.email}
                       </a>
@@ -343,7 +343,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                       <Phone className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <button
                         onClick={() => handleCall(representative.phone || '')}
-                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1 text-left"
+                        className="text-primary hover:underline break-all flex-1 text-left"
                       >
                         {representative.phone}
                       </button>
@@ -357,7 +357,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                         href={representative.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex-1"
+                        className="text-primary hover:underline break-all flex-1"
                       >
                         Official Website
                       </a>
@@ -439,10 +439,10 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                         <div className="space-y-2">
                           {phone && (
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
                               <button
                                 onClick={() => handleCall(phone)}
-                                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded"
+                                className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium bg-muted px-2 py-1 rounded"
                               >
                                 {phone}
                               </button>
@@ -458,10 +458,10 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
 
                           {office.email && (
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
+                              <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
                               <a
                                 href={`mailto:${office.email}`}
-                                className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium bg-blue-50 dark:bg-blue-950/50 px-2 py-1 rounded break-all"
+                                className="text-xs sm:text-sm text-primary hover:underline cursor-pointer font-medium bg-muted px-2 py-1 rounded break-all"
                               >
                                 {office.email}
                               </a>
@@ -513,7 +513,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
         </div>
 
         {/* Footer with Save Action */}
-        <DialogFooter className="bg-background border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+        <DialogFooter className="border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0">
           <SafeArea bottom className="w-full">
             <Button
               className="w-full h-11 sm:h-12 text-sm sm:text-base"

@@ -3,10 +3,12 @@
 @tailwind utilities;
 
 /*
- * RepFinder Canada — token system 2.0
- * Dark is the default theme (`:root`, mirrored on `.dark`).
- * `.light` redefines the full token set — including every civic-* brand token.
- * No forced-important declarations anywhere; component styles below beat
+ * RepFinder Canada — iOS (Human Interface Guidelines) skin.
+ * Native Apple design language: system palette, translucent materials,
+ * hairline separators, single tint accent.
+ *
+ * `.dark` and `.light` each define the complete token set. No
+ * forced-important declarations anywhere; component styles below beat
  * utilities by source order (and doubled specificity where a tie-break
  * is required).
  */
@@ -16,8 +18,9 @@
   --s-bottom: env(safe-area-inset-bottom);
   --s-left: env(safe-area-inset-left);
   --s-right: env(safe-area-inset-right);
-  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* SF Pro on Apple devices, bundled Inter elsewhere. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "InterVariable",
+    "Inter Variable", "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
 }
 
 /* ---------------------------------------------------------- dark (default) */
@@ -25,116 +28,117 @@
 .dark {
   color-scheme: dark;
 
-  --background: #0a0a0f;
+  --background: #000000;
   --foreground: #ffffff;
-  --card: #1c1c2e;
+  --card: #1c1c1e;
   --card-foreground: #ffffff;
-  --popover: #14141f;
+  --popover: #2c2c2e;
   --popover-foreground: #ffffff;
-  --muted: #15151f;
-  --muted-foreground: #9c9cb2;
-  --accent: #1e1e30;
+  --muted: #2c2c2e;
+  --muted-foreground: rgba(235, 235, 245, 0.6);
+  --accent: #2c2c2e;
   --accent-foreground: #ffffff;
-  --border: #262637;
-  --input: #12121c;
-  --primary: #ff4d63;
-  --primary-foreground: #0a0a0f;
-  --secondary: #4fb3ff;
-  --secondary-foreground: #07101a;
-  --destructive: #e5484d;
+  --border: rgba(84, 84, 88, 0.6);
+  --input: rgba(118, 118, 128, 0.24);
+  --placeholder: rgba(235, 235, 245, 0.3);
+  --primary: #0a84ff;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2c2e;
+  --secondary-foreground: #ffffff;
+  --destructive: #ff453a;
   --destructive-foreground: #ffffff;
-  --ring: #ff4d63;
-  --radius: 1rem;
-  --primary-dark: #e63b52;
+  --ring: #0a84ff;
+  --radius: 0.75rem;
 
-  --neutral-50: #eceef4;
-  --neutral-100: #d7dae6;
-  --neutral-200: #b4b8cb;
-  --neutral-300: #9296ad;
-  --neutral-400: #71748d;
-  --neutral-500: #565870;
-  --neutral-600: #3d3e53;
-  --neutral-700: #2b2c3d;
-  --neutral-800: #1c1c2e;
-  --neutral-900: #0a0a0f;
+  /* Government level accents */
+  --civic-blue: #0a84ff; /* Federal */
+  --civic-purple: #bf5af2; /* Provincial */
+  --civic-mint: #30d158; /* Municipal */
 
-  /* civic brand — dark */
-  --civic-blue: #4fb3ff;
-  --civic-mint: #3ddc97;
-  --civic-red: #ff4d63;
-  --civic-purple: #b48cff;
+  /* iOS system gray ramp (dark: 50 lightest → 900 darkest) */
+  --neutral-50: #ffffff;
+  --neutral-100: #f2f2f7;
+  --neutral-200: #e5e5ea;
+  --neutral-300: #d1d1d6;
+  --neutral-400: #c7c7cc;
+  --neutral-500: #aeaeb2;
+  --neutral-600: #8e8e93;
+  --neutral-700: #636366;
+  --neutral-800: #2c2c2e;
+  --neutral-900: #000000;
 
   /* charts + sidebar (referenced by tailwind.config theme tokens) */
-  --chart-1: #ff4d63;
-  --chart-2: #4fb3ff;
-  --chart-3: #3ddc97;
-  --chart-4: #b48cff;
-  --chart-5: #ffc24b;
-  --sidebar-background: #0e0e16;
+  --chart-1: #0a84ff;
+  --chart-2: #30d158;
+  --chart-3: #bf5af2;
+  --chart-4: #ff9f0a;
+  --chart-5: #64d2ff;
+  --sidebar-background: #1c1c1e;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ff4d63;
-  --sidebar-primary-foreground: #0a0a0f;
-  --sidebar-accent: #1e1e30;
+  --sidebar-primary: #0a84ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2c2c2e;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #262637;
-  --sidebar-ring: #ff4d63;
+  --sidebar-border: rgba(84, 84, 88, 0.6);
+  --sidebar-ring: #0a84ff;
 }
 
 /* ------------------------------------------------------------------- light */
 .light {
   color-scheme: light;
 
-  --background: #f7f6f3;
-  --foreground: #1b1b26;
+  --background: #f2f2f7;
+  --foreground: #000000;
   --card: #ffffff;
-  --card-foreground: #1b1b26;
+  --card-foreground: #000000;
   --popover: #ffffff;
-  --popover-foreground: #1b1b26;
-  --muted: #eeece6;
-  --muted-foreground: #5d5d6e;
-  --accent: #f0eee8;
-  --accent-foreground: #1b1b26;
-  --border: #e3e0d8;
-  --input: #ffffff;
-  --primary: #e63950;
+  --popover-foreground: #000000;
+  --muted: #f2f2f7;
+  --muted-foreground: rgba(60, 60, 67, 0.6);
+  --accent: #f2f2f7;
+  --accent-foreground: #000000;
+  --border: rgba(60, 60, 67, 0.29);
+  --input: rgba(118, 118, 128, 0.12);
+  --placeholder: rgba(60, 60, 67, 0.3);
+  --primary: #007aff;
   --primary-foreground: #ffffff;
-  --secondary: #1e7fd0;
-  --secondary-foreground: #ffffff;
-  --destructive: #d13438;
+  --secondary: #e5e5ea;
+  --secondary-foreground: #000000;
+  --destructive: #ff3b30;
   --destructive-foreground: #ffffff;
-  --ring: #e63950;
-  --primary-dark: #c72a41;
+  --ring: #007aff;
+  --radius: 0.75rem;
 
-  --neutral-50: #1b1b26;
-  --neutral-100: #33333f;
-  --neutral-200: #565664;
-  --neutral-300: #6f6f7e;
-  --neutral-400: #8a8a98;
-  --neutral-500: #a5a5b1;
-  --neutral-600: #c2c2ca;
-  --neutral-700: #dcdbd4;
-  --neutral-800: #edebe5;
-  --neutral-900: #f7f6f3;
+  /* Government level accents */
+  --civic-blue: #007aff; /* Federal */
+  --civic-purple: #af52de; /* Provincial */
+  --civic-mint: #30d158; /* Municipal */
 
-  /* civic brand — light (deepened for contrast on warm paper) */
-  --civic-blue: #1170c2;
-  --civic-mint: #0c8f62;
-  --civic-red: #e63950;
-  --civic-purple: #7a52c7;
+  /* iOS system gray ramp (light: 50 darkest → 900 lightest) */
+  --neutral-50: #000000;
+  --neutral-100: #1c1c1e;
+  --neutral-200: #3c3c43;
+  --neutral-300: #636366;
+  --neutral-400: #8e8e93;
+  --neutral-500: #aeaeb2;
+  --neutral-600: #c7c7cc;
+  --neutral-700: #d1d1d6;
+  --neutral-800: #e5e5ea;
+  --neutral-900: #f2f2f7;
 
-  --chart-1: #e63950;
-  --chart-2: #1170c2;
-  --chart-3: #0c8f62;
-  --chart-4: #7a52c7;
-  --chart-5: #c77800;
+  --chart-1: #007aff;
+  --chart-2: #30d158;
+  --chart-3: #af52de;
+  --chart-4: #ff9500;
+  --chart-5: #5ac8fa;
   --sidebar-background: #ffffff;
-  --sidebar-foreground: #1b1b26;
-  --sidebar-primary: #e63950;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #007aff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f0eee8;
-  --sidebar-accent-foreground: #1b1b26;
-  --sidebar-border: #e3e0d8;
-  --sidebar-ring: #e63950;
+  --sidebar-accent: #f2f2f7;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: rgba(60, 60, 67, 0.29);
+  --sidebar-ring: #007aff;
 }
 
 @layer base {
@@ -154,17 +158,8 @@
     @apply font-sans antialiased bg-background text-foreground;
     margin: 0;
     font-family: var(--font-sans);
-    background:
-      radial-gradient(800px 460px at 0% -10%, color-mix(in srgb, var(--civic-blue) 12%, transparent), transparent 56%),
-      radial-gradient(620px 420px at 110% 16%, color-mix(in srgb, var(--civic-red) 10%, transparent), transparent 58%),
-      var(--background);
-  }
-
-  .light body {
-    background:
-      radial-gradient(800px 460px at 0% -10%, color-mix(in srgb, var(--civic-blue) 9%, transparent), transparent 56%),
-      radial-gradient(620px 420px at 110% 16%, color-mix(in srgb, var(--civic-red) 7%, transparent), transparent 58%),
-      var(--background);
+    font-size: 17px;
+    line-height: 1.45;
   }
 
   button,
@@ -178,12 +173,8 @@
   a:focus-visible,
   input:focus-visible,
   [role="button"]:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--civic-blue) 65%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
     outline-offset: 2px;
-  }
-
-  @media (max-width: 768px) {
-    body { @apply text-sm; }
   }
 
   /* Reduced motion: still applies without forced-important declarations —
@@ -207,6 +198,18 @@
   .safe-pl { padding-left: max(1rem, var(--s-left)); }
   .safe-pr { padding-right: max(1rem, var(--s-right)); }
   .touch-manipulation { touch-action: manipulation; }
+
+  /* iOS type scale (SF Pro metrics, rem-based so it scales with user settings) */
+  .text-large-title { font-size: 2.125rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }   /* 34 */
+  .text-title2 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }       /* 22 */
+  .text-title3 { font-size: 1.25rem; font-weight: 600; line-height: 1.2; }                                  /* 20 */
+  .text-headline { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; }                             /* 17 semibold */
+  .text-body { font-size: 1.0625rem; font-weight: 400; line-height: 1.45; }                                 /* 17 */
+  .text-callout { font-size: 1rem; font-weight: 400; line-height: 1.45; }                                   /* 16 */
+  .text-subheadline { font-size: 0.9375rem; font-weight: 400; line-height: 1.45; }                          /* 15 */
+  .text-footnote { font-size: 0.8125rem; font-weight: 400; line-height: 1.35; }                             /* 13 */
+  .text-caption1 { font-size: 0.75rem; font-weight: 400; line-height: 1.3; }                                /* 12 */
+  .text-caption2 { font-size: 0.6875rem; font-weight: 600; line-height: 1.25; }                             /* 11 semibold, chips */
 }
 
 /* ------------------------------------------------------------------ shell */
@@ -216,117 +219,81 @@
   isolation: isolate;
 }
 
-.civic-shell::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  opacity: 0.24;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: linear-gradient(to bottom, black, transparent 72%);
-}
-
-.light .civic-shell::before {
-  opacity: 0.5;
-  background-image:
-    linear-gradient(rgba(20, 20, 40, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20, 20, 40, 0.045) 1px, transparent 1px);
-}
-
 .civic-page {
   width: 100%;
   max-width: 760px;
   margin-inline: auto;
-  padding: 1.25rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  /* 16px inset columns; clears the 49px tab bar + safe area + breathing room */
+  padding: 16px 16px calc(49px + env(safe-area-inset-bottom) + 32px);
 }
 
 .civic-page-header {
-  margin: 0.5rem 0 1.25rem;
+  margin: 8px 0 16px;
 }
 
 .civic-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  color: var(--civic-mint);
-  font-size: 0.68rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.16em;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.civic-kicker::before {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 14px currentColor;
-  content: "";
-}
-
 .civic-title {
-  margin-top: 0.65rem;
-  max-width: 16ch;
-  font-size: clamp(2rem, 9vw, 3.35rem);
-  font-weight: 850;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  margin-top: 4px;
+  font-size: 2.125rem; /* LargeTitle 34 */
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .civic-lede {
-  margin-top: 0.9rem;
+  margin-top: 8px;
   max-width: 40rem;
   color: var(--muted-foreground);
-  font-size: 0.95rem;
-  line-height: 1.65;
+  font-size: 0.9375rem; /* Subheadline 15 */
+  line-height: 1.45;
 }
 
 .civic-trust-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .civic-trust-chip {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 28px;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid var(--border);
+  gap: 4px;
+  padding: 4px 10px;
   border-radius: 999px;
   color: var(--muted-foreground);
-  background: color-mix(in srgb, var(--card) 86%, transparent);
-  font-size: 0.7rem;
-  font-weight: 700;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  font-size: 0.6875rem; /* Caption2 11 */
+  font-weight: 600;
 }
 
-/* cards + panels */
+/* cards + panels — flat grouped surfaces. Background contrast separates
+   them from the grouped background; no borders, no shadows. */
 
 .civic-panel,
 .civic-empty,
 [data-civic-card="true"] {
-  border: 1px solid var(--border);
-  border-radius: 1.35rem;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 42%),
-    color-mix(in srgb, var(--card) 92%, transparent);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--card);
+  box-shadow: none;
 }
 
 .light .civic-panel,
 .light .civic-empty,
 .light [data-civic-card="true"] {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.85), transparent 46%),
-    color-mix(in srgb, var(--card) 96%, transparent);
-  box-shadow: 0 14px 38px rgba(27, 27, 38, 0.08);
+  background: #ffffff;
 }
 
 .civic-empty {
@@ -334,136 +301,160 @@
   text-align: center;
 }
 
-/* glass surfaces (header + bottom nav) */
+/* iOS translucent materials (navigation bar + tab bar).
+   Hairline edge is drawn by the component's border. */
 
 .civic-glass {
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   background: color-mix(in srgb, var(--card) 72%, transparent);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-}
-
-.light .civic-glass {
-  background: color-mix(in srgb, var(--card) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .civic-nav-shell {
   position: fixed;
   z-index: 40;
-  right: 0.75rem;
-  bottom: calc(0.7rem + env(safe-area-inset-bottom));
-  left: 0.75rem;
-  padding: 0.4rem;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 1.35rem;
-  background: color-mix(in srgb, var(--card) 82%, transparent);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-}
-
-.light .civic-nav-shell {
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  box-shadow: 0 16px 36px rgba(27, 27, 38, 0.14);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: calc(49px + env(safe-area-inset-bottom));
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .civic-nav-item {
-  min-width: 64px;
-  min-height: 52px;
-  border-radius: 0.95rem;
+  min-width: 44px;
+  height: 49px;
+  border-radius: 0;
+  transition: color 150ms ease;
 }
 
 .civic-nav-item[data-active="true"] {
   color: var(--primary);
 }
 
-/* brand mark */
+/* brand mark — quiet, tint-colored */
 
 .civic-maple-mark {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: 0.9rem;
-  color: #07101a;
-  background: linear-gradient(135deg, var(--civic-red), #ff8c67);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--civic-red) 28%, transparent);
+  border-radius: 0.5rem;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* search */
 
 .civic-search-panel {
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 1.35rem;
-  background: color-mix(in srgb, var(--card) 94%, transparent);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  padding: 16px;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--card);
+  box-shadow: none;
 }
 
 .light .civic-search-panel {
-  box-shadow: 0 16px 44px rgba(27, 27, 38, 0.1);
+  background: #ffffff;
 }
 
-/* Doubled class = specificity (0,2,0): wins ties with single-class
-   utilities (`h-10`, `bg-primary`, …) so no forced-important
-   declarations are needed. */
+/* iOS search field: system fill, no glow. Focus = hairline tint + 3px
+   25% tint ring. Doubled class = specificity (0,2,0): wins ties with
+   single-class utilities so no forced-important is needed. */
 .civic-search-input.civic-search-input {
-  height: 3.75rem;
-  border-radius: 1rem;
-  border-color: color-mix(in srgb, var(--civic-blue) 26%, var(--border));
-  background: color-mix(in srgb, var(--input) 94%, transparent);
-  font-size: 1.05rem;
-  letter-spacing: 0.03em;
+  height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  background: var(--input);
+  font-size: 1.0625rem; /* Body 17 */
+  font-weight: 400;
+  letter-spacing: 0;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.civic-search-input.civic-search-input::placeholder {
+  color: var(--placeholder);
+}
+
+.civic-search-input.civic-search-input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .civic-primary-button.civic-primary-button {
-  min-height: 3.5rem;
-  border-radius: 1rem;
+  min-height: 50px;
+  border-radius: 0.875rem;
   color: var(--primary-foreground);
-  background: linear-gradient(135deg, var(--primary), #ff8465);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 26%, transparent);
+  background: var(--primary);
+  font-size: 1.0625rem; /* 17 */
+  font-weight: 600;
+  box-shadow: none;
+  transition: transform 150ms ease, background-color 150ms ease;
 }
 
+.civic-primary-button.civic-primary-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Secondary/tertiary "tinted" button style: 12% tint fill + tint label. */
+.civic-tinted-button.civic-tinted-button {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  box-shadow: none;
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+
+.civic-tinted-button.civic-tinted-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* iOS alert-style modal sheet. The only surface allowed a shadow, and it
+   is the soft neutral one. */
 .civic-modal-card {
-  border: 1px solid var(--border);
-  border-radius: 1.5rem;
+  border: 0;
+  border-radius: 0.875rem;
   color: var(--foreground);
   background: var(--card);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.52);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
-/* shimmer skeleton */
+.dark .civic-modal-card {
+  background: var(--popover); /* #2C2C2E elevated surface */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* skeleton — flat fill, restrained shimmer */
 
 .civic-skeleton {
   position: relative;
   overflow: hidden;
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
 }
 
 .civic-skeleton::after {
   position: absolute;
   inset: 0;
   content: "";
+  pointer-events: none;
   transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--foreground) 9%, transparent),
+    color-mix(in srgb, var(--foreground) 6%, transparent),
     transparent
   );
-  animation: civic-shimmer 1.6s ease-in-out infinite;
+  animation: civic-shimmer 1.4s ease-in-out infinite;
 }
 
 @keyframes civic-shimmer {
   from { transform: translateX(-100%); }
   to { transform: translateX(100%); }
-}
-
-@media (min-width: 700px) {
-  .civic-page { padding-inline: 1.5rem; }
-  .civic-nav-shell {
-    right: max(0.75rem, calc((100vw - 720px) / 2));
-    left: max(0.75rem, calc((100vw - 720px) / 2));
-  }
 }

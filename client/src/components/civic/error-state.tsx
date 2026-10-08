@@ -31,15 +31,15 @@ export function ErrorState({
         aria-hidden="true"
         className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl"
         style={{
-          color: "var(--civic-red)",
-          backgroundColor: "color-mix(in srgb, var(--civic-red) 12%, transparent)",
+          color: "var(--destructive)",
+          backgroundColor: "color-mix(in srgb, var(--destructive) 12%, transparent)",
         }}
       >
         <RotateCcw className="h-7 w-7" />
       </div>
-      <h3 className="mb-2 text-lg font-bold tracking-tight text-foreground">{title}</h3>
+      <h3 className="text-headline mb-2 text-foreground">{title}</h3>
       {description && (
-        <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+        <p className="mx-auto max-w-sm text-subheadline text-muted-foreground">
           {description}
         </p>
       )}
@@ -47,11 +47,7 @@ export function ErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold text-primary-foreground transition-transform active:translate-y-px"
-          style={{
-            background: "linear-gradient(135deg, var(--primary), #ff8465)",
-            boxShadow: "0 10px 24px color-mix(in srgb, var(--primary) 26%, transparent)",
-          }}
+          className="civic-primary-button mt-5 inline-flex items-center justify-center gap-2 px-5"
         >
           <RotateCcw className="h-4 w-4" />
           {retryLabel}

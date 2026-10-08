@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +8,7 @@ import { fetchRepsByPostalLocal } from "@/lib/localSearchService";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { useUserData } from "@/hooks/use-user-data";
 import { logActivity } from "@/lib/storage/activityRepository";
-import { springSnappy, springSoft } from "@/components/civic/motion";
+import { fadeTween } from "@/components/civic/motion";
 
 interface SearchFormProps {
   onSearchStart: () => void;
@@ -198,23 +198,11 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
   };
 
   const dropdownContent = showDropdown ? getDropdownContent() : null;
-  const reduceMotion = useReducedMotion();
 
   return (
     <div className="space-y-4">
       <form onSubmit={(e) => { e.preventDefault(); handleManualSearch(); }}>
         <div className="relative" ref={dropdownRef}>
-          {/* Focus glow ring — opacity only, no layout impact */}
-          <motion.div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-[1rem]"
-            style={{
-              boxShadow: "0 0 0 4px color-mix(in srgb, var(--civic-blue) 24%, transparent)",
-            }}
-            initial={false}
-            animate={{ opacity: inputFocused ? 1 : 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          />
           <Input
             type="text"
             placeholder="Postal code — K1A 0A9"
@@ -222,61 +210,38 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
             onChange={(e) => setQuery(e.target.value.toUpperCase())}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setTimeout(() => setInputFocused(false), 200)}
-            className="civic-search-input relative pl-14 pr-4 font-semibold text-foreground placeholder:text-muted-foreground"
+            className="civic-search-input relative pl-11 font-normal text-foreground"
           />
-          <Search className="absolute left-5 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors" />
-
-          {/* Floating validation card */}
-          <AnimatePresence>
-            {showDropdown && dropdownContent && (
-              <motion.div
-                key="postal-feedback"
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                transition={springSoft}
-                className="absolute z-50 mt-2 w-full rounded-2xl border border-border bg-card p-4 shadow-2xl"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">{dropdownContent.icon}</div>
-                  <div className="flex-1 space-y-1">
-                    <p className={`text-sm font-medium ${dropdownContent.className}`}>
-                      {dropdownContent.text}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {dropdownContent.subtext}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         </div>
+
+        {/* iOS inline validation — a plain 13px line under the field */}
+        {dropdownContent && (
+          <motion.p
+            key="postal-feedback"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={fadeTween}
+            role="status"
+            className="text-footnote mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-muted-foreground"
+          >
+            {dropdownContent.icon}
+            <span className={dropdownContent.className}>{dropdownContent.text}</span>
+            <span>{dropdownContent.subtext}</span>
+          </motion.p>
+        )}
 
         <Button
           type="submit"
           disabled={isSearching || !query.trim()}
-          className="civic-primary-button relative mt-3 w-full overflow-hidden text-base font-bold active:translate-y-px"
+          className="civic-primary-button mt-3 w-full"
         >
-          {!reduceMotion && !isSearching && query.trim() && (
-            <motion.span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-12"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,.32), transparent)",
-              }}
-              initial={{ x: "-140%" }}
-              animate={{ x: ["-140%", "420%"] }}
-              transition={{ duration: 1.1, ease: "easeInOut", repeat: Infinity, repeatDelay: 3.2 }}
-            />
-          )}
           {isSearching ? (
-            <Loader2 className="relative z-10 mr-2 h-5 w-5 animate-spin" />
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
-            <Search className="relative z-10 mr-2 h-5 w-5" />
+            <Search className="mr-2 h-5 w-5" />
           )}
-          <span className="relative z-10">Find my representatives</span>
+          <span>Find my representatives</span>
         </Button>
       </form>
     </div>

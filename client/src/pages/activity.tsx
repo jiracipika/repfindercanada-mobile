@@ -108,7 +108,11 @@ export default function Activity() {
                           {activity.representatives.slice(0, 3).map((rep) => (
                             <span
                               key={rep.id}
-                              className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+                              className="inline-flex items-center rounded-full px-2 py-0.5 font-medium text-primary"
+                              style={{
+                                backgroundColor:
+                                  "color-mix(in srgb, var(--primary) 12%, transparent)",
+                              }}
                             >
                               {rep.name}
                               {rep.electedOffice && (

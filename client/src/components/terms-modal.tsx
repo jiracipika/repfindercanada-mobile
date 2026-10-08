@@ -63,16 +63,16 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-background/88 backdrop-blur-xl"></div>
+      <div className="fixed inset-0 z-50 bg-black/40"></div>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 safe-pt safe-pb">
         <div className="civic-modal-card w-full max-w-md p-5 sm:p-6">
           <span className="civic-kicker">Before you begin</span>
-          <h1 className="mb-2 mt-3 text-2xl font-extrabold tracking-tight">Your privacy, in plain language.</h1>
-          <p className="mb-4 text-sm leading-relaxed text-muted-foreground">Review how RepFinder Canada handles postal codes and public representative data.</p>
+          <h1 className="text-title2 mb-2 mt-2 text-foreground">Your privacy, in plain language.</h1>
+          <p className="text-subheadline mb-4 text-muted-foreground">Review how RepFinder Canada handles postal codes and public representative data.</p>
           <div
             ref={termsRef}
             onScroll={handleScroll}
-            className="mb-5 max-h-[54vh] overflow-y-auto rounded-2xl border border-border bg-background/45 p-4 text-sm leading-relaxed text-muted-foreground"
+            className="mb-5 max-h-[54vh] overflow-y-auto rounded-xl bg-muted p-4 text-subheadline text-muted-foreground"
           >
             <p className="mb-2"><b>Last updated: September 24, 2025</b></p>
 
@@ -98,7 +98,11 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
           </div>
 
           <div className="grid grid-cols-[auto_1fr] gap-3">
-            <Button variant="ghost" className="min-h-12 rounded-xl" onClick={() => setShowDisagreeAlert(true)}>
+            <Button
+              variant="ghost"
+              className="min-h-12 rounded-xl px-4 font-semibold text-primary"
+              onClick={() => setShowDisagreeAlert(true)}
+            >
               Decline
             </Button>
             <Button className="civic-primary-button" onClick={handleAccept} disabled={!canAccept}>

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Heart, Mail, MapPin, Phone, Trash2, User } from "lucide-react";
 import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
-import { springSoft } from "./motion";
+import { fadeUp } from "./motion";
 import { PartyBadge, hasPartyAffiliation } from "./party-badge";
 import { LevelChip } from "./level-chip";
 
@@ -162,12 +162,12 @@ export function RepCard({
       data-civic-card="true"
       initial="hidden"
       animate="show"
-      variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: springSoft } }}
-      whileTap={{ scale: 0.995 }}
+      variants={fadeUp}
+      whileTap={{ scale: 0.97 }}
       className="overflow-hidden p-4"
     >
       <div className="flex items-start space-x-4">
-        <Avatar className="h-16 w-16 border-2 shadow-lg" style={{ borderColor: "color-mix(in srgb, var(--civic-blue) 40%, transparent)" }}>
+        <Avatar className="h-16 w-16">
           {!avatarFailed && representative.photo && (
             <AvatarImage
               src={representative.photo}
@@ -177,8 +177,8 @@ export function RepCard({
             />
           )}
           <AvatarFallback
-            className="text-lg font-bold text-neutral-900"
-            style={{ background: "linear-gradient(135deg, var(--civic-blue), var(--civic-mint))" }}
+            className="text-lg font-semibold text-muted-foreground"
+            style={{ background: "var(--muted)" }}
           >
             {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </AvatarFallback>
@@ -186,7 +186,7 @@ export function RepCard({
 
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-start justify-between gap-2">
-            <h3 className="text-lg font-semibold leading-tight text-foreground">
+            <h3 className="text-headline leading-snug text-foreground">
               {representative.name}
             </h3>
             <div className="flex gap-1">
@@ -196,12 +196,12 @@ export function RepCard({
                   size="icon"
                   onClick={handleSave}
                   aria-label={isSaved ? `Remove ${representative.name} from saved representatives` : `Save ${representative.name}`}
-                  className="h-11 w-11 shrink-0 rounded-full border border-border bg-background/40"
+                  className="h-11 w-11 shrink-0 rounded-full"
                 >
                   {isSaved ? (
-                    <Heart className="h-5 w-5 text-red-500 fill-current" />
+                    <Heart className="h-5 w-5 text-primary fill-current" />
                   ) : (
-                    <Heart className="h-5 w-5 text-neutral-400" />
+                    <Heart className="h-5 w-5 text-muted-foreground" />
                   )}
                 </Button>
               )}
@@ -211,9 +211,9 @@ export function RepCard({
                   size="icon"
                   onClick={handleDelete}
                   aria-label={`Delete ${representative.name} from saved representatives`}
-                  className="h-11 w-11 shrink-0 rounded-full border border-border bg-background/40"
+                  className="h-11 w-11 shrink-0 rounded-full"
                 >
-                  <Trash2 className="h-5 w-5 text-red-500" />
+                  <Trash2 className="h-5 w-5 text-destructive" />
                 </Button>
               )}
             </div>
@@ -231,7 +231,7 @@ export function RepCard({
             )}
           </div>
 
-          <div className="mt-2 space-y-1.5 text-sm">
+          <div className="text-subheadline mt-2 space-y-1.5">
             <div className="flex items-center text-muted-foreground">
               <MapPin className="mr-2 h-4 w-4 shrink-0" />
               <span className="truncate">
@@ -251,25 +251,25 @@ export function RepCard({
       <div className="mt-5 border-t border-border pt-4">
         <div className="grid grid-cols-2 gap-3">
           <Button
-            variant="outline"
-            className={`min-h-14 rounded-xl border-border bg-background/35 font-bold ${!representative.phone ? "opacity-50" : ""}`}
+            variant="ghost"
+            className={`civic-tinted-button min-h-12 rounded-xl ${!representative.phone ? "opacity-50" : ""}`}
             onClick={handleCall}
             disabled={!representative.phone}
           >
             <Phone className="mr-2 h-4 w-4" />
-            <span className="text-sm font-bold">
+            <span className="text-subheadline font-semibold">
               {representative.phone ? "Call" : "No Phone"}
             </span>
           </Button>
 
           <Button
-            variant="outline"
-            className={`min-h-14 rounded-xl border-border bg-background/35 font-bold ${!representative.email ? "opacity-50" : ""}`}
+            variant="ghost"
+            className={`civic-tinted-button min-h-12 rounded-xl ${!representative.email ? "opacity-50" : ""}`}
             onClick={handleEmail}
             disabled={!representative.email}
           >
             <Mail className="mr-2 h-4 w-4" />
-            <span className="text-sm font-bold">
+            <span className="text-subheadline font-semibold">
               {representative.email ? "Email" : "No Email"}
             </span>
           </Button>
@@ -278,12 +278,12 @@ export function RepCard({
 
       <div className="mt-3">
         <Button
-          variant="outline"
-          className="flex min-h-12 w-full items-center justify-center rounded-xl border-border bg-background/20"
+          variant="ghost"
+          className="civic-tinted-button flex min-h-12 w-full items-center justify-center rounded-xl"
           onClick={onViewProfile}
         >
           <User className="mr-2 h-4 w-4" />
-          <span className="text-sm font-medium">View Full Profile</span>
+          <span className="text-subheadline font-semibold">View Full Profile</span>
         </Button>
       </div>
     </motion.article>

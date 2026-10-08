@@ -36,26 +36,21 @@ interface LevelChipProps {
   className?: string;
 }
 
-/** Federal blue / Provincial purple / Municipal mint level chip. */
+/** Federal blue / Provincial purple / Municipal mint level chip — flat tinted capsule. */
 export function LevelChip({ level, electedOffice, className }: LevelChipProps) {
   const resolved = resolveLevel(level, electedOffice);
   const meta = LEVEL_META[resolved];
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-tight",
         className,
       )}
       style={{
         color: `var(${meta.cssVar})`,
-        borderColor: `color-mix(in srgb, var(${meta.cssVar}) 32%, transparent)`,
-        backgroundColor: `color-mix(in srgb, var(${meta.cssVar}) 12%, transparent)`,
+        backgroundColor: `color-mix(in srgb, var(${meta.cssVar}) 15%, transparent)`,
       }}
     >
-      <span
-        aria-hidden="true"
-        className="h-1.5 w-1.5 rounded-full bg-current"
-      />
       {meta.label}
     </span>
   );

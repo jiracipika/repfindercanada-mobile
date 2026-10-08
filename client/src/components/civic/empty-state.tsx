@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { fadeUp, springSoft } from "./motion";
+import { fadeUp } from "./motion";
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -18,20 +18,22 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       variants={fadeUp}
       initial="hidden"
       animate="show"
-      transition={springSoft}
       className={cn("civic-empty", className)}
     >
       {icon && (
         <div
           aria-hidden="true"
-          className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-secondary/10 text-[var(--civic-blue)]"
+          className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl text-primary"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--primary) 12%, transparent)",
+          }}
         >
           {icon}
         </div>
       )}
-      <h3 className="mb-2 text-lg font-bold tracking-tight text-foreground">{title}</h3>
+      <h3 className="text-headline mb-2 text-foreground">{title}</h3>
       {description && (
-        <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+        <p className="mx-auto max-w-sm text-subheadline text-muted-foreground">
           {description}
         </p>
       )}
