@@ -1,9 +1,11 @@
 # NEXT SLICE — RepFinder Canada UI overhaul (handoff, 2026-10-07)
 
-Repo: `jiracipika/repfindercanada-mobile` (private). Old full-stack repo kept as remote `original` (`jiracipika/repfinderforcanadadev`) — do not delete.
-Local: `/Users/rs/Documents/projects in progress/repfindercanada-mobile` (MacBook Air). Path has spaces — quote it.
+> **STATUS (2026-10-08): ALL PHASES DONE AND PUSHED.** Phase 2a `a407f37` → iOS-native restyle `cc171f7` (user rejected the maple/dark brief mid-verify — final design language is Apple HIG, see addendum below) → 2b `7d3bb21` → 3 `ddcae2f` → 4 `6bab949`. Phase 4 landed: Android back-button stack (sheet → tab → exit), StatusBar/splash synced to theme (`launchAutoHide:false`, no white flash), Haptics (save + tab switch only), Share via `@capacitor/share` with real URL (`client/src/lib/appUrls.ts` → `https://canadarepfinder.vercel.app`, never the webview origin), PWA manifest + real icons (webp/svg/maskable) + `<link rel="manifest">`, stale `sw.js` deleted (nothing registered it), `allowNavigation` pruned (nominatim kept — used by riding-map), 3.3.0 unified (package.json / `version.ts` / gradle `503000`/"3.3.0" / codemagic `agvtool` ×2). Also fixed: the 7-tap dev auto-tester leaked into PRODUCTION native builds (`hostname === 'localhost'` is true inside the Capacitor webview) — now `import.meta.env.DEV` only; 7 taps on the profile heading additionally run an offline self-test (`client/src/lib/dev-selftest.ts`, 14/14 green). Verified: typecheck 0, build ok, `cap sync android` ok, manifest JSON valid, share URL grep clean, live 390×844 behavioral pass (terms → disclaimer → 7-tap → toast). **Remaining = the Deferred section below + user actions: push a tag / run Codemagic `release-both` to produce signed 3.3.0 builds.**
 
-## State
+Repo: `jiracipika/repfindercanada-mobile` (private). Old full-stack repo kept as remote `original` (`jiracipika/repfinderforcanadadev`) — do not delete.
+Local: `/Users/rs/Documents/projects in progress/repfindercanada-mobile` (MacBook Air). Path has spaces — quote it. Server-PC clone: `/Volumes/ADATA/projects/repfindercanada-mobile` (active).
+
+## State (as handed off 2026-10-07 — see STATUS above for current)
 
 - `main` == `origin/main`, HEAD = `58d9495` "chore: hygiene pass — remove dead design layer, unify brand to RepFinder Canada, fix meta/version/log hygiene" (+97/−616 across 40 files).
 - Phase 1 (hygiene) is DONE and verified: dead design layer deleted (layouts/, header.tsx, boundary-info, tabs-nav, not-found, About.test, legacy storage.ts), 115 console.log removed, brand unified to **"RepFinder Canada"**, index.html fixed (title/description/viewport/theme-color, Replit banner removed, zoom allowed), `client/src/version.ts` = single APP_VERSION source, deps `next-themes` + `react-icons` removed.
