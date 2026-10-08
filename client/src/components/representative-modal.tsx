@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Capacitor } from "@capacitor/core";
+import { Share } from "@capacitor/share";
 import {
   Building2,
   ExternalLink,
@@ -18,6 +20,8 @@ import {
 } from "lucide-react";
 import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
+import { repShareUrl } from "@/lib/appUrls";
+import { hapticLight } from "@/lib/native-shell";
 import { useToast } from "@/hooks/use-toast";
 import { SafeArea } from "@/components/ui/safe-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -80,6 +84,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
         });
       } else {
         await repRepository.saveRep(representative);
+        hapticLight();
         // Don't manually set state - let the subscription handle it
         toast({
           title: "Saved successfully",
@@ -117,19 +122,34 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     window.open(combinedUrl, '_blank');
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const legislatureOffice = getLegislatureOffice();
     const constituencyOffice = getConstituencyOffice();
     const legislaturePhone = getOfficePhone(legislatureOffice) || 'Not available';
     const constituencyPhone = getOfficePhone(constituencyOffice) || 'Not available';
 
-    const shareText = `Contact ${representative.name} - ${representative.party} ${getPositionLabel(representative.electedOffice)} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}\n\nLegislature Office: ${legislaturePhone}\nConstituency Office: ${constituencyPhone}\nEmail: ${representative.email || 'Not available'}\n\nFind your representative at: ${window.location.href}`;
+    const title = `Contact ${representative.name}`;
+    // Deep-ish link to the production web app — never the webview origin
+    // (https://localhost/...), which is what window.location.href holds
+    // inside the Capacitor shell.
+    const url = repShareUrl(representative.id);
+    const shareText = `Contact ${representative.name} - ${representative.party} ${getPositionLabel(representative.electedOffice)} for ${representative.constituency}${representative.province ? ', ' + representative.province : ''}\n\nLegislature Office: ${legislaturePhone}\nConstituency Office: ${constituencyPhone}\nEmail: ${representative.email || 'Not available'}\n\nFind your representative at: ${url}`;
+
+    // Native shell: system share sheet via Capacitor Share.
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({ title, text: shareText, url, dialogTitle: 'Share contact' });
+        return;
+      } catch {
+        // User dismissed the sheet (or it failed) — fall through to web paths.
+      }
+    }
 
     if (navigator.share) {
       navigator.share({
-        title: `Contact ${representative.name}`,
+        title,
         text: shareText,
-        url: window.location.href
+        url
       }).catch(() => {
         // Fallback if native sharing fails
         navigator.clipboard.writeText(shareText).then(() => {
@@ -140,11 +160,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
         });
       });
     } else {
-      // Social media sharing options
-      const encodedText = encodeURIComponent(shareText);
-      const encodedUrl = encodeURIComponent(window.location.href);
-
-      // Show sharing options (simplified - just copy to clipboard for now)
+      // No Web Share API — copy to clipboard
       navigator.clipboard.writeText(shareText).then(() => {
         toast({
           title: "Copied to clipboard",

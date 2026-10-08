@@ -4,6 +4,7 @@ import { Preferences } from "@capacitor/preferences";
 import { Landmark, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { iconSwap } from "./civic/motion";
+import { syncChromeToTheme } from "@/lib/native-shell";
 
 const THEME_KEY = "theme";
 type Theme = "dark" | "light" | "system";
@@ -19,6 +20,9 @@ export default function AppHeader() {
     setIsDark(dark);
     root.classList.toggle("dark", dark);
     root.classList.toggle("light", !dark);
+    // Keep the native status bar / webview backdrop / PWA chrome in sync
+    // with every theme application (toggle, first load, system change).
+    syncChromeToTheme(dark);
   };
 
   useEffect(() => {

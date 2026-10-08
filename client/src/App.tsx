@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig, AnimatePresence } from "framer-motion";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapApp } from "@capacitor/app";
-import { StatusBar, Style } from '@capacitor/status-bar';
+import { StatusBar } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
 
 import { queryClient } from "./lib/queryClient";
@@ -28,6 +28,7 @@ import { SourcesDisclaimer } from "@/pages/sources-disclaimer";
 import NameSearch from "@/pages/name-search";
 import { initializeCacheManagement } from "@/lib/cacheManager";
 import { APP_VERSION } from "./version";
+import { useAndroidBackButton, syncChromeToTheme, hideLaunchSplash } from "@/lib/native-shell";
 
 // Map routes to page indices
 const routeToIndex: Record<string, number> = {
@@ -102,6 +103,18 @@ function AppContent() {
   const [appStatus, setAppStatus] = useState('initializing'); // 'initializing', 'needsTerms', 'needsDisclaimer', 'ready'
   const [appVersion, setAppVersion] = useState<string>('0.0.0');
   const { initializeUserData, isLoading: userDataLoading } = useUserData();
+  const [location, setLocation] = useLocation();
+
+  // Android hardware back: close sheet -> back to Find tab -> default exit.
+  useAndroidBackButton(location, setLocation);
+
+  // The native splash is held (launchAutoHide: false) until the app reaches
+  // its first non-initializing state, then fades out — no white flash.
+  useEffect(() => {
+    if (appStatus !== 'initializing') {
+      hideLaunchSplash();
+    }
+  }, [appStatus]);
 
   useEffect(() => {
     // Don't start startup sequence until user data is loaded
@@ -111,10 +124,11 @@ function AppContent() {
 
     const startup = async () => {
       try {
-        // Initialize StatusBar for native platforms
+        // Sync status bar to the theme the blocking bootstrap in index.html
+        // already resolved (was hardcoded Style.Light, wrong for dark).
         if (Capacitor.isNativePlatform()) {
-          await StatusBar.setStyle({ style: Style.Light }); // Or Dark, depending on theme
           await StatusBar.setOverlaysWebView({ overlay: true });
+          syncChromeToTheme(document.documentElement.classList.contains('dark'));
         }
 
         // Capacitor App.getInfo is native-only. Keep web/PWA startup deterministic.

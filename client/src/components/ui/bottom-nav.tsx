@@ -1,6 +1,7 @@
 import { useLocation, Link } from "wouter";
 import { Clock3, Heart, MapPinned, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hapticSelectionChanged } from "@/lib/native-shell";
 
 interface NavItemProps {
   path: string;
@@ -15,7 +16,14 @@ interface NavItemProps {
  * the link area itself receives every tap.
  */
 const NavItem: React.FC<NavItemProps> = ({ path, icon: Icon, label, isActive }) => (
-  <Link href={path} className="flex-1" aria-current={isActive ? "page" : undefined}>
+  <Link
+    href={path}
+    className="flex-1"
+    aria-current={isActive ? "page" : undefined}
+    onClick={() => {
+      if (!isActive) hapticSelectionChanged();
+    }}
+  >
     <span
       className={cn(
         "civic-nav-item flex w-full flex-col items-center justify-center gap-[3px] px-2 pt-1 text-muted-foreground transition-colors duration-150",

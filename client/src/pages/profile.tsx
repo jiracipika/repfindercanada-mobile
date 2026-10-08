@@ -30,6 +30,7 @@ import type { ApiRepresentative as Representative } from "@shared/schema";
 import { getCacheManagementStatus, forceClearAllCaches } from "@/lib/cacheManager";
 import { ListGroup, ListRow, ListSectionLabel, Skeleton } from "@/components/civic";
 import { APP_VERSION } from "@/version";
+import { runDevSelfTest } from "@/lib/dev-selftest";
 
 const BASE_WEB_URL = "https://canadarepfinder.vercel.app";
 
@@ -103,8 +104,10 @@ export default function Profile() {
   const [showDevOptions, setShowDevOptions] = useState(false);
   const [lastTapTime, setLastTapTime] = useState(0);
 
-  // Development environment check
-  const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+  // Development environment check. IMPORTANT: the native Capacitor shell
+  // serves the app from https://localhost, so a hostname check would read
+  // as "development" inside PRODUCTION builds — import.meta.env.DEV only.
+  const isDevelopment = import.meta.env.DEV;
 
   useEffect(() => {
     if (userData) {
@@ -308,6 +311,16 @@ export default function Profile() {
         description: "You now have access to developer tools",
         duration: 3000,
       });
+      // DEV-only offline smoke (postal validation, share URLs, PWA wiring).
+      // Not in prod bundles: both this branch and dev-selftest tree-shake.
+      if (import.meta.env.DEV) {
+        const result = runDevSelfTest();
+        toast({
+          title: `Self-test: ${result.passed} passed`,
+          description: result.failed.length ? `Failed: ${result.failed.join(", ")}` : "All checks green — see console",
+          duration: 4000,
+        });
+      }
     }
   };
 
@@ -495,8 +508,9 @@ export default function Profile() {
                 </span>
               </div>
 
-              {/* Development Auto Tester */}
-              {(isDevelopment || showDevOptions) && (
+              {/* Development Auto Tester — DEV builds only (import.meta.env.DEV);
+                  it fires 20 live Represent API requests per run. */}
+              {isDevelopment && (
                 <div className="space-y-4">
                   <div className="border-t border-border pt-4">
                     <h4 className="mb-3 flex items-center gap-2 text-subheadline font-semibold text-foreground">

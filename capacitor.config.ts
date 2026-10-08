@@ -12,12 +12,23 @@ const config: CapacitorConfig = {
       'www.ourcommons.ca',
       'sencanada.ca',
       'elections.ca',
-      'nominatim.openstreetmap.org',
-      'api.opencagedata.com',
-      'geocoder.ca',
-      'postalcodecsv.com'
+      'nominatim.openstreetmap.org'
     ]
     // No URL specified - app runs standalone on device
+  },
+  plugins: {
+    // Hold the native splash until JS calls SplashScreen.hide() after the
+    // app is ready, so there is no white flash against the dark background.
+    SplashScreen: {
+      launchAutoHide: false,
+      backgroundColor: '#000000',
+      androidScaleType: 'CENTER_CROP'
+    },
+    // Resize the whole webview (classic adjustResize) — matches this
+    // min-h-screen flex shell; 'body' would not shrink 100vh layouts.
+    Keyboard: {
+      resize: 'native'
+    }
   }
 };
 

@@ -1,4 +1,4 @@
-import { type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { type PointerEvent as ReactPointerEvent, type ReactNode, useEffect } from "react";
 import {
   AnimatePresence,
   animate,
@@ -9,6 +9,7 @@ import {
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { registerBackDismiss } from "@/lib/native-shell";
 import { springMomentum, springSoft } from "./motion";
 
 interface BottomSheetProps {
@@ -55,6 +56,13 @@ export function BottomSheet({
   const isMobile = useIsMobile();
   const dragControls = useDragControls();
   const y = useMotionValue(0);
+
+  // Android hardware back closes the top-most open sheet (LIFO) before the
+  // app falls back to tab navigation / exit.
+  useEffect(() => {
+    if (!open) return;
+    return registerBackDismiss(() => onOpenChange(false));
+  }, [open, onOpenChange]);
 
   const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!isMobile) return;
