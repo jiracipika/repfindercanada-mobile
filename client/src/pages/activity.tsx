@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { getRecentActivity, subscribeActivityChanges, type ActivityItem } from "@/lib/storage/activityRepository";
-import { ChevronRight, Clock, Users } from "lucide-react";
+import { getRecentActivity, clearActivity, subscribeActivityChanges, type ActivityItem } from "@/lib/storage/activityRepository";
+import { useSearchState } from "@/hooks/use-search-state";
+import { isValidPostalCode } from "@/lib/postal";
+import { ChevronRight, Clock, Trash2, Users } from "lucide-react";
 import { EmptyState, ListGroup, Skeleton } from "@/components/civic";
 import { entranceTween } from "@/components/civic/motion";
 import { Section } from "@/components/ui/section";
@@ -29,6 +31,11 @@ export default function Activity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
+  const { runSearch } = useSearchState();
+
+  // Two-tap confirm state for "Clear History" (no window.confirm/alert).
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const clearTimerRef = useRef<number | null>(null);
 
   const refresh = async () => {
     setIsLoading(true);
@@ -40,8 +47,38 @@ export default function Activity() {
   const handleSearchClick = async (activity: ActivityItem) => {
     if (!activity.query) return;
 
-    // Navigate to home
+    // Re-run the search the history entry represents.
+    if (activity.searchType === 'postalCode' && isValidPostalCode(activity.query)) {
+      runSearch(activity.query);
+      setLocation('/');
+      return;
+    }
+
+    // Name searches re-run on the name-search page via query param.
+    if (activity.searchType === 'name') {
+      setLocation(`/name-search?q=${encodeURIComponent(activity.query)}`);
+      return;
+    }
+
+    // Other entry types (location lookups) cannot be re-run from stored data —
+    // go to the Find page like before.
     setLocation('/');
+  };
+
+  const handleClearHistory = async () => {
+    if (!confirmingClear) {
+      // First tap: arm the confirm state for 3 seconds.
+      setConfirmingClear(true);
+      clearTimerRef.current = window.setTimeout(() => setConfirmingClear(false), 3000);
+      return;
+    }
+    // Second tap: actually clear.
+    if (clearTimerRef.current !== null) {
+      window.clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+    setConfirmingClear(false);
+    await clearActivity();
   };
 
   useEffect(() => {
@@ -52,7 +89,12 @@ export default function Activity() {
       refresh();
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (clearTimerRef.current !== null) {
+        window.clearTimeout(clearTimerRef.current);
+      }
+    };
   }, []);
 
   return (
@@ -146,6 +188,25 @@ export default function Activity() {
             </ListGroup>
           )}
         </Section>
+
+        {!isLoading && items.length > 0 && (
+          <Section>
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl text-footnote font-semibold transition-colors active:opacity-70"
+              style={{
+                color: "var(--destructive)",
+                backgroundColor: confirmingClear
+                  ? "color-mix(in srgb, var(--destructive) 12%, transparent)"
+                  : "transparent",
+              }}
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+              {confirmingClear ? "Tap again to confirm" : "Clear History"}
+            </button>
+          </Section>
+        )}
       </div>
     </div>
   );

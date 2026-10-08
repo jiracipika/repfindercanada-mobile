@@ -362,7 +362,18 @@ export default function Profile() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="postalCode">Home Postal Code</Label>
-              <Input id="postalCode" value={homePostalCode} onChange={(e) => setHomePostalCode(e.target.value)} placeholder="A1A 1A1" />
+              <Input
+                id="postalCode"
+                value={homePostalCode}
+                onChange={(e) => setHomePostalCode(e.target.value.toUpperCase())}
+                placeholder="A1A 1A1"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="done"
+                maxLength={7}
+              />
             </div>
             <Button onClick={handleSave} className="civic-primary-button w-full gap-2">
               <Save className="h-4 w-4" />

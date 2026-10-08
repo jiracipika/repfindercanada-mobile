@@ -1,5 +1,6 @@
 import { Preferences } from "@capacitor/preferences";
 import type { ApiRepresentative as Representative } from "@shared/schema";
+import { postalKey } from "@/lib/postal";
 
 const CACHE_KEY = "SEARCH_CACHE_R_V2";
 const CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -15,11 +16,11 @@ interface SearchCache {
 }
 
 /**
- * Normalize postal code for consistent cache keys
+ * Normalize keys via the canonical postal module (also accepts geo keys
+ * like "geo:45.42153,-75.69719" — compaction uppercases and strips spaces,
+ * which keeps them stable and unique).
  */
-const normalizePostalCode = (postalCode: string): string => {
-  return postalCode.replace(/\s+/g, "").toUpperCase();
-};
+const normalizeKey = (key: string): string => postalKey(key);
 
 /**
  * Get all cached searches
@@ -70,7 +71,7 @@ export const searchCacheRepository = {
     postalCode: string,
     representatives: Representative[]
   ): Promise<void> => {
-    const normalizedPostal = normalizePostalCode(postalCode);
+    const normalizedPostal = normalizeKey(postalCode);
     const cache = await getCache();
 
     cache[normalizedPostal] = {
@@ -88,7 +89,18 @@ export const searchCacheRepository = {
   getCachedSearch: async (
     postalCode: string
   ): Promise<Representative[] | null> => {
-    const normalizedPostal = normalizePostalCode(postalCode);
+    const cached = await searchCacheRepository.getCachedSearchEntry(postalCode);
+    return cached ? cached.representatives : null;
+  },
+
+  /**
+   * Get the full cached entry (results + timestamp) for a key.
+   * The timestamp powers the "Showing saved results from <time>" banner.
+   */
+  getCachedSearchEntry: async (
+    postalCode: string
+  ): Promise<{ representatives: Representative[]; timestamp: number } | null> => {
+    const normalizedPostal = normalizeKey(postalCode);
     const cache = await getCache();
 
     const cached = cache[normalizedPostal];
@@ -101,7 +113,7 @@ export const searchCacheRepository = {
       return null;
     }
 
-    return cached.representatives;
+    return { representatives: cached.representatives, timestamp: cached.timestamp };
   },
 
   /**
@@ -117,7 +129,7 @@ export const searchCacheRepository = {
    */
   clearCache: async (postalCode?: string): Promise<void> => {
     if (postalCode) {
-      const normalizedPostal = normalizePostalCode(postalCode);
+      const normalizedPostal = normalizeKey(postalCode);
       const cache = await getCache();
 
       if (cache[normalizedPostal]) {

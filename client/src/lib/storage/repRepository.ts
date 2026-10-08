@@ -129,6 +129,31 @@ export const repRepository = {
     return found;
   },
 
+  /**
+   * Bulk-merge representatives into the store (dedupe by normalized id).
+   * Single write + single change event. Used by the one-time migration of
+   * saved reps out of the legacy userData blob.
+   */
+  mergeReps: async (incoming: (Representative | ApiRepresentative)[]): Promise<void> => {
+    if (!incoming.length) {
+      return;
+    }
+    const savedReps = await getSavedReps();
+    const seen = new Set(savedReps.map(rep => normalizeId(rep.id)));
+    let changed = false;
+    for (const rep of incoming) {
+      const id = normalizeId(rep.id);
+      if (!seen.has(id)) {
+        seen.add(id);
+        savedReps.push(rep);
+        changed = true;
+      }
+    }
+    if (changed) {
+      await saveReps(savedReps);
+    }
+  },
+
   toggleSaved: async (rep: Representative | ApiRepresentative): Promise<void> => {
     const saved = await repRepository.isSaved(rep.id);
     if (saved) {

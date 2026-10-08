@@ -1,11 +1,22 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Preferences } from '@capacitor/preferences';
 import type { Representative } from '@shared/schema';
+import { repRepository } from '@/lib/storage/repRepository';
+
+/**
+ * App-level user data (profile, search counters).
+ *
+ * NOTE: saved representatives intentionally do NOT live here. The single
+ * store for saved reps is `lib/storage/repRepository` (SAVED_REPS_V2) — the
+ * previous dual store in this context had a parseInt-on-URL bug in
+ * removeSavedRep/isRepSaved and is now unified into repRepository. Any
+ * savedReps found in the legacy userData blob are merged into
+ * repRepository once, then stripped.
+ */
 
 // Define the shape of the user data
 export interface UserData {
   searchCount: number;
-  savedReps: Representative[];
   joinDate: string;
   lastPostalCodeSearch: string;
   lastNameSearch: string;
@@ -21,9 +32,6 @@ interface UserDataContextType {
   isLoading: boolean;
   initializeUserData: () => void;
   incrementSearchCount: () => void;
-  addSavedRep: (rep: Representative) => void;
-  removeSavedRep: (repId: string) => void;
-  isRepSaved: (repId: string) => boolean;
   updateLastSearch: (search: string, type: 'postalCode' | 'name') => void;
   setSearchResults: (results: Representative[]) => void;
   updateProfile: (name: string, homePostalCode: string) => void;
@@ -33,6 +41,13 @@ interface UserDataContextType {
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
 
 const USER_DATA_KEY = 'userData';
+
+/** Strip legacy fields when persisting (savedReps moved to repRepository). */
+function sanitizeUserData(data: UserData & { savedReps?: Representative[] }): UserData {
+  const { savedReps: _legacy, ...rest } = data;
+  void _legacy;
+  return rest;
+}
 
 // Create the provider component
 export function UserDataProvider({ children }: { children: ReactNode }) {
@@ -44,7 +59,18 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       try {
         const { value } = await Preferences.get({ key: USER_DATA_KEY });
         if (value) {
-          setUserData(JSON.parse(value));
+          const parsed = JSON.parse(value) as UserData & { savedReps?: Representative[] };
+
+          // One-time migration: saved reps previously lived in this blob.
+          // Merge them into the canonical repRepository store, then persist
+          // the blob without them so this runs at most once per device.
+          if (Array.isArray(parsed.savedReps) && parsed.savedReps.length > 0) {
+            await repRepository.mergeReps(parsed.savedReps);
+          }
+          setUserData(sanitizeUserData(parsed));
+          if (Array.isArray(parsed.savedReps)) {
+            await Preferences.set({ key: USER_DATA_KEY, value: JSON.stringify(sanitizeUserData(parsed)) });
+          }
         } else {
           // If no user data is found, initialize it
           initializeUserData();
@@ -61,7 +87,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const saveUserData = async (newData: UserData) => {
     try {
       setUserData(newData);
-      await Preferences.set({ key: USER_DATA_KEY, value: JSON.stringify(newData) });
+      await Preferences.set({ key: USER_DATA_KEY, value: JSON.stringify(sanitizeUserData(newData)) });
     } catch (error) {
       console.error("Failed to save user data", error);
     }
@@ -70,7 +96,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const initializeUserData = () => {
     const initialData: UserData = {
       searchCount: 0,
-      savedReps: [],
       joinDate: new Date().toISOString(),
       lastPostalCodeSearch: "",
       lastNameSearch: "",
@@ -86,24 +111,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     if (userData) {
       saveUserData({ ...userData, searchCount: userData.searchCount + 1 });
     }
-  };
-
-  const addSavedRep = (rep: Representative) => {
-    if (userData && !userData.savedReps.some(r => r.id === rep.id)) {
-      const newReps = [...userData.savedReps, rep];
-      saveUserData({ ...userData, savedReps: newReps });
-    }
-  };
-
-  const removeSavedRep = (repId: string) => {
-    if (userData) {
-      const newReps = userData.savedReps.filter(r => r.id !== parseInt(repId, 10));
-      saveUserData({ ...userData, savedReps: newReps });
-    }
-  };
-
-  const isRepSaved = (repId: string) => {
-    return userData?.savedReps.some(r => r.id === parseInt(repId, 10)) ?? false;
   };
 
   const updateLastSearch = (search: string, type: 'postalCode' | 'name') => {
@@ -130,14 +137,11 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { 
-    userData, 
-    isLoading, 
-    initializeUserData, 
-    incrementSearchCount, 
-    addSavedRep, 
-    removeSavedRep, 
-    isRepSaved, 
+  const value = {
+    userData,
+    isLoading,
+    initializeUserData,
+    incrementSearchCount,
     updateLastSearch,
     setSearchResults,
     updateProfile,

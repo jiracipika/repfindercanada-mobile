@@ -3,6 +3,8 @@
  * Uses local binary postal code data + Represent API for complete offline functionality
  */
 
+import { isValidPostalCode, normalizePostalCode } from './postal';
+
 export interface PostalCodeData {
   latitude: number;
   longitude: number;
@@ -125,20 +127,17 @@ class LocalPostalLookup {
   }
 
   /**
-   * Validate Canadian postal code format
+   * Validate Canadian postal code format (canonical validator in lib/postal.ts)
    */
   static isValidCanadianPostalCode(postalCode: string): boolean {
-    const clean = postalCode.toUpperCase().replace(/\s+/g, '');
-    const pattern = /^[A-Z]\d[A-Z]\d[A-Z]\d$/;
-    return pattern.test(clean);
+    return isValidPostalCode(postalCode);
   }
 
   /**
-   * Normalize Canadian postal code format
+   * Normalize Canadian postal code format (canonical normalizer in lib/postal.ts)
    */
   static normalizePostalCode(postalCode: string): string {
-    const clean = postalCode.toUpperCase().replace(/\s+/g, '');
-    return clean.length === 6 ? clean.slice(0, 3) + ' ' + clean.slice(3) : clean;
+    return normalizePostalCode(postalCode);
   }
 }
 

@@ -20,6 +20,7 @@ import LoadingScreen from "@/components/loading-screen";
 import TermsModal from "@/components/terms-modal";
 import NonAffiliationModal from "@/components/non-affiliation-modal";
 import { UserDataProvider, useUserData } from "@/hooks/use-user-data";
+import { SearchStateProvider } from "@/hooks/use-search-state";
 import { SwipePager } from "@/components/SwipePager";
 import AppHeader from "@/components/app-header";
 
@@ -95,6 +96,7 @@ function Router() {
 }
 
 const TERMS_KEY = 'termsAcceptedVersion';
+const DISCLAIMER_KEY = 'disclaimerAcceptedVersion';
 
 function AppContent() {
   const [appStatus, setAppStatus] = useState('initializing'); // 'initializing', 'needsTerms', 'needsDisclaimer', 'ready'
@@ -136,8 +138,12 @@ function AppContent() {
           return;
         }
 
-        // Terms are accepted for current version, show disclaimer on every launch
-        setAppStatus('needsDisclaimer');
+        // Disclaimer: once per version, not on every launch
+        const disclaimerResult = await Preferences.get({ key: DISCLAIMER_KEY });
+        const disclaimerAcceptedVersion = disclaimerResult?.value || null;
+        const needsDisclaimer = disclaimerAcceptedVersion !== currentVersion;
+
+        setAppStatus(needsDisclaimer ? 'needsDisclaimer' : 'ready');
       } catch (error) {
         console.error('[Startup] !!! Error during startup:', error);
         console.error('[Startup] !!! Falling back to showing terms');
@@ -159,6 +165,13 @@ function AppContent() {
   };
 
   const handleAcknowledgeDisclaimer = async () => {
+    try {
+      // Store the accepted version so the disclaimer only re-shows when the
+      // app version bumps.
+      await Preferences.set({ key: DISCLAIMER_KEY, value: appVersion });
+    } catch (error) {
+      console.error('[Startup] Error saving disclaimer acknowledgement:', error);
+    }
     setAppStatus('ready');
   };
 
@@ -181,10 +194,12 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
         <UserDataProvider>
-          <TooltipProvider>
-            <AppContent />
-            <Toaster />
-          </TooltipProvider>
+          <SearchStateProvider>
+            <TooltipProvider>
+              <AppContent />
+              <Toaster />
+            </TooltipProvider>
+          </SearchStateProvider>
         </UserDataProvider>
       </MotionConfig>
     </QueryClientProvider>

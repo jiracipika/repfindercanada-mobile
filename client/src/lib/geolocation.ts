@@ -1,7 +1,22 @@
 import { Geolocation, PositionOptions } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
 
 export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
   try {
+    if (!Capacitor.isNativePlatform()) {
+      // Web/PWA: the Capacitor permissions bridge is not implemented here —
+      // the browser shows its own permission prompt from getCurrentPosition.
+      const webPosition = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      });
+      return {
+        latitude: webPosition.coords.latitude,
+        longitude: webPosition.coords.longitude,
+      };
+    }
+
     // Check permissions
     let permissionStatus = await Geolocation.checkPermissions();
 

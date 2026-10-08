@@ -4,17 +4,109 @@
  */
 
 import type { ApiRepresentative } from "@shared/schema";
+import { provinceFromPostalCode } from "./postal";
 
 const REPRESENT_API_BASE = import.meta.env.DEV
   ? 'http://localhost:5001/api/represent/proxy'
   : 'https://represent.opennorth.ca';
 
 /**
+ * Statistics Canada federal electoral district numbering — the numeric id at
+ * the end of a federal boundary URL starts with one of these prefixes, which
+ * identifies the province/territory (verified against the live API, 2026-10).
+ */
+const FEDERAL_BOUNDARY_PREFIX_TO_PROVINCE: Record<string, string> = {
+  '10': 'NL', '11': 'PE', '12': 'NS', '13': 'NB', '24': 'QC', '35': 'ON',
+  '46': 'MB', '47': 'SK', '48': 'AB', '59': 'BC',
+  '60': 'YT', '61': 'NT', '62': 'NU',
+};
+
+/** Provincial legislatures / assemblies identifiable by their set name or URL slug. */
+const PROVINCIAL_SET_PROVINCE_PATTERNS: Array<[RegExp, string]> = [
+  [/ontario|legislative assembly of ontario/i, 'ON'],
+  [/qu[eé]bec|national assembly|assembl[eé]e nationale/i, 'QC'],
+  [/british columbia|\bbc\b|b\.c\./i, 'BC'],
+  [/alberta/i, 'AB'],
+  [/saskatchewan/i, 'SK'],
+  [/manitoba/i, 'MB'],
+  [/new brunswick|nouveau-brunswick/i, 'NB'],
+  [/nova scotia|nouvelle-[eé]cosse/i, 'NS'],
+  [/prince edward island|[îi]le-du-prince-[eé]douard|\bpei\b/i, 'PE'],
+  [/newfoundland|terre-neuve/i, 'NL'],
+  [/yukon/i, 'YT'],
+  [/northwest territories|territoires du nord-ouest|\bnt\b/i, 'NT'],
+  [/nunavut/i, 'NU'],
+];
+
+const OFFICE_PROVINCE_PATTERN = /\b(NL|PE|NS|NB|QC|ON|MB|SK|AB|BC|YT|NT|NU)\b/;
+
+/**
+ * Best-effort province/territory derivation for a single representative from
+ * whatever the Represent API payload carries (no explicit province field).
+ */
+function deriveProvinceFromRep(rep: any, details: any): string {
+  // 1. Federal boundary URL id prefix (e.g. /boundaries/federal-electoral-districts-2023-representation-order/35079/)
+  const boundaryUrl = rep?.related?.boundary_url || rep?.boundary_url || details?.boundary_url || '';
+  if (/federal-electoral-districts/i.test(boundaryUrl)) {
+    const idMatch = boundaryUrl.match(/\/(\d+)\/?$/);
+    if (idMatch) {
+      const province = FEDERAL_BOUNDARY_PREFIX_TO_PROVINCE[idMatch[1].slice(0, 2)];
+      if (province) {
+        return province;
+      }
+    }
+  }
+
+  // 2. Provincial representative set (name or URL slug)
+  const setIdentity = `${rep?.representative_set_name || ''} ${rep?.related?.representative_set_url || ''}`;
+  for (const [pattern, province] of PROVINCIAL_SET_PROVINCE_PATTERNS) {
+    if (pattern.test(setIdentity)) {
+      return province;
+    }
+  }
+
+  // 3. Office mailing addresses often embed the province code ("Ottawa ON  K1Y 4T3")
+  const officeText = [rep?.offices, details?.offices]
+    .flat()
+    .map((office: any) => office?.postal || '')
+    .join(' ');
+  const officeMatch = officeText.match(OFFICE_PROVINCE_PATTERN);
+  if (officeMatch) {
+    return officeMatch[1];
+  }
+
+  return '';
+}
+
+/**
+ * Fill every representative with the search-wide province. All results for a
+ * single point (federal, provincial, municipal) belong to the same province,
+ * so the first confident derivation is authoritative for the whole set.
+ */
+function applySearchProvince(
+  representatives: ApiRepresentative[],
+  provinceHint: string
+): ApiRepresentative[] {
+  const searchProvince =
+    provinceHint || representatives.map((rep) => rep.province).find(Boolean) || '';
+  if (!searchProvince) {
+    return representatives;
+  }
+  for (const rep of representatives) {
+    if (!rep.province) {
+      rep.province = searchProvince;
+    }
+  }
+  return representatives;
+}
+
+/**
  * Search representatives by coordinates using Represent API directly
  */
 export async function fetchRepsByCoordinatesDirect(
   latitude: number,
-  longitude: number
+  longitude: number,
+  provinceHint: string = ''
 ): Promise<ApiRepresentative[]> {
   try {
 
@@ -29,14 +121,14 @@ export async function fetchRepsByCoordinatesDirect(
 
     const repsData = await repsResponse.json();
 
-    const allRepresentatives: ApiRepresentative[] = [];
+    // Transform all representatives concurrently (each may fetch its own
+    // detail page — Promise.all replaces the former serial N+1 loop).
+    let allRepresentatives: ApiRepresentative[] = [];
     if (repsData.objects) {
-      for (const rep of repsData.objects) {
-        const representative = await transformRepresentative(rep);
-        if (representative) {
-          allRepresentatives.push(representative);
-        }
-      }
+      const transformed = await Promise.all(repsData.objects.map(transformRepresentative));
+      allRepresentatives = transformed.filter(
+        (representative): representative is ApiRepresentative => representative !== null
+      );
     }
 
     // Remove duplicates (same person might represent multiple areas)
@@ -51,7 +143,8 @@ export async function fetchRepsByCoordinatesDirect(
              (levelOrder[b.level as keyof typeof levelOrder] || 99);
     });
 
-    return sortedRepresentatives;
+    // Fill province for every rep (postal FSA hint first, then derived values)
+    return applySearchProvince(sortedRepresentatives, provinceHint);
 
   } catch (error) {
     console.error('[RepresentAPI] Error searching by coordinates:', error);
@@ -243,7 +336,10 @@ async function transformRepresentative(rep: any): Promise<ApiRepresentative | nu
       name: rep.name,
       party: party,
       constituency: riding,
-      province: '', // This might need to be extracted from district_name or other field
+      // Best-effort province from the payload (federal boundary id, provincial
+      // set name/slug, office addresses). fillSearchProvince() completes the
+      // rest from the search-wide value after all reps are transformed.
+      province: deriveProvinceFromRep(rep, details),
       electedOffice: office,
       email: email,
       phone: phone,
@@ -298,8 +394,13 @@ export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
     throw new Error(`Postal code not found: ${postalCode}`);
   }
 
-  // Search representatives using coordinates
-  const representatives = await fetchRepsByCoordinatesDirect(coordinates.latitude, coordinates.longitude);
+  // Search representatives using coordinates; the postal code's FSA letter
+  // gives a definitive province hint for the whole result set.
+  const representatives = await fetchRepsByCoordinatesDirect(
+    coordinates.latitude,
+    coordinates.longitude,
+    provinceFromPostalCode(postalCode)
+  );
 
   return {
     representatives,
@@ -328,14 +429,13 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
 
     const data = await response.json();
 
-    const representatives: ApiRepresentative[] = [];
+    // Transform all matches concurrently
+    let representatives: ApiRepresentative[] = [];
     if (data.objects) {
-      for (const rep of data.objects) {
-        const representative = await transformRepresentative(rep);
-        if (representative) {
-          representatives.push(representative);
-        }
-      }
+      const transformed = await Promise.all(data.objects.map(transformRepresentative));
+      representatives = transformed.filter(
+        (representative): representative is ApiRepresentative => representative !== null
+      );
     }
 
     // Sort by government level: Federal → Provincial → Municipal
@@ -345,7 +445,8 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
              (levelOrder[b.level as keyof typeof levelOrder] || 99);
     });
 
-    return sortedRepresentatives;
+    // Name searches span the country — fill per-rep derived provinces only
+    return applySearchProvince(sortedRepresentatives, '');
 
   } catch (error) {
     console.error('[RepresentAPI] Error searching by name:', error);
@@ -374,29 +475,32 @@ export async function fetchRepsByRidingDirect(ridingName: string): Promise<ApiRe
       return [];
     }
 
-    // Get representatives for each boundary
-    const allRepresentatives: ApiRepresentative[] = [];
-
-    for (const boundary of boundariesData.objects) {
-      if (boundary.related && boundary.related.representatives_url) {
+    // Get representatives for each boundary (concurrently)
+    const boundaryResults = await Promise.all(
+      boundariesData.objects.map(async (boundary: any): Promise<ApiRepresentative[]> => {
+        if (!boundary.related || !boundary.related.representatives_url) {
+          return [];
+        }
         try {
           const repsResponse = await fetch(boundary.related.representatives_url);
-          if (repsResponse.ok) {
-            const repsData = await repsResponse.json();
-            if (repsData.objects) {
-              for (const rep of repsData.objects) {
-                const representative = await transformRepresentative(rep);
-                if (representative) {
-                  allRepresentatives.push(representative);
-                }
-              }
-            }
+          if (!repsResponse.ok) {
+            return [];
           }
+          const repsData = await repsResponse.json();
+          if (!repsData.objects) {
+            return [];
+          }
+          const transformed = await Promise.all(repsData.objects.map(transformRepresentative));
+          return transformed.filter(
+            (representative): representative is ApiRepresentative => representative !== null
+          );
         } catch (error) {
           console.warn(`[RepresentAPI] Error fetching representatives for boundary:`, error);
+          return [];
         }
-      }
-    }
+      })
+    );
+    const allRepresentatives = boundaryResults.flat();
 
     // Sort by government level: Federal → Provincial → Municipal
     const sortedRepresentatives = allRepresentatives.sort((a, b) => {
@@ -405,7 +509,7 @@ export async function fetchRepsByRidingDirect(ridingName: string): Promise<ApiRe
              (levelOrder[b.level as keyof typeof levelOrder] || 99);
     });
 
-    return sortedRepresentatives;
+    return applySearchProvince(sortedRepresentatives, '');
 
   } catch (error) {
     console.error('[RepresentAPI] Error searching by riding:', error);

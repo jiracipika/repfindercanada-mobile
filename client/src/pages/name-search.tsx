@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
@@ -18,16 +18,20 @@ import { logActivity } from "@/lib/storage/activityRepository";
 
 export default function NameSearch() {
   const [, setLocation] = useLocation();
+  const searchParams = useSearch();
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
   const [searchResults, setSearchResults] = useState<Representative[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const autoRunRef = useRef(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    await performSearch(query.trim());
+  };
 
-    const trimmedQuery = query.trim();
+  const performSearch = async (trimmedQuery: string) => {
     if (!trimmedQuery) {
       setSearchError("Please enter a name to search");
       return;
@@ -70,6 +74,17 @@ export default function NameSearch() {
     }
   };
 
+  // Re-run a search handed over from the activity page (/name-search?q=...)
+  useEffect(() => {
+    if (autoRunRef.current) return;
+    const q = new URLSearchParams(searchParams).get('q');
+    if (q && q.trim()) {
+      autoRunRef.current = true;
+      setQuery(q.trim());
+      void performSearch(q.trim());
+    }
+  }, [searchParams]);
+
   return (
     <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="civic-page space-y-6">
@@ -99,6 +114,10 @@ export default function NameSearch() {
                 onChange={(e) => setQuery(e.target.value)}
                 className="civic-search-input pl-9"
                 disabled={isSearching}
+                autoCapitalize="words"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="search"
               />
             </div>
 

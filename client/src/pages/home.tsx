@@ -4,13 +4,14 @@ import { motion } from "framer-motion";
 import { SearchForm } from "@/components/search-form";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
-import { Building2, Database, MapPinCheck, ShieldCheck, UserSearch } from "lucide-react";
+import { Building2, Database, MapPinCheck, ShieldCheck, UserSearch, WifiOff } from "lucide-react";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/civic";
 import { SectionHeader } from "@/components/civic/section-header";
 import { Skeleton } from "@/components/civic/skeleton";
+import { useSearchState } from "@/hooks/use-search-state";
 import {
   fadeUp,
   fadeUpItem,
@@ -56,15 +57,20 @@ const groupOf = (representative: Representative): LevelGroup => {
 
 export default function Home() {
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
-  const [searchResults, setSearchResults] = useState<Representative[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const handleSearchComplete = (results: Representative[]) => {
-    setSearchResults(sortRepresentatives(results));
-    setIsSearching(false);
-    setSearchError(null);
-  };
+  // Search state lives in SearchStateProvider (above the SwipePager) so
+  // results survive tab swipes.
+  const {
+    submittedQuery,
+    outcome,
+    isSearching,
+    error,
+    retry,
+  } = useSearchState();
+
+  const searchResults = sortRepresentatives(outcome?.results ?? []);
+  const fromCache = outcome?.fromCache ?? false;
+  const cachedAt = outcome?.cachedAt ?? null;
 
   // Grouped federal/provincial/municipal — order preserved from the existing sort.
   const grouped = LEVEL_GROUPS.map(({ key, title }) => ({
@@ -104,19 +110,7 @@ export default function Home() {
           animate="show"
         >
           <Section className="civic-search-panel">
-            <SearchForm
-              onSearchStart={() => {
-                setSearchResults([]);
-                setIsSearching(true);
-                setSearchError(null);
-              }}
-              onSearchComplete={handleSearchComplete}
-              onSearchError={(error) => {
-                setSearchError(error);
-                setIsSearching(false);
-                setSearchResults([]);
-              }}
-            />
+            <SearchForm />
             <div className="mt-3 border-t border-border/70 pt-3">
               <Link href="/name-search">
                 <Button variant="ghost" className="h-12 w-full rounded-xl text-muted-foreground">
@@ -127,12 +121,36 @@ export default function Home() {
           </Section>
         </motion.div>
 
-        {searchError && (
+        {/* Single inline error path: one ErrorState with Retry (no toasts) */}
+        {error && !isSearching && (
           <Section className="mt-5">
             <ErrorState
               title="Search unavailable"
-              description={searchError}
+              description={error.message}
+              onRetry={retry}
             />
+          </Section>
+        )}
+
+        {/* Offline banner: API failed, cached results served — never without this banner */}
+        {fromCache && !isSearching && searchResults.length > 0 && (
+          <Section className="mt-5">
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+              style={{ backgroundColor: "color-mix(in srgb, var(--primary) 12%, transparent)" }}
+            >
+              <WifiOff className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 text-footnote text-muted-foreground">
+                Showing saved results{cachedAt ? ` from ${new Date(cachedAt).toLocaleString()}` : ""} — offline
+              </span>
+              <button
+                type="button"
+                onClick={retry}
+                className="min-h-[44px] shrink-0 rounded-lg px-2 text-footnote font-semibold text-primary active:opacity-70"
+              >
+                Retry
+              </button>
+            </div>
           </Section>
         )}
 
@@ -194,13 +212,21 @@ export default function Home() {
           </Section>
         )}
 
-        {searchResults.length === 0 && !isSearching && !searchError && (
+        {searchResults.length === 0 && !isSearching && !error && (
           <Section className="mt-5">
-            <EmptyState
-              icon={<Building2 className="h-7 w-7" />}
-              title="Ready when you are"
-              description="Your postal code is used for this lookup and is not sent to an advertising or analytics service."
-            />
+            {submittedQuery ? (
+              <EmptyState
+                icon={<Building2 className="h-7 w-7" />}
+                title="No representatives found"
+                description={`We couldn't find any representatives for "${submittedQuery}". Please check the format and try again.`}
+              />
+            ) : (
+              <EmptyState
+                icon={<Building2 className="h-7 w-7" />}
+                title="Ready when you are"
+                description="Your postal code is used for this lookup and is not sent to an advertising or analytics service."
+              />
+            )}
           </Section>
         )}
 

@@ -4,6 +4,7 @@
  */
 
 import type { ApiRepresentative as Representative } from "@shared/schema";
+import { normalizePostalCode as normalizePostal, isValidPostalCode as isValidPostal } from "./postal";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD
@@ -208,18 +209,15 @@ export async function fetchRepsByCoordinatesBackend(
 }
 
 /**
- * Normalize Canadian postal code format
+ * Normalize Canadian postal code format (canonical normalizer in lib/postal.ts)
  */
 export function normalizePostalCode(postalCode: string): string {
-  const clean = postalCode.toUpperCase().replace(/\s+/g, '');
-  return clean.length === 6 ? clean.slice(0, 3) + ' ' + clean.slice(3) : clean;
+  return normalizePostal(postalCode);
 }
 
 /**
- * Validate Canadian postal code format
+ * Validate Canadian postal code format (canonical validator in lib/postal.ts)
  */
 export function isValidCanadianPostalCode(postalCode: string): boolean {
-  const clean = postalCode.toUpperCase().replace(/\s+/g, '');
-  const pattern = /^[A-Z]\d[A-Z]\d[A-Z]\d$/;
-  return pattern.test(clean);
+  return isValidPostal(postalCode);
 }

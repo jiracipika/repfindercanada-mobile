@@ -1,52 +1,33 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { Search, Loader2, CheckCircle2, AlertCircle, WifiOff } from "lucide-react";
-import { fetchRepsByPostalLocal } from "@/lib/localSearchService";
-import type { ApiRepresentative as Representative } from "@shared/schema";
-import { useUserData } from "@/hooks/use-user-data";
-import { logActivity } from "@/lib/storage/activityRepository";
+import { Search, Loader2, CheckCircle2, AlertCircle, MapPin, WifiOff } from "lucide-react";
+import { isValidPostalCode, POSTAL_MAX_LENGTH } from "@/lib/postal";
+import { useSearchState } from "@/hooks/use-search-state";
 import { fadeTween } from "@/components/civic/motion";
 
-interface SearchFormProps {
-  onSearchStart: () => void;
-  onSearchComplete: (results: Representative[]) => void;
-  onSearchError?: (error: string) => void;
-  initialQuery?: string; // Allow parent to set initial query
-  shouldAutoSearch?: boolean; // Trigger search automatically when initialQuery is set
-}
-
-export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, initialQuery, shouldAutoSearch }: SearchFormProps) {
-  const { userData, incrementSearchCount, updateLastSearch } = useUserData();
-  const [query, setQuery] = useState(() => {
-    return userData?.lastPostalCodeSearch || "";
-  });
-  const [isSearching, setIsSearching] = useState(false);
+/**
+ * Postal code + location search UI for the Find page.
+ *
+ * All search state (query, results, loading, errors) lives in the
+ * SearchStateProvider — this component is a thin view over it, so swiping
+ * between tabs and back keeps everything.
+ */
+export function SearchForm() {
+  const {
+    query,
+    setQuery,
+    runSearch,
+    isSearching,
+    inputError,
+    geoError,
+    isLocating,
+    locateAndSearch,
+  } = useSearchState();
   const [showDropdown, setShowDropdown] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
-  const [pendingAutoSearch, setPendingAutoSearch] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (userData?.lastPostalCodeSearch) {
-      setQuery(userData.lastPostalCodeSearch);
-    }
-  }, [userData?.lastPostalCodeSearch]);
-
-  // Update query when initialQuery prop changes (from parent)
-  useEffect(() => {
-    if (initialQuery !== undefined && initialQuery !== null) {
-      setQuery(initialQuery);
-
-      // Automatically trigger search if shouldAutoSearch is true
-      if (shouldAutoSearch && initialQuery.trim()) {
-        setPendingAutoSearch(initialQuery);
-      }
-    }
-  }, [initialQuery, shouldAutoSearch]);
 
   // Show dropdown when user is typing and input is focused
   useEffect(() => {
@@ -66,110 +47,13 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Validate postal code format (basic Canadian postal code validation)
-  const isValidPostalCodeFormat = (code: string): boolean => {
-    const cleanCode = code.replace(/\s+/g, "");
-    // Canadian postal code: A1A1A1 (letter-digit-letter digit-letter-digit)
-    const regex = /^[A-Z]\d[A-Z]\d[A-Z]\d$/i;
-    return regex.test(cleanCode);
-  };
-
-  const performSearch = async (searchQuery: string) => {
-    const trimmedQuery = searchQuery.trim();
-    if (!trimmedQuery) {
-      toast({
-        title: "Please enter a postal code",
-        description: "Enter your postal code to search for representatives.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSearching(true);
-    onSearchStart();
-
-    try {
-      // Use local postal data + Represent API approach (completely offline-first)
-      const results = await fetchRepsByPostalLocal(trimmedQuery);
-      onSearchComplete(results);
-
-      // Log the search activity with representatives
-      await logActivity({
-        type: "search",
-        query: trimmedQuery,
-        searchType: "postalCode",
-        ts: Date.now(),
-        representatives: results, // Store the representatives found
-      });
-
-      if (results.length > 0) {
-        incrementSearchCount();
-        updateLastSearch(trimmedQuery, 'postalCode');
-      } else {
-        toast({
-          title: "No representatives found",
-          description: "We couldn't find any representatives for this postal code. Please check the format and try again.",
-          variant: "default",
-        });
-      }
-    } catch (error) {
-      console.error('[SearchForm] Search error:', error);
-
-      // Provide specific error messages for local postal data + Represent API
-      let errorMessage = "Could not retrieve representatives using local postal data. Please ensure you have internet access for the Represent API and try again.";
-      let errorTitle = "Search failed";
-
-      // Check for specific error patterns
-      if (error instanceof Error) {
-        const errorString = error.message.toLowerCase();
-        if (errorString.includes('invalid canadian postal code format')) {
-          errorMessage = `The postal code "${trimmedQuery}" doesn't appear to be a valid Canadian postal code. Please check the format (e.g., K1A 0A9).`;
-          errorTitle = "Invalid postal code";
-        } else if (errorString.includes('postal code not found in database')) {
-          errorMessage = `The postal code "${trimmedQuery}" is not in our local database. Please verify the postal code is correct and try again.`;
-          errorTitle = "Postal code not found";
-        } else if (errorString.includes('postal code database not loaded')) {
-          errorMessage = "The postal code database is currently loading. Please try again in a moment.";
-          errorTitle = "Database loading";
-        } else if (errorString.includes('no representatives found')) {
-          errorMessage = `No representatives found for postal code "${trimmedQuery}". This might be a new postal code or area not covered in the database.`;
-          errorTitle = "No representatives found";
-        } else if (errorString.includes('network') || errorString.includes('fetch') || errorString.includes('server error')) {
-          errorMessage = "Network connection error. Please check your internet connection and try again.";
-          errorTitle = "Connection error";
-        }
-      }
-
-      toast({
-        title: errorTitle,
-        description: errorMessage,
-        variant: "destructive",
-      });
-      onSearchComplete([]);
-      if (onSearchError) {
-        onSearchError(errorMessage);
-      }
-
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const handleManualSearch = () => {
-    performSearch(query);
+    runSearch(query);
   };
-
-  // Handle pending auto-search after performSearch is available
-  useEffect(() => {
-    if (pendingAutoSearch && !isSearching) {
-      performSearch(pendingAutoSearch);
-      setPendingAutoSearch(null); // Clear after triggering
-    }
-  }, [pendingAutoSearch, isSearching]);
 
   const getDropdownContent = () => {
     const cleanCode = query.replace(/\s+/g, "");
-    const isValid = isValidPostalCodeFormat(query);
+    const isValid = isValidPostalCode(query);
 
     if (cleanCode.length < 6) {
       return {
@@ -211,12 +95,19 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
             onFocus={() => setInputFocused(true)}
             onBlur={() => setTimeout(() => setInputFocused(false), 200)}
             className="civic-search-input relative pl-11 font-normal text-foreground"
+            inputMode="text"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            maxLength={POSTAL_MAX_LENGTH}
+            aria-invalid={!!inputError}
           />
           <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         </div>
 
         {/* iOS inline validation — a plain 13px line under the field */}
-        {dropdownContent && (
+        {dropdownContent && !inputError && (
           <motion.p
             key="postal-feedback"
             initial={{ opacity: 0 }}
@@ -228,6 +119,21 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
             {dropdownContent.icon}
             <span className={dropdownContent.className}>{dropdownContent.text}</span>
             <span>{dropdownContent.subtext}</span>
+          </motion.p>
+        )}
+
+        {/* Inline input validation error (single error path — no toasts) */}
+        {inputError && (
+          <motion.p
+            key="postal-input-error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={fadeTween}
+            role="alert"
+            className="text-footnote mt-2"
+            style={{ color: "var(--destructive)" }}
+          >
+            {inputError}
           </motion.p>
         )}
 
@@ -244,7 +150,36 @@ export function SearchForm({ onSearchStart, onSearchComplete, onSearchError, ini
           <span>Find my representatives</span>
         </Button>
       </form>
+
+      {/* Location flow: inline 13px destructive text on failure, no toasts/alerts */}
+      {geoError && (
+        <motion.p
+          key="geo-error"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={fadeTween}
+          role="alert"
+          className="text-footnote flex items-start gap-1.5"
+          style={{ color: "var(--destructive)" }}
+        >
+          <WifiOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{geoError}</span>
+        </motion.p>
+      )}
+
+      <Button
+        type="button"
+        onClick={() => void locateAndSearch()}
+        disabled={isLocating || isSearching}
+        className="civic-tinted-button h-11 w-full rounded-xl text-body font-semibold"
+      >
+        {isLocating ? (
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        ) : (
+          <MapPin className="mr-2 h-5 w-5" />
+        )}
+        <span>{isLocating ? "Finding your location…" : "Use my location"}</span>
+      </Button>
     </div>
   );
 }
-
