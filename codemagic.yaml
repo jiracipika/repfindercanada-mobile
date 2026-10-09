@@ -38,12 +38,19 @@ workflows:
           # NOTE: = form is required for --private-key — the PEM value starts
           # with dashes, which argparse would read as another option.
           set -e
+          # The 2026 distribution cert already exists in ASC (created via the
+          # Codemagic UI), but its private key only exists in the team's
+          # downloaded .p12 — without it the tool cannot save the certificate
+          # ("Cannot save Signing Certificates without certificate private key").
+          # DIST_CERT_PRIVATE_KEY (app_store_connect group) = base64 of that PEM.
+          export DIST_CERT_KEY="$(echo "$DIST_CERT_PRIVATE_KEY" | base64 --decode)"
           app-store-connect fetch-signing-files \
             com.marcelsabas.repfinderforcanada \
             --type IOS_APP_STORE \
             --issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --private-key="$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key="$DIST_CERT_KEY" \
             --create
           keychain initialize
           keychain add-certificates
@@ -120,12 +127,19 @@ workflows:
           # expired 2026-10-01 and were removed from the team store).
           # = form required for --private-key (PEM value starts with dashes).
           set -e
+          # The 2026 distribution cert already exists in ASC (created via the
+          # Codemagic UI), but its private key only exists in the team's
+          # downloaded .p12 — without it the tool cannot save the certificate
+          # ("Cannot save Signing Certificates without certificate private key").
+          # DIST_CERT_PRIVATE_KEY (app_store_connect group) = base64 of that PEM.
+          export DIST_CERT_KEY="$(echo "$DIST_CERT_PRIVATE_KEY" | base64 --decode)"
           app-store-connect fetch-signing-files \
             com.marcelsabas.repfinderforcanada \
             --type IOS_APP_STORE \
             --issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
             --key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --private-key="$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key="$DIST_CERT_KEY" \
             --create
           keychain initialize
           keychain add-certificates
