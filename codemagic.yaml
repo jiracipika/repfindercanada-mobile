@@ -35,12 +35,15 @@ workflows:
           # fetch-signing-files --create mints a fresh app_store profile for
           # the bundle id via the App Store Connect API and binds it to the
           # Codemagic-generated distribution cert (RepFinder Distribution 2026).
+          # NOTE: = form is required for --private-key — the PEM value starts
+          # with dashes, which argparse would read as another option.
+          set -e
           app-store-connect fetch-signing-files \
             com.marcelsabas.repfinderforcanada \
             --type IOS_APP_STORE \
-            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
-            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
-            --private-key $APP_STORE_CONNECT_PRIVATE_KEY \
+            --issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key="$APP_STORE_CONNECT_PRIVATE_KEY" \
             --create
           keychain initialize
           keychain add-certificates
@@ -115,12 +118,14 @@ workflows:
           # Custom code signing — same flow as release-both: create the
           # app_store profile on the fly via the ASC API (uploaded profiles
           # expired 2026-10-01 and were removed from the team store).
+          # = form required for --private-key (PEM value starts with dashes).
+          set -e
           app-store-connect fetch-signing-files \
             com.marcelsabas.repfinderforcanada \
             --type IOS_APP_STORE \
-            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
-            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
-            --private-key $APP_STORE_CONNECT_PRIVATE_KEY \
+            --issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key="$APP_STORE_CONNECT_PRIVATE_KEY" \
             --create
           keychain initialize
           keychain add-certificates
