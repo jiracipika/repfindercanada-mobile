@@ -24,7 +24,13 @@ workflows:
     scripts:
       - name: Set up code signing
         script: |
-          xcode-project use-profiles
+          # Automatic code signing: with the ASC API key, use-profiles creates
+          # a fresh app_store profile for the bundle id (the uploaded ones
+          # expired 2026-10-01 and were removed from team Code signing identities).
+          xcode-project use-profiles \
+            --app-store-connect-issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
+            --app-store-connect-key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --app-store-connect-private-key="$APP_STORE_CONNECT_PRIVATE_KEY"
       - name: Install npm deps
         script: |
           npm install
@@ -95,7 +101,13 @@ workflows:
     scripts:
       - name: Set up code signing
         script: |
-          xcode-project use-profiles
+          # Automatic code signing: with the ASC API key, use-profiles creates
+          # a fresh app_store profile for the bundle id (the uploaded ones
+          # expired 2026-10-01 and were removed from team Code signing identities).
+          xcode-project use-profiles \
+            --app-store-connect-issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
+            --app-store-connect-key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --app-store-connect-private-key="$APP_STORE_CONNECT_PRIVATE_KEY"
       - name: Install npm dependencies
         script: |
           npm install
