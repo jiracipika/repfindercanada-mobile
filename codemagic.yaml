@@ -19,14 +19,6 @@ workflows:
       android_signing:
         - akey                    # uses your uploaded keystore
     scripts:
-      - name: Diagnose ASC env vars
-        script: |
-          # Lengths only — never print secret values.
-          echo "ISSUER_ID len=${#APP_STORE_CONNECT_ISSUER_ID}"
-          echo "KEY_IDENTIFIER len=${#APP_STORE_CONNECT_KEY_IDENTIFIER}"
-          echo "PRIVATE_KEY len=${#APP_STORE_CONNECT_PRIVATE_KEY}"
-          echo "TEAM_ID len=${#APP_STORE_CONNECT_TEAM_ID}"
-          echo "vars in env: $(env | grep -c '^APP_STORE_CONNECT' || true)"
       - name: Set up code signing
         script: |
           # Custom code signing (docs: "Custom code signing" section). The
