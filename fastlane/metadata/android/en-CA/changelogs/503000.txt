@@ -1,0 +1,11 @@
+Fresh start, same mission — RepFinder Canada is redesigned from the ground up.
+
+• All-new clean look with light & dark themes
+• Tap a representative for a bottom sheet with contacts, map and more
+• Results now stay put when you switch tabs
+• New "Use my location" button
+• Your last results open even without a connection
+• Android back button works as expected
+• Faster searches, smarter caching, many fixes
+
+Private by design: postal codes never leave your device.
