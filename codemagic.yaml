@@ -30,7 +30,12 @@ workflows:
           npm install
       - name: Install Android SDK 36
         script: |
-          sdkmanager "platforms;android-36"
+          # sdkmanager is not on PATH on the current mac_mini_m2 image —
+          # resolve it the same way the android-play-store workflow does.
+          SDKMGR=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
+          echo "Using sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platforms;android-36"
       - name: Build web + sync Capacitor (iOS & Android)
         script: |
           npm run build
