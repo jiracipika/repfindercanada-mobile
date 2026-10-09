@@ -16,21 +16,27 @@ workflows:
       node: 20
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.marcelsabas.repfinderforcanada
       android_signing:
         - akey                    # uses your uploaded keystore
     scripts:
       - name: Set up code signing
         script: |
-          # Automatic code signing: with the ASC API key, use-profiles creates
-          # a fresh app_store profile for the bundle id (the uploaded ones
-          # expired 2026-10-01 and were removed from team Code signing identities).
-          xcode-project use-profiles \
-            --app-store-connect-issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
-            --app-store-connect-key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --app-store-connect-private-key="$APP_STORE_CONNECT_PRIVATE_KEY"
+          # Custom code signing (docs: "Custom code signing" section). The
+          # managed ios_signing block was removed — it only consumes profiles
+          # from the team store, which expired 2026-10-01 and were removed.
+          # fetch-signing-files --create mints a fresh app_store profile for
+          # the bundle id via the App Store Connect API and binds it to the
+          # Codemagic-generated distribution cert (RepFinder Distribution 2026).
+          app-store-connect fetch-signing-files \
+            com.marcelsabas.repfinderforcanada \
+            --type IOS_APP_STORE \
+            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
+            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
+            --private-key $APP_STORE_CONNECT_PRIVATE_KEY \
+            --create
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Install npm deps
         script: |
           npm install
@@ -95,19 +101,22 @@ workflows:
       node: 20
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.marcelsabas.repfinderforcanada
     scripts:
       - name: Set up code signing
         script: |
-          # Automatic code signing: with the ASC API key, use-profiles creates
-          # a fresh app_store profile for the bundle id (the uploaded ones
-          # expired 2026-10-01 and were removed from team Code signing identities).
-          xcode-project use-profiles \
-            --app-store-connect-issuer-id="$APP_STORE_CONNECT_ISSUER_ID" \
-            --app-store-connect-key-id="$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --app-store-connect-private-key="$APP_STORE_CONNECT_PRIVATE_KEY"
+          # Custom code signing — same flow as release-both: create the
+          # app_store profile on the fly via the ASC API (uploaded profiles
+          # expired 2026-10-01 and were removed from the team store).
+          app-store-connect fetch-signing-files \
+            com.marcelsabas.repfinderforcanada \
+            --type IOS_APP_STORE \
+            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
+            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
+            --private-key $APP_STORE_CONNECT_PRIVATE_KEY \
+            --create
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Install npm dependencies
         script: |
           npm install
