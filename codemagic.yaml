@@ -43,7 +43,9 @@ workflows:
           # downloaded .p12 — without it the tool cannot save the certificate
           # ("Cannot save Signing Certificates without certificate private key").
           # DIST_CERT_PRIVATE_KEY (app_store_connect group) = base64 of that PEM.
-          export DIST_CERT_KEY="$(echo "$DIST_CERT_PRIVATE_KEY" | base64 --decode)"
+          # openssl pkcs12 prints "Bag Attributes" headers before the key —
+          # keep only the PEM block, and never echo it (set -e + no set -x).
+          export DIST_CERT_KEY="$(echo "$DIST_CERT_PRIVATE_KEY" | base64 --decode | awk '/BEGIN/{f=1} f{print}')"
           app-store-connect fetch-signing-files \
             com.marcelsabas.repfinderforcanada \
             --type IOS_APP_STORE \
@@ -132,7 +134,9 @@ workflows:
           # downloaded .p12 — without it the tool cannot save the certificate
           # ("Cannot save Signing Certificates without certificate private key").
           # DIST_CERT_PRIVATE_KEY (app_store_connect group) = base64 of that PEM.
-          export DIST_CERT_KEY="$(echo "$DIST_CERT_PRIVATE_KEY" | base64 --decode)"
+          # openssl pkcs12 prints "Bag Attributes" headers before the key —
+          # keep only the PEM block, and never echo it (set -e + no set -x).
+          export DIST_CERT_KEY="$(echo "$DIST_CERT_PRIVATE_KEY" | base64 --decode | awk '/BEGIN/{f=1} f{print}')"
           app-store-connect fetch-signing-files \
             com.marcelsabas.repfinderforcanada \
             --type IOS_APP_STORE \
