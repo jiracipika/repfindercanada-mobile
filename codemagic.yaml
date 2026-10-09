@@ -90,7 +90,29 @@ workflows:
       - name: Build Android .aab
         script: |
           cd android
-          ./gradlew clean bundleRelease
+          # Signed release: injected signing properties (same as the
+          # android-play-store workflow) — an unsigned bundle is rejected by
+          # Play ("All uploaded bundles must be signed"). Probe for a JDK that
+          # can read the keystore (newer keytool formats break zulu-17).
+          GRADLE_JAVA_HOME=""
+          for V in 21 26 17; do
+            J="/Library/Java/JavaVirtualMachines/zulu-$V.jdk/Contents/Home"
+            if [ -x "$J/bin/keytool" ]; then
+              if "$J/bin/keytool" -list -keystore "$CM_KEYSTORE_PATH" -storepass "$CM_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+                echo "== zulu-$V can read the keystore; building with zulu-$V =="
+                GRADLE_JAVA_HOME="$J"
+                break
+              else
+                echo "== zulu-$V CANNOT read the keystore =="
+              fi
+            fi
+          done
+          if [ -z "$GRADLE_JAVA_HOME" ]; then
+            echo "NO JDK on the image can read the keystore"
+            keytool -list -keystore "$CM_KEYSTORE_PATH" -storepass "$CM_KEYSTORE_PASSWORD" || true
+            exit 1
+          fi
+          ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
     artifacts:
       - build/ios/ipa/*.ipa
       - android/app/build/outputs/**/*.aab
