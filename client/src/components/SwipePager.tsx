@@ -1,6 +1,9 @@
-import { useState, useEffect, ReactNode, useRef } from "react";
-import { motion, AnimatePresence, PanInfo, useMotionValue, animate } from "framer-motion";
-import { pagerVariants, springPage } from "@/components/civic/motion";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { animate, motion, PanInfo, useMotionValue, type ValueAnimationTransition } from "framer-motion";
+
+/** Critically damped settle — identical to civic/motion.ts springPage, typed
+ * for imperative animate() on a motion value (Transition ≠ ValueAnimationTransition). */
+const settleSpring: ValueAnimationTransition<number> = { type: "spring", bounce: 0, duration: 0.4 };
 
 interface SwipePagerProps {
   pages: ReactNode[];
@@ -9,140 +12,94 @@ interface SwipePagerProps {
   className?: string;
 }
 
-const SWIPE_THRESHOLD = 50; // pixels - minimum distance to trigger page change
-const VELOCITY_THRESHOLD = 500; // pixels per second - minimum velocity for fast swipe
-const DRAG_START_THRESHOLD = 10; // pixels - minimum movement before considering it a drag
+/** Fraction of the viewport a drag must cover to change pages. */
+const PAGE_COMMIT_RATIO = 0.25;
+/** px/s — a fling past this always turns the page (toward the fling). */
+const FLING_VELOCITY = 450;
 
+/**
+ * iOS-style paging track: every page stays mounted, laid out side by side,
+ * and the whole track follows the finger 1:1 while dragging. Release settles
+ * the nearest page with the app's critically damped spring (no bounce, like
+ * UIScrollView paging). Tab taps glide the same track, so taps and swipes
+ * share one motion. Off-screen pages are aria-hidden; their scroll positions
+ * persist because nothing unmounts.
+ */
 export function SwipePager({ pages, currentIndex, onIndexChange, className = "" }: SwipePagerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
-  const [dragging, setDragging] = useState(false);
-  const [isDragIntentional, setIsDragIntentional] = useState(false);
-  const dragStartPos = useRef(0);
-  const lastIndexRef = useRef(currentIndex);
-  const directionRef = useRef(1);
+  const [pageWidth, setPageWidth] = useState(0);
+  const widthRef = useRef(0);
+  const indexRef = useRef(currentIndex);
 
-  // Direction for the page transition, derived during render so AnimatePresence
-  // sees it on the exact commit where the page key changes (effects run later).
-  const direction =
-    currentIndex === lastIndexRef.current
-      ? directionRef.current
-      : currentIndex > lastIndexRef.current
-        ? 1
-        : -1;
-  directionRef.current = direction;
+  const maxX = (pages.length - 1) * pageWidth;
 
-  // Reset position when index changes
+  // Measure the viewport and realign the track instantly (first size,
+  // rotation, any resize — never animate a resize).
   useEffect(() => {
-    if (lastIndexRef.current !== currentIndex) {
-      x.set(0);
-      setIsDragIntentional(false);
-      lastIndexRef.current = currentIndex;
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w && w !== widthRef.current) {
+        widthRef.current = w;
+        setPageWidth(w);
+        x.set(-indexRef.current * w);
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [x]);
+
+  // Tab taps / route changes glide to the target page. Drags commit through
+  // the same helper, so indexRef already matches and this becomes a no-op.
+  useEffect(() => {
+    if (currentIndex !== indexRef.current) {
+      indexRef.current = currentIndex;
+      if (widthRef.current) animate(x, -currentIndex * widthRef.current, settleSpring);
     }
   }, [currentIndex, x]);
 
-  const handleDragStart = (_: any, info: PanInfo) => {
-    setDragging(true);
-    setIsDragIntentional(false);
-    dragStartPos.current = info.point.x;
+  const commit = (index: number) => {
+    indexRef.current = index;
+    animate(x, -index * widthRef.current, settleSpring);
+    if (index !== currentIndex) onIndexChange(index);
   };
 
-  const handleDrag = (_: any, info: PanInfo) => {
-    const { offset, delta } = info;
-
-    // Only start allowing drag movement once threshold is exceeded
-    if (!isDragIntentional) {
-      const totalDragDistance = Math.abs(offset.x);
-      if (totalDragDistance > DRAG_START_THRESHOLD) {
-        // Check if this is more horizontal than vertical
-        if (Math.abs(offset.x) > Math.abs(offset.y) * 1.5) {
-          setIsDragIntentional(true);
-        }
-      }
-      // Don't allow movement until intentional drag is detected
-      x.set(0);
-      return;
-    }
-
-    // Ignore if mostly vertical scrolling
-    if (Math.abs(delta.y) > Math.abs(delta.x) * 1.5) {
-      return;
-    }
-  };
-
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
     const { offset, velocity } = info;
-    const swipeDistance = offset.x;
-    const swipeVelocity = velocity.x;
-
-    // Reset drag states
-    setDragging(false);
-    setIsDragIntentional(false);
-
-    // Determine if we should change pages (only if drag was intentional)
-    let newIndex = currentIndex;
-
-    if (isDragIntentional) {
-      // Check velocity first for fast swipes
-      if (Math.abs(swipeVelocity) > VELOCITY_THRESHOLD) {
-        if (swipeVelocity > 0 && currentIndex > 0) {
-          newIndex = currentIndex - 1;
-        } else if (swipeVelocity < 0 && currentIndex < pages.length - 1) {
-          newIndex = currentIndex + 1;
-        }
-      }
-      // Then check distance for slower swipes
-      else if (Math.abs(swipeDistance) > SWIPE_THRESHOLD) {
-        if (swipeDistance > 0 && currentIndex > 0) {
-          newIndex = currentIndex - 1;
-        } else if (swipeDistance < 0 && currentIndex < pages.length - 1) {
-          newIndex = currentIndex + 1;
-        }
-      }
+    let target = indexRef.current;
+    if (offset.x < -pageWidth * PAGE_COMMIT_RATIO || velocity.x < -FLING_VELOCITY) {
+      target = Math.min(indexRef.current + 1, pages.length - 1);
+    } else if (offset.x > pageWidth * PAGE_COMMIT_RATIO || velocity.x > FLING_VELOCITY) {
+      target = Math.max(indexRef.current - 1, 0);
     }
-
-    // Animate back to center — momentum gesture, so a little bounce is allowed
-    animate(x, 0, {
-      type: "spring",
-      bounce: 0.2,
-      duration: 0.4,
-      restDelta: 0.01
-    });
-
-    // Update index if changed
-    if (newIndex !== currentIndex) {
-      requestAnimationFrame(() => {
-        onIndexChange(newIndex);
-      });
-    }
+    commit(target);
   };
 
   return (
-    <div className={`relative w-full h-full touch-manipulation ${className}`} style={{ overflow: 'hidden' }}>
+    <div ref={containerRef} className={`relative h-full w-full overflow-hidden ${className}`}>
       <motion.div
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={isDragIntentional ? 0.1 : 0}
-        dragMomentum={false}
-        onDragStart={handleDragStart}
-        onDrag={handleDrag}
-        onDragEnd={handleDragEnd}
+        className="flex h-full w-full"
         style={{ x }}
-        className="w-full h-full"
+        drag="x"
+        dragConstraints={{ left: -maxX, right: 0 }}
+        dragElastic={0.08}
+        dragMomentum={false}
+        dragDirectionLock
+        onDragEnd={handleDragEnd}
       >
-        <AnimatePresence mode="wait" initial={false} custom={direction}>
-          <motion.div
-            key={currentIndex}
-            custom={direction}
-            variants={pagerVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={springPage}
-            className="w-full h-full"
+        {pages.map((page, i) => (
+          <div
+            key={i}
+            className="h-full w-full shrink-0 overflow-hidden"
+            aria-hidden={i !== currentIndex}
           >
-            {pages[currentIndex]}
-          </motion.div>
-        </AnimatePresence>
+            {page}
+          </div>
+        ))}
       </motion.div>
 
       {/* Accessibility announcement */}
