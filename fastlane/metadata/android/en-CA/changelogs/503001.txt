@@ -1,0 +1,7 @@
+Smoother navigation — swipe between tabs.
+
+• New swipe gestures: glide between Find, Saved, Activity and Profile like a native app
+
+Everything from 3.3.0: clean redesign, light & dark themes, rep details with map and contacts, offline results, back-button support, faster searches.
+
+Private by design: postal codes never leave your device.
