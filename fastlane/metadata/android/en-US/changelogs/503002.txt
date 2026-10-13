@@ -1,0 +1,8 @@
+Bug fixes — swiping now responds every time.
+
+• Fixed: side-to-side swiping between tabs wasn't registering on some touchscreens
+• Fixed: a crash some Android devices hit when checking location permissions
+
+Everything from 3.3.1: swipe gestures, clean redesign, light & dark themes, rep details with map and contacts, offline results, back-button support.
+
+Private by design: postal codes never leave your device.
