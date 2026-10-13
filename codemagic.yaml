@@ -105,6 +105,18 @@ workflows:
             exit 1
           fi
           ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
+      - name: Publish AAB to closed + open testing tracks
+        script: |
+          # The publishing.google_play block below only covers internal.
+          # alpha = Closed testing (Alpha), beta = Open testing. Re-uploading
+          # the same versionCode to more tracks is allowed (idempotent).
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          for T in alpha beta; do
+            echo "== Publishing AAB to $T =="
+            google-play bundles publish \
+              --credentials @env:GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS \
+              --bundle "$AAB" --track "$T"
+          done
     artifacts:
       - build/ios/ipa/*.ipa
       - android/app/build/outputs/**/*.aab
