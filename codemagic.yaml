@@ -114,7 +114,7 @@ workflows:
           for T in alpha beta; do
             echo "== Publishing AAB to $T =="
             google-play bundles publish \
-              --credentials @env:GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS \
+              --credentials @env:GCLOUD_SERVICE_ACCOUNT_CREDENTIALS \
               --bundle "$AAB" --track "$T"
           done
     artifacts:
