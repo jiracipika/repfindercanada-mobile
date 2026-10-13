@@ -105,17 +105,40 @@ workflows:
             exit 1
           fi
           ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
-      - name: Publish AAB to closed + open testing tracks
+      - name: Publish AAB to internal + closed + open testing tracks
         script: |
-          # The publishing.google_play block below only covers internal.
-          # alpha = Closed testing (Alpha), beta = Open testing. Re-uploading
-          # the same versionCode to more tracks is allowed (idempotent).
+          # Upload ONCE to alpha, then promote the same release to internal and
+          # beta. `bundles publish` re-uploads the bundle on every call and Play
+          # rejects duplicate versionCodes ("Version code N has already been
+          # used"), so every track after the first must come from
+          # tracks promote-release (no re-upload). The publishing.google_play
+          # block was removed for the same reason. Re-runs are safe: a duplicate
+          # upload is tolerated and the promotes re-assert the same versionCode.
           AAB="android/app/build/outputs/bundle/release/app-release.aab"
-          for T in alpha beta; do
-            echo "== Publishing AAB to $T =="
-            google-play bundles publish \
-              --credentials @env:GCLOUD_SERVICE_ACCOUNT_CREDENTIALS \
-              --bundle "$AAB" --track "$T"
+          CREDS=@env:GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+          PKG=$(sed -n 's/.*applicationId "\([^"]*\)".*/\1/p' android/app/build.gradle | head -1)
+          VC=$(sed -n 's/.*versionCode \([0-9]*\).*/\1/p' android/app/build.gradle | head -1)
+          python3 - "$VC" > /tmp/release-notes.json <<'PYEOF'
+          import json, sys
+          vc = sys.argv[1]
+          def notes(loc):
+              with open('fastlane/metadata/android/%s/changelogs/%s.txt' % (loc, vc)) as f:
+                  return f.read().strip()
+          print(json.dumps([
+              {"language": "en-CA", "text": notes('en-CA')},
+              {"language": "en-US", "text": notes('en-US')},
+          ]))
+          PYEOF
+          echo "== Uploading $AAB (versionCode $VC, package $PKG) to alpha =="
+          if ! google-play bundles publish --credentials "$CREDS" --bundle "$AAB" \
+               --track alpha --release-notes @file:/tmp/release-notes.json; then
+            echo "alpha upload failed — tolerated only if versionCode $VC was already uploaded; promote below will verify"
+          fi
+          for T in internal beta; do
+            echo "== Promoting alpha release $VC to track $T =="
+            google-play tracks promote-release --credentials "$CREDS" \
+              --package-name "$PKG" --source-track alpha --target-track "$T" \
+              --version-code-filter "$VC"
           done
     artifacts:
       - build/ios/ipa/*.ipa
@@ -128,10 +151,6 @@ workflows:
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         submit_to_app_store: false
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        submit_as_draft: false
 
   ios-app-store:
     name: React Native Capacitor Build
