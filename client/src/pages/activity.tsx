@@ -98,7 +98,7 @@ export default function Activity() {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
       <div className="civic-page space-y-6">
         <Section className="civic-page-header">
           <span className="civic-kicker">Local lookup history</span>

@@ -80,7 +80,7 @@ export default function Home() {
   })).filter((group) => group.reps.length > 0);
 
   return (
-    <div className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+    <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: "touch" }}>
       <main className="civic-page">
         <motion.header
           className="civic-page-header"
