@@ -32,14 +32,24 @@ Private by design: postal codes never leave your device.
 </en-CA>
 ```
 
-## App Store Connect — READY TO PASTE (needs user login)
+## App Store Connect — DONE (2026-10-14, user logged in)
 
-1. App Store tab → iOS app → the editable version → set **Version 3.3.4**.
-2. **Build**: attach iOS build 50 (uploaded Oct 14, TestFlight beta review
-   WAITING_FOR_REVIEW — build is processed and attachable).
-3. **Screenshots**: iPhone 6.9" slot ← `ios/` folder (6 × 1320×2868:
-   home, find-results light+dark, saved, history, profile).
-4. **What's New**:
+All filled on the version page and **saved** (left at Prepare for Submission —
+NOT submitted for review):
+
+1. Version **3.3.4** ✓ (was 3.3.1)
+2. **Build 53** attached (the picker showed ground truth: 3.3.4 = build 53,
+   NOT 50 — 50 is 3.3.2's upload; earlier doc was wrong)
+3. Screenshots: "App Previews and Screenshots" tab → iPhone with Dynamic Island
+   (medium display) slot ← 6 × **1206×2622** (the `ios/` folder was re-exported
+   at this size — the slot REJECTS 1320×2868; original 6.9" captures resized).
+   In the new ASC layout the device slots live under the version page's
+   "App Previews and Screenshots" TAB (not the Header/Search results tab).
+4. What's New:
+5. Promotional text updated (113 chars), Description fully rewritten (1,730
+   chars — new branding, correct sole credit, new-features list), Copyright
+   "2026 Gajadhar".
+5. What's New:
 
 ```
 Rebuilt from the ground up.
