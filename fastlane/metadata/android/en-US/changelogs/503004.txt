@@ -1,0 +1,8 @@
+Smarter with brand-new postal codes.
+
+• Offline database refreshed with the newest official data — 2,600+ postal codes added from the December 2025 address register
+• Codes too new for any official database (like Markham's L6E 0W3) now resolve live, so your search finds your representatives instead of showing "not found"
+
+Everything from 3.3.2: swiping fixed on every touchscreen, startup crash fixed.
+
+Private by design: postal codes never leave your device.
