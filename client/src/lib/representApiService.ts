@@ -386,10 +386,11 @@ export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
     source: string;
   };
 }> {
-  const { getCoordinatesFromPostalCodeLocal } = await import('./localPostalLookup');
+  const { getCoordinatesWithFreshFallback } = await import('./freshPostalLookup');
 
-  // Get coordinates from local data
-  const coordinates = await getCoordinatesFromPostalCodeLocal(postalCode);
+  // Get coordinates from local data; codes unknown even by prefix (brand-new
+  // FSAs) get an online rescue via geocoder.ca
+  const coordinates = await getCoordinatesWithFreshFallback(postalCode);
   if (!coordinates) {
     throw new Error(`Postal code not found: ${postalCode}`);
   }
@@ -408,9 +409,11 @@ export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
       postalCode: postalCode,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
-      source: coordinates.matchedOn === 'prefix'
-        ? `local-database-prefix:${coordinates.matchedPrefix}`
-        : 'local-database'
+      source: coordinates.matchedOn === 'geocoder-ca'
+        ? 'geocoder-ca'
+        : coordinates.matchedOn === 'prefix'
+          ? `local-database-prefix:${coordinates.matchedPrefix}`
+          : 'local-database'
     }
   };
 }

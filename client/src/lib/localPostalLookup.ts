@@ -11,9 +11,11 @@ export interface PostalCodeData {
   /**
    * "exact" = the full code is in the bundled index. "prefix" = the code was
    * introduced after the data snapshot (Canada Post adds codes continuously);
-   * coordinates come from the longest matching prefix instead.
+   * coordinates come from the longest matching prefix instead. "geocoder-ca"
+   * = the code is unknown locally even by prefix (brand-new FSA) and was
+   * rescued online via geocoder.ca.
    */
-  matchedOn?: "exact" | "prefix";
+  matchedOn?: "exact" | "prefix" | "geocoder-ca";
   /** The prefix that matched, when matchedOn is "prefix" (e.g. "L6E0"). */
   matchedPrefix?: string;
 }

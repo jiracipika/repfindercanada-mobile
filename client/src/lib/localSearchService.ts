@@ -10,9 +10,9 @@ import {
   fetchRepsByRidingDirect
 } from "./representApiService";
 import {
-  getCoordinatesFromPostalCodeLocal,
   LocalPostalLookup
 } from "./localPostalLookup";
+import { getCoordinatesWithFreshFallback } from "./freshPostalLookup";
 
 /**
  * Search representatives by postal code using local database + Represent API
@@ -98,8 +98,9 @@ export async function getPostalCodeGeocodingLocal(postalCode: string): Promise<{
     // Normalize postal code
     const normalizedCode = LocalPostalLookup.normalizePostalCode(postalCode);
 
-    // Get coordinates from local database
-    const coordinates = await getCoordinatesFromPostalCodeLocal(normalizedCode);
+    // Get coordinates from local database; codes unknown even by prefix get
+    // an online rescue via geocoder.ca (see freshPostalLookup)
+    const coordinates = await getCoordinatesWithFreshFallback(normalizedCode);
     if (!coordinates) {
       throw new Error(`Postal code not found in database: ${normalizedCode}`);
     }
@@ -108,10 +109,12 @@ export async function getPostalCodeGeocodingLocal(postalCode: string): Promise<{
       postalCode: normalizedCode,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
-      source: coordinates.matchedOn === 'prefix'
-        ? `local-database-prefix:${coordinates.matchedPrefix}`
-        : 'local-database',
-      confidence: coordinates.matchedOn === 'exact' ? 1.0 : 0.9 // prefix = same block/FSA, not the exact code
+      source: coordinates.matchedOn === 'geocoder-ca'
+        ? 'geocoder-ca'
+        : coordinates.matchedOn === 'prefix'
+          ? `local-database-prefix:${coordinates.matchedPrefix}`
+          : 'local-database',
+      confidence: coordinates.matchedOn === 'exact' ? 1.0 : coordinates.matchedOn === 'prefix' ? 0.9 : 0.8
     };
 
   } catch (error) {
@@ -145,8 +148,9 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
     // Normalize postal code
     const normalizedCode = LocalPostalLookup.normalizePostalCode(postalCode);
 
-    // Get coordinates from local database
-    const coordinates = await getCoordinatesFromPostalCodeLocal(normalizedCode);
+    // Get coordinates from local database; codes unknown even by prefix get
+    // an online rescue via geocoder.ca (see freshPostalLookup)
+    const coordinates = await getCoordinatesWithFreshFallback(normalizedCode);
     if (!coordinates) {
       throw new Error(`Postal code not found in database: ${normalizedCode}`);
     }
@@ -161,10 +165,12 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
         postalCode: normalizedCode,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        source: coordinates.matchedOn === 'prefix'
-          ? `local-database-prefix:${coordinates.matchedPrefix}`
-          : 'local-database',
-        confidence: coordinates.matchedOn === 'exact' ? 1.0 : 0.9
+        source: coordinates.matchedOn === 'geocoder-ca'
+          ? 'geocoder-ca'
+          : coordinates.matchedOn === 'prefix'
+            ? `local-database-prefix:${coordinates.matchedPrefix}`
+            : 'local-database',
+        confidence: coordinates.matchedOn === 'exact' ? 1.0 : coordinates.matchedOn === 'prefix' ? 0.9 : 0.8
       }
     };
   } catch (error) {
