@@ -1,0 +1,8 @@
+Finds every postal code — including brand-new ones.
+
+• Fixed: very new postal codes (like Markham's L6E 0W3) now find your representatives instead of showing "not found" — the app falls back to your area's coordinates when a code is too new for the offline database
+• Same results as your neighbours: new codes in an established area share its electoral districts
+
+Everything from 3.3.2: swiping between tabs works on every touchscreen, no more startup crash on some Android devices.
+
+Private by design: postal codes never leave your device.
