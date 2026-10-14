@@ -108,8 +108,10 @@ export async function getPostalCodeGeocodingLocal(postalCode: string): Promise<{
       postalCode: normalizedCode,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
-      source: 'local-database',
-      confidence: 1.0 // We're confident because it's from our database
+      source: coordinates.matchedOn === 'prefix'
+        ? `local-database-prefix:${coordinates.matchedPrefix}`
+        : 'local-database',
+      confidence: coordinates.matchedOn === 'exact' ? 1.0 : 0.9 // prefix = same block/FSA, not the exact code
     };
 
   } catch (error) {
@@ -159,8 +161,10 @@ export async function getLocationDataWithLocalGeocoding(postalCode: string): Pro
         postalCode: normalizedCode,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        source: 'local-database',
-        confidence: 1.0
+        source: coordinates.matchedOn === 'prefix'
+          ? `local-database-prefix:${coordinates.matchedPrefix}`
+          : 'local-database',
+        confidence: coordinates.matchedOn === 'exact' ? 1.0 : 0.9
       }
     };
   } catch (error) {

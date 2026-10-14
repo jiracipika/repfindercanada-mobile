@@ -408,7 +408,9 @@ export async function fetchRepsByPostalCodeDirect(postalCode: string): Promise<{
       postalCode: postalCode,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
-      source: 'local-database'
+      source: coordinates.matchedOn === 'prefix'
+        ? `local-database-prefix:${coordinates.matchedPrefix}`
+        : 'local-database'
     }
   };
 }
