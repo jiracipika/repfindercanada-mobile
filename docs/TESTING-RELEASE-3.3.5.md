@@ -26,10 +26,30 @@ made exact and the complete browser suite passed again.
 
 ## Access / external state
 
-NOT uploaded or remotely staged by this work. Computer-use session setup
-failed; fallback browser is logged out of Codemagic; no saved vault login or
-Codemagic API token was available. Previous releases are documented in
-PUBLIC-RELEASE-PREP-3.3.4.md but must be checked against live consoles.
+Codemagic build completed successfully:
+https://codemagic.io/app/68dcb0f5de98085078c068f2/build/6ad668657550aed810903f93
+
+- Source SHA verified through the GitHub check:
+  5491bdf66d0963c8d264fa27e69267f3782c6473.
+- Manual release-both build, using main, not the earlier 47569fd commit.
+- Play internal testing read-back: 3.3.5 available to internal testers.
+- Play closed testing / Alpha read-back: 3.3.5 in review.
+- Play open testing read-back: 3.3.5 in review; expanded summary confirms 503005.
+- Codemagic publishing log confirms alpha upload and internal promotion of
+  503005; the actual store-console read-back is authoritative for review state.
+- Production read-back before and after this build: 3.3.4 at 100% rollout.
+  It was already published before this work, despite older prep docs describing
+  a draft. No production controls or global Publishing overview actions used.
+- iOS build/publishing CI succeeded with TestFlight enabled and App Store
+  submission disabled. Exact iOS build number, TestFlight processing, testing
+  group assignment, and tester availability remain UNVERIFIED: ASC is logged
+  out and requires the user's secure sign-in.
+- A subsequent desktop scroll action timed out awaiting approval. Do not retry
+  that blocked action or route around it; wait for renewed user interaction.
+
+Desktop transport was repaired by stopping the incompatible system daemon and
+launching Hermes' PM-pinned CuaDriver.app through LaunchServices. Existing
+Accessibility and Screen Recording grants remained valid.
 
 ## Before triggering
 
