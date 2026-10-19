@@ -63,7 +63,7 @@ test('touch open, close, reopen and Escape leave the app interactive', async ({ 
   await expect(clearCaches).toBeInViewport();
   await expect(clearCaches).toBeEnabled();
   await page.getByRole('button', { name: 'Save Profile', exact: true }).tap();
-  await expect(page.getByText('Your profile has been updated.')).toBeVisible();
+  await expect(page.getByText('Your profile has been updated.', { exact: true })).toBeVisible();
 });
 
 test('viewport switches during entrance never strand an invisible modal', async ({ page }) => {

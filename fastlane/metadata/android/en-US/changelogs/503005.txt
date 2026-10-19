@@ -1,0 +1,3 @@
+Fixes an intermittent issue where tapping View Full Profile could leave the representative details invisible and prevent further taps.
+
+Profile details now open reliably on phones and tablets, including when the screen size changes. Includes regression coverage for closing, reopening, drag-to-dismiss, and reduced motion.

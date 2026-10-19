@@ -51,7 +51,7 @@ workflows:
           xcode-project use-profiles
       - name: Install npm deps
         script: |
-          npm install
+          npm ci
       - name: Install Android SDK 36
         script: |
           # sdkmanager is not on PATH on the current mac_mini_m2 image —
@@ -71,7 +71,7 @@ workflows:
       - name: Increment iOS build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 3.3.4
+          agvtool new-marketing-version 3.3.5
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS .ipa
         script: |
@@ -195,7 +195,7 @@ workflows:
           xcode-project use-profiles
       - name: Install npm dependencies
         script: |
-          npm install
+          npm ci
       - name: Build web app and sync with Capacitor
         script: |
           npm run build
@@ -206,7 +206,7 @@ workflows:
       - name: Increment build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 3.3.4
+          agvtool new-marketing-version 3.3.5
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS
         script: |
@@ -242,7 +242,7 @@ workflows:
           echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
       - name: Install npm dependencies
         script: |
-          npm install
+          npm ci
       - name: Install Android SDK 36
         script: |
           SDKMGR=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
