@@ -125,11 +125,14 @@ export function BottomSheet({
                     className,
                   )}
                   style={isMobile ? { y } : undefined}
-                  initial={isMobile ? { y: "100%" } : { opacity: 0, scale: 0.96, y: 8 }}
-                  animate={isMobile ? { y: 0, transition: springSoft } : { opacity: 1, scale: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
+                  // opacity is pinned in EVERY branch (including mobile) so a
+                  // mid-entrance isMobile flip can never cancel the fade to a
+                  // sheet stuck invisible under a tap-eating overlay.
+                  initial={isMobile ? { y: "100%", opacity: 0 } : { opacity: 0, scale: 0.96, y: 8 }}
+                  animate={isMobile ? { y: 0, opacity: 1, scale: 1, transition: springSoft } : { opacity: 1, scale: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
                   exit={
                     isMobile
-                      ? { y: "100%", transition: { duration: 0.22, ease: "easeIn" } }
+                      ? { y: "100%", opacity: 0, transition: { duration: 0.22, ease: "easeIn" } }
                       : { opacity: 0, scale: 0.96, y: 8, transition: { duration: 0.18, ease: "easeIn" } }
                   }
                   drag={isMobile ? "y" : false}
