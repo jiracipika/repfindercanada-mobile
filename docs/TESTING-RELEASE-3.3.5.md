@@ -40,10 +40,15 @@ https://codemagic.io/app/68dcb0f5de98085078c068f2/build/6ad668657550aed810903f93
 - Production read-back before and after this build: 3.3.4 at 100% rollout.
   It was already published before this work, despite older prep docs describing
   a draft. No production controls or global Publishing overview actions used.
-- iOS build/publishing CI succeeded with TestFlight enabled and App Store
-  submission disabled. Exact iOS build number, TestFlight processing, testing
-  group assignment, and tester availability remain UNVERIFIED: ASC is logged
-  out and requires the user's secure sign-in.
+- ASC read-back after secure sign-in confirms 3.3.5 (54), processed and
+  Waiting for Review in TestFlight. No additional version bump is needed.
+- Build 54 is assigned to internal groups RepFinderCanadaiOS (one tester)
+  and Testers. Installation/tester receipt remains unverified.
+- The build detail exposes Remove from Review; leave the pending beta review
+  intact. App Store Distribution remains 3.3.4 Ready for Distribution.
+- Attempted to add profile-regression What to Test notes, but AXValue did not
+  confirm an update and foreground input approval timed out. Notes were NOT
+  verified saved; do not claim they were. No review was cancelled.
 - A subsequent desktop scroll action timed out awaiting approval. Do not retry
   that blocked action or route around it; wait for renewed user interaction.
 
