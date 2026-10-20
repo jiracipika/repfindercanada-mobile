@@ -33,8 +33,25 @@ Please test Carney and Mark Carney; Toronto; Nepean and Ottawa Centre; postal en
 
 Do not copy obsolete claims that postal codes never leave the device. Preserve existing valid reviewer/contact/access/compliance information. No invented credentials or export/privacy answers.
 
-## Delivery evidence (in progress)
+## Delivery evidence — verified 2026-10-20
 
-No new CI build has been triggered yet. No 3.3.6 upload, tester availability or live metadata persistence is claimed at this preparation checkpoint. Replace this section with exact source SHA, CI URL/build ID, artifact identifiers, track/version/status/notes readbacks, TestFlight group/status and saved notes evidence.
+- Source: d1dd78cdfc4e7294b6bbc8ec364b251bd86963f3, containing required feature 13578c843e998ec8f2cc388c830c9d9dfba3342e.
+- Codemagic check completed successfully: https://codemagic.io/app/68dcb0f5de98085078c068f2/build/6ad78cf4454d2506f7ab7f79 . Workflow: Testing only: iOS TestFlight + Play internal/closed/open.
+- Downloaded APK release-manifest.json identifies that CI build and source, Android 503006, iOS 55, marketing 3.3.6, alpha/internal/beta/TestFlight destinations, productionSubmission false.
+- Play internal testing: Active, latest release 3.3.6 (direct console read-back).
+- Play closed Alpha: Active, latest release 3.3.6, available to selected testers, released Oct 20 at 12:33 PM, two countries/regions (direct console read-back).
+- Play open testing: Active, 3.3.6 available to unlimited testers, released Oct 20 at 12:33 PM, 100%, two of two countries/regions. Console also reported available to zero users; enrollment/install success is not claimed.
+- Play production remained 503005 (3.3.5), Active. No production candidate was replaced by this testing release.
+- Play localized release-note persistence and per-track versionCode read-backs remain unverified; intended copy above is not evidence of saved store metadata.
+- Apple TestFlight: 3.3.6 (55), uploaded Oct 20 at 11:56 AM, Waiting for Review for external Beta App Review. Build showed two associated groups; exact identities/internal install availability remain unverified. Public Testing selector also showed build 55 Waiting for Review. Do not claim external/public tester availability yet.
+- TestFlight What to Test was saved with both paragraphs above and independently persisted after refresh (3,411 characters remaining).
+- Separate Apple production 3.3.5 (54) submission was not modified; last verified Waiting for Review. No newer production approval is claimed.
+- Remaining Apple app-level testing/review metadata has not been fully audited. Foreground Safari scrolling was blocked by the tool approval gate; it was not retried or bypassed.
 
-Native validation: Android SDK/ADB/emulator are available; emulator-5554 is connected. Install the exact CI APK after download, verify version/source manifest and exercise search/details. This machine has no full Xcode, so iOS native execution remains unavailable locally.
+## Native validation and production blockers
+
+Installed the downloaded app-release.apk using adb install -r: Success. Android package read-back confirmed versionName 3.3.6 and versionCode 503006. MainActivity cold launch succeeded. On emulator-5554, unified Carney search returned Mark Carney; View Full Profile opened the native WebView profile sheet with Nepean and contact/source controls. Lowercase k1a0a9 normalized to K1A0A9 and returned four representatives. Screenshots are retained locally under ~/.hermes/cache/scratch/repfinder-native-*.png.
+
+The first search showed Search unavailable because the emulator had no active network. After reconnecting its saved AndroidWifi network, the same candidate returned live results. This was not established as an app regression. Native saved/history/offline replay, mail handoff, and the complete browser regression matrix have not been repeated on Android. This machine has no full Xcode; iOS native runtime validation remains unavailable.
+
+PRODUCTION BLOCKER: the installed candidate's privacy onboarding still claims postal code/location is never transmitted off-device. That statement conflicts with the network lookup design and must be corrected before promoting 3.3.6 to production. This testing-delivery handoff does not silently change the uploaded binaries or withdraw Apple's pending review.
