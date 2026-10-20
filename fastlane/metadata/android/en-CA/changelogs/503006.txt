@@ -1,0 +1,1 @@
+One search bar now finds representatives by Canadian postal code, name, city, area or riding. Fixed name searches such as Carney and normalized postal-code entry. Previously saved searches and representative details remain available offline.

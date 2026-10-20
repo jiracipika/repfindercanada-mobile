@@ -1,6 +1,6 @@
 workflows:
   release-both:
-    name: "One-click: Build iOS (TestFlight) + Android (Play)"
+    name: "Testing only: iOS TestFlight + Play internal/closed/open"
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
@@ -51,7 +51,10 @@ workflows:
           xcode-project use-profiles
       - name: Install npm deps
         script: |
+          set -euo pipefail
           npm ci
+          npm run typecheck
+          npm run test:unit
       - name: Install Android SDK 36
         script: |
           # sdkmanager is not on PATH on the current mac_mini_m2 image —
@@ -62,7 +65,9 @@ workflows:
           "$SDKMGR" "platforms;android-36"
       - name: Build web + sync Capacitor (iOS & Android)
         script: |
+          set -euo pipefail
           npm run build
+          node scripts/write-release-manifest.mjs
           npx cap sync ios
           npx cap sync android
       - name: Install CocoaPods
@@ -71,7 +76,7 @@ workflows:
       - name: Increment iOS build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 3.3.5
+          agvtool new-marketing-version 3.3.6
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS .ipa
         script: |
@@ -79,8 +84,9 @@ workflows:
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
             --config Release
-      - name: Build Android .aab
+      - name: Build signed Android .aab and installable .apk
         script: |
+          set -euo pipefail
           cd android
           # Signed release: injected signing properties (same as the
           # android-play-store workflow) — an unsigned bundle is rejected by
@@ -104,7 +110,7 @@ workflows:
             keytool -list -keystore "$CM_KEYSTORE_PATH" -storepass "$CM_KEYSTORE_PASSWORD" || true
             exit 1
           fi
-          ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
+          ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" assembleRelease bundleRelease -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
       - name: Publish AAB to internal + closed + open testing tracks
         script: |
           # Upload ONCE to alpha, then promote the same release to internal and
@@ -112,8 +118,9 @@ workflows:
           # rejects duplicate versionCodes ("Version code N has already been
           # used"), so every track after the first must come from
           # tracks promote-release (no re-upload). The publishing.google_play
-          # block was removed for the same reason. Re-runs are safe: a duplicate
-          # upload is tolerated and the promotes re-assert the same versionCode.
+          # block was removed for the same reason. Stop on upload failure;
+          # investigate before retrying rather than promoting an older binary.
+          set -euo pipefail
           AAB="android/app/build/outputs/bundle/release/app-release.aab"
           CREDS=@env:GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
           PKG=$(sed -n 's/.*applicationId "\([^"]*\)".*/\1/p' android/app/build.gradle | head -1)
@@ -130,10 +137,10 @@ workflows:
           ]))
           PYEOF
           echo "== Uploading $AAB (versionCode $VC, package $PKG) to alpha =="
-          if ! google-play bundles publish --credentials "$CREDS" --bundle "$AAB" \
-               --track alpha --release-notes @file:/tmp/release-notes.json; then
-            echo "alpha upload failed — tolerated only if versionCode $VC was already uploaded; promote below will verify"
-          fi
+          test "$PKG" = "com.marcelsabas.canadarepfinder"
+          test "$VC" = "503006"
+          google-play bundles publish --credentials "$CREDS" --bundle "$AAB" \
+               --track alpha --release-notes @file:/tmp/release-notes.json
           for T in internal beta; do
             echo "== Promoting alpha release $VC to track $T =="
             google-play tracks promote-release --credentials "$CREDS" \
@@ -144,6 +151,7 @@ workflows:
       - build/ios/ipa/*.ipa
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
+      - dist/public/release-manifest.json
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
