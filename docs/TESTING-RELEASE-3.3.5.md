@@ -51,12 +51,14 @@ https://codemagic.io/app/68dcb0f5de98085078c068f2/build/6ad668657550aed810903f93
   remains assigned and Testing. Public enrollment link:
   https://testflight.apple.com/join/UcX3VcxK
 - Full saved bug-fix update and installed-build checklist:
-  RELEASE-NOTES-3.3.5.md. Store-displayed release notes remain unverified.
+  RELEASE-NOTES-3.3.5.md. iOS What to Test notes are saved and verified verbatim
+  after fresh navigation to build 54; live Play release notes remain unverified.
 - The build detail exposes Remove from Review; leave the pending beta review
   intact. App Store Distribution remains 3.3.4 Ready for Distribution.
-- Attempted to add profile-regression What to Test notes, but AXValue did not
-  confirm an update and foreground input approval timed out. Notes were NOT
-  verified saved; do not claim they were. No review was cancelled.
+- Earlier AXValue/typing attempts were unconfirmed or blocked by approval
+  timeouts. After renewed user authorization and a successful typing approval,
+  entered the notes, clicked Save, reopened the build URL, and asserted both
+  paragraphs match exactly with no unsaved Save button. No review was cancelled.
 - A subsequent desktop scroll action timed out awaiting approval. Do not retry
   that blocked action or route around it; wait for renewed user interaction.
 

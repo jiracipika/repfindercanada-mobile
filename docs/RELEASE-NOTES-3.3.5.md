@@ -54,8 +54,8 @@ Local validation passed: typecheck, check, production build, six unit cases,
 and eight browser cases; tablet drag was intentionally skipped. These are
 browser regression results, not installed-native runtime verification.
 
-The Android localized changelog files already contain the profile fix summary.
-Live store release-note text has not been independently read back. Attempts to
-enter iOS What to Test notes were not confirmed saved; a typing approval timed
-out, so no alternate input route was used. This document is the complete saved
-bug-fix update, not proof that the stores display the same notes.
+The Android localized changelog files already contain the profile fix summary;
+live Play release-note text has not been independently read back. iOS What to
+Test notes were successfully saved for build 54 and verified verbatim after
+fresh page navigation. They include the invisible-sheet / blocked-taps fix and
+the search, Saved, reopen, swipe-dismiss, iPad, and Reduce Motion checklist.
