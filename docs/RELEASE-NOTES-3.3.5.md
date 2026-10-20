@@ -22,7 +22,19 @@ responsive breakpoint changes, and reduced-motion settings.
 Source fix: `136aefa`. Store-build source:
 `5491bdf66d0963c8d264fa27e69267f3782c6473`.
 
-## Testing distribution verified in consoles
+## Production update (2026-10-20)
+
+Android 3.3.5 / 503005 has now been submitted for production review with full
+rollout selected and managed publishing off. A fresh Publishing overview showed
+Changes in review while quick checks were still running. Approval/public
+availability is not yet confirmed.
+
+Apple production submission remains blocked by sign-in. The existing 3.3.5
+draft and build 54 must be inspected and submitted after authentication.
+See [the phone-ready handoff](PRODUCTION-STAGING-3.3.5.md) for direct store links,
+copy/paste patch notes and the remaining Apple submission steps.
+
+## Earlier testing distribution snapshot (before production submission)
 
 - Android: **3.3.5 / 503005** is available to selected testers on closed testing
   (Alpha) and unlimited testers on open testing. Both expanded summaries show

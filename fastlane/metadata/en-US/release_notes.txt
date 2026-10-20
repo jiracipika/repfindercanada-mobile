@@ -1,0 +1,3 @@
+Fixed an intermittent issue where tapping View Full Profile could open an invisible details sheet and block taps.
+
+Profile details now open reliably on phones and tablets, including when the screen size changes. This update also improves closing and reopening the sheet.
