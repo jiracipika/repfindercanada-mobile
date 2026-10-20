@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { SearchForm } from "@/components/search-form";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
-import { Building2, Database, MapPinCheck, ShieldCheck, UserSearch, WifiOff } from "lucide-react";
+import { Building2, Database, MapPinCheck, ShieldCheck, WifiOff } from "lucide-react";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
-import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/civic";
 import { SectionHeader } from "@/components/civic/section-header";
 import { Skeleton } from "@/components/civic/skeleton";
@@ -95,7 +93,7 @@ export default function Home() {
             Know who represents you.
           </motion.h2>
           <motion.p variants={fadeUpItem} className="civic-lede">
-            Enter a Canadian postal code to identify your federal, provincial, and municipal representatives from linked public sources.
+            Enter a Canadian postal code, representative name, city, area or riding to find representatives from linked public sources.
           </motion.p>
           <motion.div variants={fadeUpItem} className="civic-trust-row" aria-label="Privacy and source information">
             <span className="civic-trust-chip"><ShieldCheck className="h-3.5 w-3.5" /> Private by design</span>
@@ -111,13 +109,6 @@ export default function Home() {
         >
           <Section className="civic-search-panel">
             <SearchForm />
-            <div className="mt-3 border-t border-border/70 pt-3">
-              <Link href="/name-search">
-                <Button variant="ghost" className="h-12 w-full rounded-xl text-muted-foreground">
-                  <UserSearch className="mr-2 h-4 w-4" /> Search by representative name
-                </Button>
-              </Link>
-            </div>
           </Section>
         </motion.div>
 
@@ -156,7 +147,7 @@ export default function Home() {
 
         {isSearching && (
           <Section className="mt-5 space-y-3" aria-live="polite" aria-busy="true">
-            <p className="text-sm font-semibold text-muted-foreground">Mapping your districts…</p>
+            <p className="text-sm font-semibold text-muted-foreground">Searching representatives…</p>
             {[0, 1, 2].map((index) => (
               <div key={index} className="civic-panel p-4">
                 <div className="flex items-start gap-4">
@@ -183,8 +174,8 @@ export default function Home() {
             >
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <span className="civic-kicker">District matched</span>
-                  <h3 className="text-title3 mt-2 text-foreground">Your representatives</h3>
+                  <span className="civic-kicker">Search results</span>
+                  <h3 className="text-title3 mt-2 text-foreground">Representatives found</h3>
                 </div>
                 <span className="text-footnote font-semibold text-muted-foreground">
                   {searchResults.length} found
@@ -218,7 +209,7 @@ export default function Home() {
               <EmptyState
                 icon={<Building2 className="h-7 w-7" />}
                 title="No representatives found"
-                description={`We couldn't find any representatives for "${submittedQuery}". Please check the format and try again.`}
+                description={`We couldn't find any representatives for "${submittedQuery}". Try another name, city, riding or postal code. Coverage varies by area.`}
               />
             ) : (
               <EmptyState

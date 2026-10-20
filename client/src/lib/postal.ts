@@ -11,7 +11,7 @@
  */
 
 /** Canadian postal code: A1A1A1 (letter-digit-letter digit-letter-digit). */
-const POSTAL_PATTERN = /^[A-Z]\d[A-Z]\d[A-Z]\d$/;
+const POSTAL_PATTERN = /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d$/;
 
 /** A canonical postal code is 6 significant characters; allow one inner space. */
 export const POSTAL_MAX_LENGTH = 7;

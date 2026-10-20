@@ -10,14 +10,16 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { ApiRepresentative as Representative } from '@shared/schema';
 import { fetchRepsByPostalLocal, fetchRepsByCoordinatesLocal } from '@/lib/localSearchService';
-import { isValidPostalCode, postalKey } from '@/lib/postal';
+import { postalKey } from '@/lib/postal';
+import { resolveSearchIntent, textSearchKey } from '@/lib/searchIntent';
+import { fetchRepsByTextDirect } from '@/lib/representApiService';
 import { searchCacheRepository } from '@/lib/storage/searchCacheRepository';
 import { logActivity } from '@/lib/storage/activityRepository';
 import { getCurrentLocation } from '@/lib/geolocation';
 import { useUserData } from '@/hooks/use-user-data';
 
 /**
- * App-wide postal/location search state.
+ * App-wide unified postal/text/location search state.
  *
  * Lives OUTSIDE the SwipePager pages (mounted above the router) so results,
  * the typed query and any error survive tab swipes — SwipePager unmounts the
@@ -40,10 +42,11 @@ export interface SearchOutcome {
 
 type SubmittedSearch =
   | { kind: 'postal'; raw: string }
+  | { kind: 'text'; raw: string; key: string }
   | { kind: 'geo'; key: string; lat: number; lng: number };
 
 interface SearchStateContextType {
-  /** Live input value (uppercase as typed). */
+  /** Live input value; postal codes normalize only on submission. */
   query: string;
   setQuery: (value: string) => void;
   /** The search currently displayed (null = nothing searched yet). */
@@ -57,7 +60,7 @@ interface SearchStateContextType {
   /** Inline message for the location flow (permission denied etc.). */
   geoError: string | null;
   isLocating: boolean;
-  /** Validate + run a postal search. */
+  /** Resolve postal/text intent, validate and search. */
   runSearch: (raw: string) => void;
   /** Re-run the exact failed/current search. */
   retry: () => void;
@@ -121,7 +124,7 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
   }, [userData?.lastPostalCodeSearch]);
 
   const queryKey = useMemo(
-    () => ['postal-search', submitted ? (submitted.kind === 'postal' ? postalKey(submitted.raw) : submitted.key) : null] as const,
+    () => ['representative-search', submitted ? (submitted.kind === 'postal' ? postalKey(submitted.raw) : submitted.key) : null] as const,
     [submitted]
   );
 
@@ -138,6 +141,25 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
     queryFn: async (): Promise<SearchOutcome> => {
       if (!submitted) {
         throw new Error('No search submitted');
+      }
+
+      if (submitted.kind === 'text') {
+        try {
+          const results = await fetchRepsByTextDirect(submitted.raw);
+          await searchCacheRepository.cacheSearch(submitted.key, results);
+          await logActivity({ type: 'search', query: submitted.raw, searchType: 'name', ts: Date.now(), representatives: results });
+          if (results.length > 0) incrementSearchCount();
+          return { results, fromCache: false, cachedAt: null };
+        } catch (error) {
+          const entry = await searchCacheRepository.getCachedSearchEntry(submitted.key);
+          if (entry && entry.representatives.length > 0) {
+            return { results: entry.representatives, fromCache: true, cachedAt: entry.timestamp };
+          }
+          if (error instanceof Error && error.message.includes('429')) {
+            throw new Error('Search rate limit reached. Please try again later.');
+          }
+          throw new Error('Could not search representatives. Please check your internet connection and try again.');
+        }
       }
 
       if (submitted.kind === 'postal') {
@@ -194,26 +216,26 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
   });
 
   const runSearch = useCallback((raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) {
-      setInputError('Enter a postal code to search (e.g., K1A 0A9).');
-      return;
-    }
-    if (!isValidPostalCode(trimmed)) {
-      setInputError(`"${trimmed}" is not a valid Canadian postal code. Use the format A1A 1A1.`);
+    const intent = resolveSearchIntent(raw);
+    if (intent.kind === 'invalid') {
+      setInputError(intent.message);
+      setSubmitted(null);
       return;
     }
     setInputError(null);
     setGeoError(null);
-    setQuery(trimmed.toUpperCase());
+    setQuery(intent.query);
 
-    const key = postalKey(trimmed);
-    if (submitted && submitted.kind === 'postal' && postalKey(submitted.raw) === key) {
+    const key = intent.kind === 'postal' ? postalKey(intent.query) : textSearchKey(intent.query);
+    const currentKey = submitted ? (submitted.kind === 'postal' ? postalKey(submitted.raw) : submitted.key) : null;
+    if (currentKey === key) {
       // Same search re-submitted (e.g. after a failure) — force a refetch,
       // because React Query won't refetch a key that already errored.
       void searchQuery.refetch();
     } else {
-      setSubmitted({ kind: 'postal', raw: trimmed });
+      setSubmitted(intent.kind === 'postal'
+        ? { kind: 'postal', raw: intent.query }
+        : { kind: 'text', raw: intent.query, key });
     }
   }, [submitted, searchQuery]);
 
@@ -247,15 +269,15 @@ export function SearchStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SearchStateContextType>(
     () => ({
       query,
-      setQuery,
+      setQuery: (value) => { setQuery(value); setInputError(null); setSubmitted(null); },
       submittedQuery:
         submitted === null
           ? null
           : submitted.kind === 'postal'
             ? postalKey(submitted.raw)
-            : 'My location',
+            : submitted.kind === 'text' ? submitted.raw : 'My location',
       outcome: searchQuery.data,
-      isSearching: submitted !== null && searchQuery.isFetching && !searchQuery.data,
+      isSearching: submitted !== null && searchQuery.isFetching,
       error: searchQuery.error instanceof Error ? searchQuery.error : null,
       inputError,
       geoError,

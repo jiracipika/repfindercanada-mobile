@@ -5,6 +5,7 @@
 
 import type { ApiRepresentative } from "@shared/schema";
 import { provinceFromPostalCode } from "./postal";
+import { fetchTextSearchRecords } from './textSearchApi';
 
 const REPRESENT_API_BASE = import.meta.env.DEV
   ? 'http://localhost:5001/api/represent/proxy'
@@ -180,7 +181,7 @@ async function transformRepresentative(rep: any): Promise<ApiRepresentative | nu
 
     // Fetch detailed information if URL is available
     let details = null;
-    if (rep.url && rep.url !== rep.self) {
+    if (rep.url?.startsWith('/representatives/') && rep.url !== rep.self) {
       details = await fetchRepresentativeDetails(rep.url);
     }
 
@@ -425,7 +426,7 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
   try {
 
     const response = await fetch(
-      `${REPRESENT_API_BASE}/representatives/?name=${encodeURIComponent(name)}&limit=50`
+      `${REPRESENT_API_BASE}/representatives/?name__icontains=${encodeURIComponent(name.trim())}&limit=50`
     );
 
     if (!response.ok) {
@@ -451,7 +452,7 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
     });
 
     // Name searches span the country — fill per-rep derived provinces only
-    return applySearchProvince(sortedRepresentatives, '');
+    return sortedRepresentatives;
 
   } catch (error) {
     console.error('[RepresentAPI] Error searching by name:', error);
@@ -460,8 +461,18 @@ export async function fetchRepsByNameDirect(name: string): Promise<ApiRepresenta
 }
 
 /**
- * Search representatives by riding/constituency name using Represent API directly
+ * Search names, cities, areas and ridings using documented Represent filters.
  */
+export async function fetchRepsByTextDirect(query: string): Promise<ApiRepresentative[]> {
+  const records = await fetchTextSearchRecords(query, REPRESENT_API_BASE);
+  const transformed = await Promise.all(records.map(transformRepresentative));
+  const order: Record<string, number> = { federal: 1, provincial: 2, municipal: 3 };
+  // Text matches can span provinces; never propagate one match's province.
+  return transformed.filter((rep): rep is ApiRepresentative => rep !== null)
+    .sort((a, b) => (order[a.level || ''] || 99) - (order[b.level || ''] || 99));
+}
+
+/** Search representatives by riding/constituency name using Represent directly. */
 export async function fetchRepsByRidingDirect(ridingName: string): Promise<ApiRepresentative[]> {
   try {
 

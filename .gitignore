@@ -1,6 +1,7 @@
 node_modules
 test-results/
 playwright-report/
+design-evidence/
 dist
 .DS_Store
 server/public
