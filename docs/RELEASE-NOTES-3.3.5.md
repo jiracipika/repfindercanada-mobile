@@ -24,15 +24,33 @@ Source fix: `136aefa`. Store-build source:
 
 ## Production update (2026-10-20)
 
-Android 3.3.5 / 503005 has now been submitted for production review with full
-rollout selected and managed publishing off. A fresh Publishing overview showed
-Changes in review while quick checks were still running. Approval/public
-availability is not yet confirmed.
+Android prior verified state: 3.3.5 / 503005 was submitted for production review
+with full rollout selected and managed publishing off. Publishing overview
+showed **Changes in review** while quick checks were still running. This state
+was not freshly checked for this documentation update; approval/public
+availability is not confirmed.
 
-Apple production submission remains blocked by sign-in. The existing 3.3.5
-draft and build 54 must be inspected and submitted after authentication.
-See [the phone-ready handoff](PRODUCTION-STAGING-3.3.5.md) for direct store links,
-copy/paste patch notes and the remaining Apple submission steps.
+Apple production review submission succeeded. The parent personally verified
+Safari's App Store Connect iOS Submission page: **Waiting for Review**, item
+**iOS App 3.3.5**, build **3.3.5 (54)**, submitted **Oct 20 2026 at 8:54 AM**,
+submission ID `06b6393b-3813-4007-86ae-605ceff956cd`. Final confirmation showed
+**1 Item Submitted** before that exact review page.
+
+Before submission, the parent saved English Canada patch notes matching
+`fastlane/metadata/en-US/release_notes.txt`, attached build 54, and confirmed
+**Automatically release this version** was selected. No compliance answers or
+credentials changed. Automatic release is pending Apple approval; submission
+is not a live release. Neither store is confirmed publicly live on 3.3.5.
+
+Apple evidence screenshot (local, supplied parent verification):
+`/Users/rs-mac/.hermes/cache/images/computer_use_ffa295633e54403ba184d13e751ca451.png`.
+This documentation update did not perform a fresh browser/store inspection or
+any store writes.
+
+See [the phone-ready handoff](PRODUCTION-STAGING-3.3.5.md) for store links,
+completed preparation, saved patch notes and review/availability follow-up.
+Do not repeat preparation or submit a duplicate review request. The earlier
+Apple sign-in blocker is historical and superseded by the verified submission.
 
 ## Earlier testing distribution snapshot (before production submission)
 
@@ -50,8 +68,9 @@ copy/paste patch notes and the remaining Apple submission steps.
   https://testflight.apple.com/join/UcX3VcxK
 - iOS uses TestFlight groups rather than Android-style closed/open tracks.
   No new invite-only external group was created.
-- Production stays at **3.3.4** on both platforms. No production release was
-  submitted or promoted.
+- At this earlier snapshot, production was **3.3.4** on both platforms and no
+  production release had been submitted or promoted. This is historical, not
+  the current submission status; see the production update above.
 
 ## What to test on installed builds
 

@@ -6,44 +6,52 @@ The user authorized production submission and release on both stores. This super
 
 | Store | Verified status | Remaining action |
 | --- | --- | --- |
-| Google Play | Production 503005 (3.3.5), full rollout submitted; Publishing overview shows **Changes in review**. Managed publishing is **off**. Quick checks were still running. | Wait for successful checks and Google approval. Confirm rollout and public availability afterward. Do not submit a duplicate release. |
-| Apple | Browser is at Apple sign-in; no authenticated release inspection or submission was possible this session. | Sign in, finish the existing 3.3.5 draft using build 54, validate, and submit for App Review. See the phone checklist below. |
+| Google Play | Prior verified state: production 503005 (3.3.5), full rollout submitted; Publishing overview showed **Changes in review**. Managed publishing was **off**. Quick checks were still running at that read-back. Not freshly checked for this documentation update. | Wait for successful checks and Google approval. Confirm rollout and public availability afterward. Do not submit a duplicate release. |
+| Apple | Parent personally verified the Safari App Store Connect iOS Submission page: **Waiting for Review**, item **iOS App 3.3.5**, build **3.3.5 (54)**, submitted **Oct 20 2026 at 8:54 AM**, submission ID `06b6393b-3813-4007-86ae-605ceff956cd`. **Automatically release this version** was confirmed selected before submission. | Wait for Apple review and approval; automatic release is pending approval. Monitor the existing submission and confirm distribution status and public availability afterward. Do not submit again. |
 
-Neither store is confirmed live on 3.3.5. Android submission is not approval. Apple submission has NOT happened.
+Neither store is confirmed live on 3.3.5. Both production review submissions are recorded; submission is not approval or public availability.
 
 ## Phone links
 
 Open these in Safari/Chrome; request the desktop website if store controls are hidden.
 
 - Google Publishing overview: https://play.google.com/console/u/0/developers/5960845981523237862/app/4974047278945021663/publishing
-- Google production release originally used: https://play.google.com/console/u/0/developers/5960845981523237862/app/4974047278945021663/tracks/4697425640660344863/releases/12/prepare
-- Apple existing version draft: https://appstoreconnect.apple.com/apps/6753271444/distribution/ios/version/inflight
-- Apple app overview if the draft link redirects: https://appstoreconnect.apple.com/apps/6753271444
+- Google production release originally used (reference only; do not recreate/resubmit): https://play.google.com/console/u/0/developers/5960845981523237862/app/4974047278945021663/tracks/4697425640660344863/releases/12/prepare
+- Apple existing version / in-flight submission entry: https://appstoreconnect.apple.com/apps/6753271444/distribution/ios/version/inflight
+- Apple app overview if the version link redirects: https://appstoreconnect.apple.com/apps/6753271444
 
-## Apple: finish from a phone
+## Apple: completed preparation and submission
 
-1. Sign in to App Store Connect with the app owner's Apple Account and complete Apple's verification directly. Never share passwords or codes in chat.
-2. Open Rep Finder for Canada → Distribution → iOS App 3.3.5. An earlier session created this draft and observed **Prepare for Submission**; its current contents must be rechecked after sign-in. Do not create another version or withdraw a pending review.
-3. In **Build**, select the already uploaded **3.3.5 (54)** and save. If 54 is already attached, leave it. Do not use build 47 or a 3.3.4 build. If 54 is missing/ineligible, inspect its processing/compliance status in TestFlight before deciding to rebuild. Its external beta review is separate from App Store review.
-4. Paste the patch notes below into **What's New in This Version** for the matching English locale. Preserve existing descriptions, screenshots and translations unless a validator requires a specific correction.
-5. Check inherited support/privacy URLs, copyright, screenshots (including required iPad sizes), age rating and App Privacy. Do not invent compliance/privacy answers. Answer export-compliance questions according to the actual app's encryption use; a stored exemption answer is not evidence by itself.
-6. Check **App Review Information**. Keep valid existing contact details and any real review access instructions. Do not invent reviewer credentials. If sign-in is not required, do not falsely mark it as required.
-7. Under **Version Release**, choose **Automatically release this version** for the requested production promotion, without a future date. Save and reopen the version to confirm this choice persisted. If you instead deliberately choose manual release, an additional **Release This Version** action will be needed after approval.
-8. Tap **Add for Review**. Resolve every reported validation error, then open the review submission and tap **Submit for Review**. Adding an item to a review submission is NOT the final submission.
-9. Reopen the exact version and confirm **Waiting for Review** or **In Review**, version **3.3.5**, build **54**. If it still says **Prepare for Submission** or **Ready for Review**, submission is not complete.
-10. After approval, confirm **Ready for Distribution** and public store availability. If **Pending Developer Release** appears, tap **Release This Version**. Do not report production live before this read-back.
+The parent completed these steps before the verified production review submission:
 
-If the phone interface cannot show a required control, use Request Desktop Website; if still unavailable, finish that control from a desktop. Authentication and Apple validation remain real blockers, not completed scaffolding.
+- Saved **What's New in This Version** for **English (Canada)** with the patch notes below, matching `fastlane/metadata/en-US/release_notes.txt`.
+- Attached the existing **3.3.5 (54)** build; no replacement build was needed.
+- Confirmed **Automatically release this version** was selected.
+- Completed final submission. Confirmation showed **1 Item Submitted**, followed by the exact **Waiting for Review** submission page recorded above.
+- No compliance answers or credentials were changed.
 
-## Copy/paste: What's New (English)
+These are completed steps, not a checklist to repeat. Do not create another version, attach a different build, withdraw the pending review, or submit a duplicate review request.
+
+## Apple: follow up from a phone (monitor only)
+
+1. Sign in to App Store Connect with the app owner's Apple Account and complete Apple's verification directly if needed. Never share passwords or codes in chat. The earlier sign-in blocker is historical, not a current submission blocker.
+2. Open Rep Finder for Canada → Distribution → iOS App 3.3.5 and inspect the existing iOS Submission. Match submission ID `06b6393b-3813-4007-86ae-605ceff956cd`, version **3.3.5**, and build **54**. The verified state is **Waiting for Review**; monitor for **In Review** or a review outcome. Do not repeat **Add for Review** or **Submit for Review**.
+3. If Apple requests information or rejects the submission, inspect the specific issue and respond through the existing review workflow. Preserve valid metadata and review contact/access details; do not invent compliance/privacy answers or reviewer credentials. TestFlight beta review is separate from this production App Store review.
+4. After approval, automatic release is expected from the selected release setting. Confirm **Ready for Distribution** and public store availability before reporting production live. If **Pending Developer Release** unexpectedly appears, inspect the actual release setting and resolve that state before claiming availability; it is not evidence that a duplicate submission is needed.
+
+If phone controls are hidden, use Request Desktop Website or inspect from a desktop. Follow-up is review monitoring and availability verification, not unfinished submission preparation.
+
+## Saved What's New (English Canada)
 
 Fixed an intermittent issue where tapping View Full Profile could open an invisible details sheet and block taps.
 
 Profile details now open reliably on phones and tablets, including when the screen size changes. This update also improves closing and reopening the sheet.
 
-A plain-text copy is in `fastlane/metadata/en-US/release_notes.txt`.
+The saved English Canada text matches the plain-text copy in `fastlane/metadata/en-US/release_notes.txt`.
 
 ## Google: verify rather than resubmit
+
+The following instructions use the prior verified state; Google Play was not freshly checked for this documentation update.
 
 1. Open Publishing overview and inspect the existing production change **503005 (3.3.5)**, **Start full rollout**.
 2. At submission, **Managed publishing off** was shown. Successful approval should publish without a separate managed-publishing action. Read the actual current state before acting.
@@ -52,9 +60,15 @@ A plain-text copy is in `fastlane/metadata/en-US/release_notes.txt`.
 
 ## Evidence and scope
 
-- Android: saved the existing candidate, reached step 2 **Ready to release**, saved to Publishing overview, then confirmed **Send changes for review**. A fresh capture showed **Changes in review**, production **503005 (3.3.5)** and **Start full rollout**. Quick checks had up to 14 minutes remaining at that read-back.
-- Android evidence screenshot: `/Users/rs-mac/.hermes/cache/images/computer_use_6140d56ae37149e1bc7775bdbdb4ba25.png` (local only).
-- Apple: fresh capture showed the **Email or Phone Number** / **Sign in with Passkey** page. The credential vault returned no saved logins. A local API signing key exists, but no issuer ID is configured in the environment or `fastlane/.env`; no authenticated API request was made.
-- Previous verified testing records identify iOS **3.3.5 (54)** and Android **3.3.5 / 503005**, source `5491bdf66d0963c8d264fa27e69267f3782c6473`. Build 54's current attachment and App Store eligibility remain unverified.
-- No new native build, version bump, signing change, new country, tester-list change, or production CI trigger was needed or performed. Do not rebuild an already uploaded candidate just to submit it.
-- This handoff and the Apple release-notes file are repository preparation, not proof that Apple metadata has been saved remotely.
+- Apple: parent personally verified the Safari App Store Connect iOS Submission page after **1 Item Submitted**: **Waiting for Review**, **iOS App 3.3.5**, **3.3.5 (54)**, submitted **Oct 20 2026 at 8:54 AM**, submission ID `06b6393b-3813-4007-86ae-605ceff956cd`.
+- Apple evidence screenshot: `/Users/rs-mac/.hermes/cache/images/computer_use_ffa295633e54403ba184d13e751ca451.png` (local only; supplied parent evidence, not a fresh store inspection by this documentation update).
+- Apple preparation: English Canada patch notes saved matching fastlane metadata, build 54 attached, automatic release selected. No compliance answers or credentials changed.
+- Android prior verification: saved the existing candidate, reached step 2 **Ready to release**, saved to Publishing overview, then confirmed **Send changes for review**. The prior capture showed **Changes in review**, production **503005 (3.3.5)** and **Start full rollout**, with managed publishing off. Quick checks had up to 14 minutes remaining at that read-back. This is not a fresh check or proof of live availability.
+- Android evidence screenshot: `/Users/rs-mac/.hermes/cache/images/computer_use_6140d56ae37149e1bc7775bdbdb4ba25.png` (local only; prior verification).
+- Previous verified testing records identify iOS **3.3.5 (54)** and Android **3.3.5 / 503005**, source `5491bdf66d0963c8d264fa27e69267f3782c6473`. The later Apple submission verification above confirms build 54 is attached to the production review item.
+- No new native build, version bump, signing change, new country, tester-list change, or production CI trigger was needed for submission. Do not rebuild an already uploaded candidate merely to repeat submission.
+- This update changes release handoff documentation only. No browser/store actions or app-code changes were performed for this update; store states are attributed to the supplied parent verification and prior Android evidence.
+
+## Historical blocker (superseded)
+
+Before the successful Apple submission, an earlier session stopped at the **Email or Phone Number** / **Sign in with Passkey** page and could not inspect the authenticated draft. The credential vault returned no saved logins; a local API signing key existed without a configured issuer ID, and no authenticated API request was made. At that earlier point, draft attachment, metadata persistence and submission were unverified. Those limitations describe history only: the parent's later preparation and verified production submission supersede them.
