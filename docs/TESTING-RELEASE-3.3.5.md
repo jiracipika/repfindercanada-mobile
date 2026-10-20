@@ -33,8 +33,10 @@ https://codemagic.io/app/68dcb0f5de98085078c068f2/build/6ad668657550aed810903f93
   5491bdf66d0963c8d264fa27e69267f3782c6473.
 - Manual release-both build, using main, not the earlier 47569fd commit.
 - Play internal testing read-back: 3.3.5 available to internal testers.
-- Play closed testing / Alpha read-back: 3.3.5 in review.
-- Play open testing read-back: 3.3.5 in review; expanded summary confirms 503005.
+- Play closed testing / Alpha read-back: 3.3.5 available to selected testers;
+  expanded summary confirms versionCode 503005.
+- Play open testing read-back: 3.3.5 available to unlimited testers at 100%
+  rollout; expanded summary confirms 503005. Review has completed for Android.
 - Codemagic publishing log confirms alpha upload and internal promotion of
   503005; the actual store-console read-back is authoritative for review state.
 - Production read-back before and after this build: 3.3.4 at 100% rollout.
@@ -44,6 +46,12 @@ https://codemagic.io/app/68dcb0f5de98085078c068f2/build/6ad668657550aed810903f93
   Waiting for Review in TestFlight. No additional version bump is needed.
 - Build 54 is assigned to internal groups RepFinderCanadaiOS (one tester)
   and Testers. Installation/tester receipt remains unverified.
+- Added 3.3.5 (54) to the existing external Public Testing group and verified
+  it in the group's Builds table: Waiting for Review. Existing 3.3.1 (47)
+  remains assigned and Testing. Public enrollment link:
+  https://testflight.apple.com/join/UcX3VcxK
+- Full saved bug-fix update and installed-build checklist:
+  RELEASE-NOTES-3.3.5.md. Store-displayed release notes remain unverified.
 - The build detail exposes Remove from Review; leave the pending beta review
   intact. App Store Distribution remains 3.3.4 Ready for Distribution.
 - Attempted to add profile-regression What to Test notes, but AXValue did not
