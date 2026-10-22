@@ -8,6 +8,6 @@ export const OFFICIAL_LINKS = {
   ELECTIONS_CANADA: 'https://www.elections.ca/content.aspx',
 };
 
-export const PRIVACY_NOTE = `Privacy Note: We only use your postal code or approximate location to find your representatives. Location is processed ephemerally and not stored. Recent searches may be cached locally on your device for convenience.`;
+export const PRIVACY_NOTE = `Privacy Note: Postal code lookups run on your device first using the built-in database. If a code is newer than that database, or you search by name, city or riding, the search text is sent over HTTPS to public data services (Represent, geocoder.ca) to return results. "Use my location" is optional and never runs in the background. Saved representatives, search history and recent results are cached only on your device.`;
 
 export const ABOUT_PARAGRAPH_1 = `RepFinder Canada helps you discover your federal and provincial representatives in Canada.`;

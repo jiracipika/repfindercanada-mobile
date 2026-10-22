@@ -74,23 +74,28 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
             onScroll={handleScroll}
             className="mb-5 max-h-[54vh] overflow-y-auto rounded-xl bg-muted p-4 text-subheadline text-muted-foreground"
           >
-            <p className="mb-2"><b>Last updated: September 24, 2025</b></p>
+            <p className="mb-2"><b>Last updated: October 22, 2026</b></p>
 
             <h2 className="text-lg font-semibold mt-4 mb-2">Data Use & Privacy</h2>
-            <p className="mb-2">At RepFinder Canada, your privacy is paramount. We want to be transparent about how your data is handled:</p>
+            <p className="mb-2">RepFinder Canada works without an account. Your saved representatives, search history and recent results stay on your device. Here is how lookups are handled:</p>
             <ul className="list-disc list-inside mb-2">
-              <li><b>Postal code/location:</b> Your postal code or location data is processed once on your device to determine your electoral district. It is never stored or transmitted off your device.</li>
-              <li><b>Analytics, Ads, or Tracking:</b> This application does not use any analytics, display ads, or incorporate any tracking mechanisms.</li>
-              <li><b>Local Storage:</b> The only data stored locally on your device are the names of representatives and their ridings from your recent lookups. This data is stored solely for your convenience and can be cleared by you at any time within the app.</li>
+              <li><b>Postal code lookups start on your device.</b> The app includes a built-in postal code database, so most postal lookups are completed entirely on your phone.</li>
+              <li><b>Some searches go online.</b> If a postal code is newer than the built-in database, or you search by name, city or riding, the app sends your search text over HTTPS to public data services (Represent by Open North, geocoder.ca as a postal-code fallback, and our search API) to return results. Search text is used only to answer your search — it is not used for advertising or profiling, and there is no account tied to your searches.</li>
+              <li><b>"Use my location" is optional.</b> If you tap it, your device coordinates are sent over HTTPS to Represent to find your riding. The app never tracks your location in the background.</li>
+              <li><b>Maps:</b> the riding map loads map images from OpenStreetMap.</li>
+              <li><b>Analytics, ads, or tracking:</b> This application does not use any analytics, display ads, or incorporate any tracking mechanisms.</li>
+              <li><b>Local storage:</b> your saved representatives, search history and cached results are stored only on your device and can be cleared by you at any time within the app.</li>
             </ul>
 
             <h2 className="text-lg font-semibold mt-4 mb-2">Sources of Information</h2>
             <p className="mb-2">RepFinder Canada aggregates publicly available information from official sources to help you find your elected representatives. We rely on the following data sources:</p>
             <ul className="list-disc list-inside mb-2">
               <li>Represent by Open North: <a href="https://represent.opennorth.ca/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://represent.opennorth.ca/</a></li>
+              <li>geocoder.ca (postal code fallback): <a href="https://geocoder.ca/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://geocoder.ca/</a></li>
               <li>House of Commons – Members (MPs): <a href="https://www.ourcommons.ca/members/en/search" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://www.ourcommons.ca/members/en/search</a></li>
               <li>Senate of Canada – Senators: <a href="https://sencanada.ca/en/senators/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://sencanada.ca/en/senators/</a></li>
               <li>Elections Canada – Electoral District Lookup: <a href="https://www.elections.ca/content.aspx" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://www.elections.ca/content.aspx</a></li>
+              <li>Map imagery © OpenStreetMap contributors: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://www.openstreetmap.org/copyright</a></li>
             </ul>
 
             <h2 className="text-lg font-semibold mt-4 mb-2">Disclaimer</h2>

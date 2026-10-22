@@ -4,4 +4,4 @@
  * The native shell reports its own version via CapApp.getInfo(); this value
  * is the web/PWA fallback (and is kept in sync with package.json).
  */
-export const APP_VERSION = '3.3.6';
+export const APP_VERSION = '3.3.7';

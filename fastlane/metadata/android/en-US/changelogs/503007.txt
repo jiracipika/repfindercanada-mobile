@@ -1,0 +1,1 @@
+Clearer privacy disclosure: postal lookups run on your device first; searches that go online (newer codes, name, city or riding) now list exactly which public data services are used. No data practices changed — this update corrects inaccurate privacy text and credits all data sources.

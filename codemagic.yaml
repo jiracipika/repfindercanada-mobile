@@ -76,7 +76,7 @@ workflows:
       - name: Increment iOS build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 3.3.6
+          agvtool new-marketing-version 3.3.7
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS .ipa
         script: |
@@ -214,7 +214,7 @@ workflows:
       - name: Increment build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 3.3.5
+          agvtool new-marketing-version 3.3.7
           agvtool new-version -all $(($BUILD_NUMBER + 1))
       - name: Build iOS
         script: |
