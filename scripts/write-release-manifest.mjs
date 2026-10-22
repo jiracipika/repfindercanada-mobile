@@ -8,10 +8,17 @@ git('merge-base', '--is-ancestor', feature, 'HEAD');
 const version = JSON.parse(readFileSync('package.json')).version;
 const gradle = readFileSync('android/app/build.gradle', 'utf8');
 const versionCode = Number(gradle.match(/versionCode (\d+)/)[1]);
-assert.equal(version, '3.3.6');
-assert.equal(versionCode, 503006);
+const versionTs = readFileSync('client/src/version.ts', 'utf8');
+// Pins are per-release on purpose (the versionCode line has no clean formula:
+// 3.3.x = 503000+patch, older codes were sequential). Bump BOTH pins with the
+// version bump or this script fails the build with this message.
+const expected = { version: '3.3.7', versionCode: 503007 };
+assert.equal(version, expected.version,
+  `package.json is ${version} — update the 'expected' pins in scripts/write-release-manifest.mjs when bumping the release version`);
+assert.equal(versionCode, expected.versionCode,
+  `versionCode is ${versionCode} — update the 'expected' pins in scripts/write-release-manifest.mjs when bumping the release version`);
 assert.ok(gradle.includes(`versionName "${version}"`));
-assert.ok(readFileSync('client/src/version.ts', 'utf8').includes(`'${version}'`));
+assert.ok(versionTs.includes(`'${version}'`));
 assert.ok(existsSync('dist/public/index.html'), 'Build web assets first');
 const manifest = {
   version, androidVersionCode: versionCode,

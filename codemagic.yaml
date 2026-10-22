@@ -138,7 +138,8 @@ workflows:
           PYEOF
           echo "== Uploading $AAB (versionCode $VC, package $PKG) to alpha =="
           test "$PKG" = "com.marcelsabas.canadarepfinder"
-          test "$VC" = "503006"
+          # Per-release pin — bump together with the version (3.3.x = 503000+patch)
+          test "$VC" = "503007"
           google-play bundles publish --credentials "$CREDS" --bundle "$AAB" \
                --track alpha --release-notes @file:/tmp/release-notes.json
           for T in internal beta; do
