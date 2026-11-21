@@ -61,6 +61,7 @@ export default {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
         },
+        "primary-text": "var(--primary-text)",
         secondary: {
           DEFAULT: "var(--secondary)",
           foreground: "var(--secondary-foreground)",

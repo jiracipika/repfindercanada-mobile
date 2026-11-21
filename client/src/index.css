@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 /*
- * RepFinder Canada — iOS (Human Interface Guidelines) skin.
- * Native Apple design language: system palette, translucent materials,
- * hairline separators, single tint accent.
+ * RepFinder Canada — "Civic Field Guide" (shared with repfinder.avolab.ca).
+ * Dark near-black field guide: Manrope display + DM Sans body, civic red
+ * #c62432 as the single accent, hairline rules #393949. The web sibling's
+ * exact token values are used so both surfaces read as one product.
  *
  * `.dark` and `.light` each define the complete token set. No
  * forced-important declarations anywhere; component styles below beat
@@ -18,9 +19,18 @@
   --s-bottom: env(safe-area-inset-bottom);
   --s-left: env(safe-area-inset-left);
   --s-right: env(safe-area-inset-right);
-  /* SF Pro on Apple devices, bundled Inter elsewhere. */
-  --font-sans: -apple-system, BlinkMacSystemFont, "InterVariable",
-    "Inter Variable", "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Manrope (display) + DM Sans (body), bundled as variable woff2 —
+     the same faces the web sibling loads. */
+  --font-display: "Manrope Variable", "Manrope", -apple-system, "Segoe UI",
+    system-ui, sans-serif;
+  --font-body: "DM Sans Variable", "DM Sans", -apple-system, "Segoe UI",
+    system-ui, sans-serif;
+  --font-sans: var(--font-body);
+  /* Civic Field Guide brand tokens (web parity). */
+  --civic-red: #c62432;
+  --civic-link: #ff8b96;
+  --civic-soft: #b0b0bf;
+  --civic-line: #393949;
 }
 
 /* ---------------------------------------------------------- dark (default) */
@@ -28,117 +38,127 @@
 .dark {
   color-scheme: dark;
 
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #1c1c1e;
-  --card-foreground: #ffffff;
-  --popover: #2c2c2e;
-  --popover-foreground: #ffffff;
-  --muted: #2c2c2e;
-  --muted-foreground: rgba(235, 235, 245, 0.6);
-  --accent: #2c2c2e;
-  --accent-foreground: #ffffff;
-  --border: rgba(84, 84, 88, 0.6);
-  --input: rgba(118, 118, 128, 0.24);
-  --placeholder: rgba(235, 235, 245, 0.3);
-  --primary: #0a84ff;
+  --background: hsl(240 10% 4%); /* near-black field */
+  --foreground: hsl(210 20% 98%);
+  --card: hsl(240 8% 12%);
+  --card-foreground: hsl(210 20% 98%);
+  --popover: hsl(240 8% 12%);
+  --popover-foreground: hsl(210 20% 98%);
+  --muted: hsl(240 6% 16%);
+  --muted-foreground: hsl(213 12% 60%);
+  --accent: hsl(240 8% 18%);
+  --accent-foreground: hsl(210 20% 98%);
+  --border: var(--civic-line); /* hairline #393949 */
+  --input: hsl(240 6% 20%);
+  --placeholder: rgba(176, 176, 191, 0.45);
+  --primary: var(--civic-red); /* #c62432 — 5.7:1 under white labels */
+  --primary-hover: #d92c3c;
   --primary-foreground: #ffffff;
-  --secondary: #2c2c2e;
-  --secondary-foreground: #ffffff;
-  --destructive: #ff453a;
-  --destructive-foreground: #ffffff;
-  --ring: #0a84ff;
-  --radius: 0.75rem;
+  /* Red as TEXT on dark surfaces: #c62432 is only 3.5:1 on near-black —
+     too low for 10–13px labels and chips. The web sibling's link red
+     (#ff8b96) carries text duty; fills keep --primary. */
+  --primary-text: var(--civic-link);
+  --secondary: hsl(240 6% 16%);
+  --secondary-foreground: hsl(210 20% 98%);
+  --destructive: hsl(4 100% 61%); /* #ff453a family — 5:1 as text on card */
+  --destructive-foreground: hsl(0 0% 98%);
+  --ring: var(--civic-red);
+  --radius: 0.625rem;
 
-  /* Government level accents */
-  --civic-blue: #0a84ff; /* Federal */
-  --civic-purple: #bf5af2; /* Provincial */
-  --civic-mint: #30d158; /* Municipal */
+  /* Government level accents — derived from the web chart palette
+     (210/280/160 hues), lightness raised so 11px chip labels clear AA
+     on the card surface. */
+  --civic-blue: #62a7e8; /* Federal */
+  --civic-purple: #b78bef; /* Provincial */
+  --civic-mint: #43d9a5; /* Municipal */
 
-  /* iOS system gray ramp (dark: 50 lightest → 900 darkest) */
+  /* Neutral ramp (dark: 50 lightest → 900 darkest) */
   --neutral-50: #ffffff;
-  --neutral-100: #f2f2f7;
-  --neutral-200: #e5e5ea;
-  --neutral-300: #d1d1d6;
-  --neutral-400: #c7c7cc;
-  --neutral-500: #aeaeb2;
-  --neutral-600: #8e8e93;
-  --neutral-700: #636366;
-  --neutral-800: #2c2c2e;
-  --neutral-900: #000000;
+  --neutral-100: #eceded;
+  --neutral-200: #d4d6db;
+  --neutral-300: #b0b0bf;
+  --neutral-400: #8b93a2;
+  --neutral-500: #6d7484;
+  --neutral-600: #545a68;
+  --neutral-700: #3c404e;
+  --neutral-800: #262836;
+  --neutral-900: #0a0a0f;
 
   /* charts + sidebar (referenced by tailwind.config theme tokens) */
-  --chart-1: #0a84ff;
-  --chart-2: #30d158;
-  --chart-3: #bf5af2;
-  --chart-4: #ff9f0a;
-  --chart-5: #64d2ff;
-  --sidebar-background: #1c1c1e;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #0a84ff;
+  --chart-1: #c62432;
+  --chart-2: #62a7e8;
+  --chart-3: #43d9a5;
+  --chart-4: #e8b64c;
+  --chart-5: #b78bef;
+  --sidebar-background: hsl(240 8% 12%);
+  --sidebar-foreground: hsl(210 20% 98%);
+  --sidebar-primary: var(--civic-red);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #2c2c2e;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(84, 84, 88, 0.6);
-  --sidebar-ring: #0a84ff;
+  --sidebar-accent: hsl(240 8% 18%);
+  --sidebar-accent-foreground: hsl(210 20% 98%);
+  --sidebar-border: var(--civic-line);
+  --sidebar-ring: var(--civic-red);
 }
 
 /* ------------------------------------------------------------------- light */
 .light {
   color-scheme: light;
 
-  --background: #f2f2f7;
-  --foreground: #000000;
+  --background: #f6f6f8;
+  --foreground: #17171d;
   --card: #ffffff;
-  --card-foreground: #000000;
+  --card-foreground: #17171d;
   --popover: #ffffff;
-  --popover-foreground: #000000;
-  --muted: #f2f2f7;
-  --muted-foreground: rgba(60, 60, 67, 0.6);
-  --accent: #f2f2f7;
-  --accent-foreground: #000000;
-  --border: rgba(60, 60, 67, 0.29);
-  --input: rgba(118, 118, 128, 0.12);
-  --placeholder: rgba(60, 60, 67, 0.3);
-  --primary: #007aff;
+  --popover-foreground: #17171d;
+  --muted: #ededf1;
+  --muted-foreground: #5d6472;
+  --accent: #ededf1;
+  --accent-foreground: #17171d;
+  --border: #d9d9e2;
+  --input: #e4e4ea;
+  --placeholder: rgba(93, 100, 114, 0.55);
+  --primary: var(--civic-red); /* 5.7:1 under white labels */
+  --primary-hover: #d92c3c;
   --primary-foreground: #ffffff;
-  --secondary: #e5e5ea;
-  --secondary-foreground: #000000;
-  --destructive: #ff3b30;
+  /* On white paper the brand red carries text at 5.7:1. */
+  --primary-text: var(--civic-red);
+  --secondary: #ededf1;
+  --secondary-foreground: #17171d;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --ring: #007aff;
-  --radius: 0.75rem;
+  --ring: var(--civic-red);
+  --radius: 0.625rem;
 
-  /* Government level accents */
-  --civic-blue: #007aff; /* Federal */
-  --civic-purple: #af52de; /* Provincial */
-  --civic-mint: #30d158; /* Municipal */
+  /* Government level accents — same hues, darkened for white paper. */
+  --civic-blue: #1d6fb8; /* Federal */
+  --civic-purple: #7a3fb8; /* Provincial */
+  --civic-mint: #0e7d5b; /* Municipal */
 
-  /* iOS system gray ramp (light: 50 darkest → 900 lightest) */
-  --neutral-50: #000000;
-  --neutral-100: #1c1c1e;
-  --neutral-200: #3c3c43;
-  --neutral-300: #636366;
-  --neutral-400: #8e8e93;
-  --neutral-500: #aeaeb2;
-  --neutral-600: #c7c7cc;
-  --neutral-700: #d1d1d6;
-  --neutral-800: #e5e5ea;
-  --neutral-900: #f2f2f7;
+  /* Neutral ramp (light: 50 darkest → 900 lightest) */
+  --neutral-50: #17171d;
+  --neutral-100: #262836;
+  --neutral-200: #3c404e;
+  --neutral-300: #545a68;
+  --neutral-400: #5d6472;
+  --neutral-500: #8b93a2;
+  --neutral-600: #b0b0bf;
+  --neutral-700: #d4d6db;
+  --neutral-800: #eceded;
+  --neutral-900: #f6f6f8;
 
-  --chart-1: #007aff;
-  --chart-2: #30d158;
-  --chart-3: #af52de;
-  --chart-4: #ff9500;
-  --chart-5: #5ac8fa;
+  --chart-1: #c62432;
+  --chart-2: #1d6fb8;
+  --chart-3: #0e7d5b;
+  --chart-4: #b97f16;
+  --chart-5: #7a3fb8;
   --sidebar-background: #ffffff;
-  --sidebar-foreground: #000000;
-  --sidebar-primary: #007aff;
+  --sidebar-foreground: #17171d;
+  --sidebar-primary: var(--civic-red);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f2f2f7;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: rgba(60, 60, 67, 0.29);
-  --sidebar-ring: #007aff;
+  --sidebar-accent: #ededf1;
+  --sidebar-accent-foreground: #17171d;
+  --sidebar-border: #d9d9e2;
+  --sidebar-ring: var(--civic-red);
 }
 
 @layer base {
@@ -150,16 +170,26 @@
   html,
   body,
   #root {
-    min-height: 100%;
+    /* Fixed viewport chain: the app shell never grows past the window, so
+       the webview itself never scrolls or rubber-bands (pages scroll
+       internally instead). dvh tracks collapsing browser chrome. */
+    height: 100%;
     overscroll-behavior: none;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
     margin: 0;
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
     font-size: 17px;
     line-height: 1.45;
+  }
+
+  /* Display voice carries headings and large numeric moments (web parity). */
+  h1,
+  h2,
+  .font-display {
+    font-family: var(--font-display);
   }
 
   button,
@@ -173,8 +203,24 @@
   a:focus-visible,
   input:focus-visible,
   [role="button"]:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--primary) 65%, transparent);
     outline-offset: 2px;
+  }
+
+  /* Browser surfaces ship with the design: selection, caret, numerals. */
+  ::selection {
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--civic-red) 32%, transparent);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--civic-red);
+  }
+
+  /* Tabular alignment for counts, timestamps and phone numbers. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Reduced motion: still applies without forced-important declarations —
@@ -199,17 +245,26 @@
   .safe-pr { padding-right: max(1rem, var(--s-right)); }
   .touch-manipulation { touch-action: manipulation; }
 
-  /* iOS type scale (SF Pro metrics, rem-based so it scales with user settings) */
-  .text-large-title { font-size: 2.125rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }   /* 34 */
-  .text-title2 { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }       /* 22 */
-  .text-title3 { font-size: 1.25rem; font-weight: 600; line-height: 1.2; }                                  /* 20 */
-  .text-headline { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; }                             /* 17 semibold */
-  .text-body { font-size: 1.0625rem; font-weight: 400; line-height: 1.45; }                                 /* 17 */
-  .text-callout { font-size: 1rem; font-weight: 400; line-height: 1.45; }                                   /* 16 */
-  .text-subheadline { font-size: 0.9375rem; font-weight: 400; line-height: 1.45; }                          /* 15 */
-  .text-footnote { font-size: 0.8125rem; font-weight: 400; line-height: 1.35; }                             /* 13 */
-  .text-caption1 { font-size: 0.75rem; font-weight: 400; line-height: 1.3; }                                /* 12 */
-  .text-caption2 { font-size: 0.6875rem; font-weight: 600; line-height: 1.25; }                             /* 11 semibold, chips */
+  /* Inner scroll containers (pager pages, sheet bodies): momentum + rubber
+     band containment so the outer shell never scrolls by accident. */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  /* Civic type scale. Display roles ride Manrope; body roles ride DM Sans.
+     rem-based so text follows user font-size settings. */
+  .text-large-title { font-family: var(--font-display); font-size: 2.125rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; } /* 34 */
+  .text-title2 { font-family: var(--font-display); font-size: 1.375rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; } /* 22 */
+  .text-title3 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; } /* 20 */
+  .text-headline { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; } /* 17 semibold */
+  .text-body { font-size: 1.0625rem; font-weight: 400; line-height: 1.45; } /* 17 */
+  .text-callout { font-size: 1rem; font-weight: 400; line-height: 1.45; } /* 16 */
+  .text-subheadline { font-size: 0.9375rem; font-weight: 400; line-height: 1.45; } /* 15 */
+  .text-footnote { font-size: 0.8125rem; font-weight: 400; line-height: 1.35; } /* 13 */
+  .text-caption1 { font-size: 0.75rem; font-weight: 400; line-height: 1.3; } /* 12 */
+  .text-caption2 { font-size: 0.6875rem; font-weight: 600; line-height: 1.25; } /* 11 semibold, chips */
 }
 
 /* ------------------------------------------------------------------ shell */
@@ -224,30 +279,20 @@
   max-width: 760px;
   margin-inline: auto;
   /* 16px inset columns; clears the 49px tab bar + safe area + breathing room */
-  padding: 16px 16px calc(49px + env(safe-area-inset-bottom) + 32px);
+  padding: 16px 16px calc(49px + var(--s-bottom) + 32px);
 }
 
 .civic-page-header {
   margin: 8px 0 16px;
 }
 
-.civic-kicker {
-  display: inline-flex;
-  align-items: center;
-  color: var(--muted-foreground);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .civic-title {
   margin-top: 4px;
+  font-family: var(--font-display);
   font-size: 2.125rem; /* LargeTitle 34 */
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
 }
 
 .civic-lede {
@@ -278,13 +323,13 @@
   font-weight: 600;
 }
 
-/* cards + panels — flat grouped surfaces. Background contrast separates
-   them from the grouped background; no borders, no shadows. */
+/* cards + panels — flat field-guide surfaces. Background contrast separates
+   them from the page; a 1px hairline keeps edges honest on photos of text. */
 
 .civic-panel,
 .civic-empty,
 [data-civic-card="true"] {
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--civic-line) 55%, transparent);
   border-radius: 0.75rem;
   background: var(--card);
   box-shadow: none;
@@ -293,6 +338,7 @@
 .light .civic-panel,
 .light .civic-empty,
 .light [data-civic-card="true"] {
+  border-color: var(--border);
   background: #ffffff;
 }
 
@@ -301,8 +347,8 @@
   text-align: center;
 }
 
-/* iOS translucent materials (navigation bar + tab bar).
-   Hairline edge is drawn by the component's border. */
+/* Translucent header material (blur behind the top bar). The hairline
+   edge is drawn by the component's border. */
 
 .civic-glass {
   background: color-mix(in srgb, var(--card) 72%, transparent);
@@ -316,12 +362,11 @@
   right: 0;
   bottom: 0;
   left: 0;
-  height: calc(49px + env(safe-area-inset-bottom));
-  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom)
-    env(safe-area-inset-left);
+  height: calc(49px + var(--s-bottom));
+  padding: 0 var(--s-right) var(--s-bottom) var(--s-left);
   border: 0;
-  border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--card) 72%, transparent);
+  border-top: 1px solid var(--civic-line);
+  background: color-mix(in srgb, var(--background) 82%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
@@ -334,7 +379,7 @@
 }
 
 .civic-nav-item[data-active="true"] {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* brand mark — quiet, tint-colored */
@@ -347,24 +392,25 @@
   flex: 0 0 auto;
   border-radius: 0.5rem;
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 /* search */
 
 .civic-search-panel {
   padding: 16px;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--civic-line) 55%, transparent);
   border-radius: 0.75rem;
   background: var(--card);
   box-shadow: none;
 }
 
 .light .civic-search-panel {
+  border-color: var(--border);
   background: #ffffff;
 }
 
-/* iOS search field: system fill, no glow. Focus = hairline tint + 3px
+/* Search field: system fill, no glow. Focus = hairline tint + 3px
    25% tint ring. Doubled class = specificity (0,2,0): wins ties with
    single-class utilities so no forced-important is needed. */
 .civic-search-input.civic-search-input {
@@ -380,6 +426,7 @@
 
 .civic-search-input.civic-search-input::placeholder {
   color: var(--placeholder);
+  text-overflow: ellipsis;
 }
 
 .civic-search-input.civic-search-input:focus-visible {
@@ -390,7 +437,7 @@
 
 .civic-primary-button.civic-primary-button {
   min-height: 50px;
-  border-radius: 0.875rem;
+  border-radius: 0.75rem;
   color: var(--primary-foreground);
   background: var(--primary);
   font-size: 1.0625rem; /* 17 */
@@ -401,42 +448,57 @@
 
 .civic-primary-button.civic-primary-button:active:not(:disabled) {
   transform: scale(0.97);
+  background: var(--primary-hover);
+}
+
+.civic-primary-button.civic-primary-button:disabled {
+  background: color-mix(in srgb, var(--civic-red) 45%, var(--card));
+  color: color-mix(in srgb, #ffffff 82%, transparent);
 }
 
 /* Secondary/tertiary "tinted" button style: 12% tint fill + tint label. */
 .civic-tinted-button.civic-tinted-button {
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--civic-link);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
   box-shadow: none;
   transition: transform 150ms ease, background-color 150ms ease;
+}
+
+.light .civic-tinted-button.civic-tinted-button {
+  color: var(--civic-red);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .civic-tinted-button.civic-tinted-button:active:not(:disabled) {
   transform: scale(0.97);
 }
 
-/* iOS alert-style modal sheet. The only surface allowed a shadow, and it
+/* Alert-style modal card. The only surface allowed a shadow, and it
    is the soft neutral one. */
 .civic-modal-card {
-  border: 0;
+  border: 1px solid var(--civic-line);
   border-radius: 0.875rem;
   color: var(--foreground);
   background: var(--card);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
+.light .civic-modal-card {
+  border-color: var(--border);
+}
+
 .dark .civic-modal-card {
-  background: var(--popover); /* #2C2C2E elevated surface */
+  background: var(--popover); /* elevated surface */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* skeleton — flat fill, restrained shimmer */
+/* Skeleton — flat fill, restrained shimmer */
 
 .civic-skeleton {
   position: relative;
   overflow: hidden;
   pointer-events: none;
-  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--muted-foreground) 14%, transparent);
 }
 
 .civic-skeleton::after {
@@ -457,4 +519,31 @@
 @keyframes civic-shimmer {
   from { transform: translateX(-100%); }
   to { transform: translateX(100%); }
+}
+
+/* Pull-to-refresh indicator — civic red ring spinner. The arm/rotation
+   is driven by framer-motion; reduced motion swaps to a static tint. */
+
+.civic-ptr-spinner {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  color: var(--civic-link);
+  background: color-mix(in srgb, var(--civic-red) 18%, transparent);
+}
+
+.civic-ptr-ring {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--civic-red) 35%, transparent);
+  border-top-color: var(--civic-link);
+  animation: civic-ptr-spin 0.8s linear infinite;
+  animation-play-state: paused;
+}
+
+@keyframes civic-ptr-spin {
+  to { transform: rotate(360deg); }
 }

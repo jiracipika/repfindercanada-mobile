@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import "@fontsource-variable/inter";
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/dm-sans";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 import { migrateSavedRepsV2 } from "./lib/migrations/migrateSavedReps";

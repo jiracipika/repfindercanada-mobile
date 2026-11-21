@@ -17,14 +17,15 @@ import { Haptics, ImpactStyle } from "@capacitor/haptics";
 
 export function syncChromeToTheme(dark: boolean): void {
   // PWA browser chrome follows the toggle too (index.html only sets the
-  // initial value from storage before first paint).
+  // initial value from storage before first paint). Values match
+  // --background in client/src/index.css (Civic Field Guide).
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", dark ? "#000000" : "#F2F2F7");
+  if (meta) meta.setAttribute("content", dark ? "#0a0a0f" : "#f6f6f8");
 
   if (!Capacitor.isNativePlatform()) return;
   StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
   if (Capacitor.getPlatform() === "android") {
-    StatusBar.setBackgroundColor({ color: dark ? "#000000" : "#F2F2F7" }).catch(() => {});
+    StatusBar.setBackgroundColor({ color: dark ? "#0a0a0f" : "#f6f6f8" }).catch(() => {});
   }
 }
 
