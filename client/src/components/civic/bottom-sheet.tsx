@@ -170,13 +170,25 @@ export function BottomSheet({
                   )}
 
                   <div
-                    className="min-h-0 flex-1 overflow-y-auto"
-                    style={{ WebkitOverflowScrolling: "touch" }}
+                    className="min-h-0 flex-1 overflow-y-auto mobile-scroll"
+                    style={{
+                      WebkitOverflowScrolling: "touch",
+                      // Without a pinned footer, keep the last row clear of
+                      // the home indicator; with one, the footer owns the inset.
+                      paddingBottom: footer ? undefined : "max(16px, var(--s-bottom))",
+                    }}
                   >
                     {children}
                   </div>
 
-                  {footer && <div className="shrink-0">{footer}</div>}
+                  {footer && (
+                    <div
+                      className="shrink-0"
+                      style={{ paddingBottom: "max(12px, var(--s-bottom))" }}
+                    >
+                      {footer}
+                    </div>
+                  )}
                 </motion.div>
               </DialogPrimitive.Content>
             )}

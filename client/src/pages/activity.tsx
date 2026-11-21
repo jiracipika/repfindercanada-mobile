@@ -98,10 +98,9 @@ export default function Activity() {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="mobile-scroll h-full overflow-y-auto">
       <div className="civic-page space-y-6">
         <Section className="civic-page-header">
-          <span className="civic-kicker">Local lookup history</span>
           <h2 className="civic-title">Recent searches.</h2>
           <p className="civic-lede">Return to districts you have looked up without rebuilding your context.</p>
         </Section>
@@ -157,7 +156,7 @@ export default function Activity() {
                               {activity.representatives.slice(0, 3).map((rep) => (
                                 <span
                                   key={rep.id}
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-caption2 text-primary"
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-caption2 text-primary-text"
                                   style={{
                                     backgroundColor:
                                       "color-mix(in srgb, var(--primary) 12%, transparent)",

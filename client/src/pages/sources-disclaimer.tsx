@@ -27,7 +27,7 @@ function SourceLink({ url, name, description, icon, divider }: SourceLinkProps) 
       divider={divider}
       label={
         <span className="block min-w-0">
-          <span className="block truncate text-body text-primary">{name}</span>
+          <span className="block truncate text-body text-primary-text">{name}</span>
           {description && (
             <span className="mt-0.5 block whitespace-normal text-footnote leading-relaxed text-muted-foreground">
               {description}
@@ -53,18 +53,17 @@ export function SourcesDisclaimer() {
   }, []);
 
   return (
-    <div ref={containerRef} className="h-full overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div ref={containerRef} className="mobile-scroll h-full overflow-y-auto">
       <div className="civic-page space-y-6">
         <Section className="civic-page-header">
           <Button
             variant="ghost"
             onClick={() => setLocation('/profile')}
-            className="mb-3 h-11 gap-2 rounded-full px-3 text-subheadline text-primary"
+            className="mb-3 h-11 gap-2 rounded-full px-3 text-subheadline text-primary-text"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Profile
           </Button>
-          <span className="civic-kicker">Where the data comes from</span>
           <h2 className="civic-title mt-1">Sources &amp; disclaimers.</h2>
         </Section>
 

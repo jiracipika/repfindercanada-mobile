@@ -244,7 +244,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
         </div>
       }
       footer={
-        <SafeArea bottom className="px-4 pb-4 pt-3">
+        <SafeArea bottom className="px-4 pt-3">
           <motion.button
             type="button"
             onClick={handleSave}

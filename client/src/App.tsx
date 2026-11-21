@@ -26,6 +26,7 @@ import AppHeader from "@/components/app-header";
 
 import { SourcesDisclaimer } from "@/pages/sources-disclaimer";
 import NameSearch from "@/pages/name-search";
+import { AppTransitionShell } from "@/components/app-transition-shell";
 import { initializeCacheManagement } from "@/lib/cacheManager";
 import { APP_VERSION } from "./version";
 import { useAndroidBackButton, syncChromeToTheme, hideLaunchSplash } from "@/lib/native-shell";
@@ -46,10 +47,12 @@ function Router() {
   // Handle special routes that aren't part of the main pager
   if (location === '/sources-disclaimer') {
     return (
-      <div className="civic-shell min-h-screen flex flex-col bg-background text-foreground">
+      <div className="civic-shell flex h-[100dvh] flex-col bg-background text-foreground">
         <AppHeader />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <SourcesDisclaimer />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <AppTransitionShell routeKey={location}>
+            <SourcesDisclaimer />
+          </AppTransitionShell>
         </div>
         <BottomNav />
       </div>
@@ -58,10 +61,12 @@ function Router() {
 
   if (location === '/name-search') {
     return (
-      <div className="civic-shell min-h-screen flex flex-col bg-background text-foreground">
+      <div className="civic-shell flex h-[100dvh] flex-col bg-background text-foreground">
         <AppHeader />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <NameSearch />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <AppTransitionShell routeKey={location}>
+            <NameSearch />
+          </AppTransitionShell>
         </div>
         <BottomNav />
       </div>
@@ -76,7 +81,7 @@ function Router() {
   };
 
   return (
-    <div className="civic-shell min-h-screen flex flex-col bg-background text-foreground">
+    <div className="civic-shell flex h-[100dvh] flex-col bg-background text-foreground">
       <AppHeader />
       <div className="flex-1 flex flex-col" style={{ overflow: 'hidden' }}>
         <SwipePager

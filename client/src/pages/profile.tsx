@@ -326,7 +326,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="mobile-scroll h-full overflow-y-auto">
         <div className="civic-page space-y-4" aria-busy="true">
           <Section className="civic-page-header">
             <Skeleton className="h-4 w-40" />
@@ -352,10 +352,9 @@ export default function Profile() {
   }
 
   return (
-    <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="mobile-scroll h-full overflow-y-auto">
       <div className="civic-page space-y-6">
         <Section className="civic-page-header">
-          <span className="civic-kicker">Preferences and privacy</span>
           <h2
             className="civic-title cursor-pointer select-none active:scale-[.98] transition-transform"
             onClick={handleProfileTitleTap}

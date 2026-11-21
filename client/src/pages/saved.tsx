@@ -43,10 +43,9 @@ export default function Saved() {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="mobile-scroll h-full overflow-y-auto">
       <div className="civic-page space-y-6">
         <Section className="civic-page-header">
-          <span className="civic-kicker">Your civic shortlist</span>
           <h2 className="civic-title">Saved representatives.</h2>
           <p className="civic-lede">Keep the people and offices you contact most within easy reach.</p>
         </Section>

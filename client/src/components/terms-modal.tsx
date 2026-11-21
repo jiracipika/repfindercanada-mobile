@@ -66,8 +66,7 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
       <div className="fixed inset-0 z-50 bg-black/40"></div>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 safe-pt safe-pb">
         <div className="civic-modal-card w-full max-w-md p-5 sm:p-6">
-          <span className="civic-kicker">Before you begin</span>
-          <h1 className="text-title2 mb-2 mt-2 text-foreground">Your privacy, in plain language.</h1>
+          <h1 className="text-title2 mb-2 text-foreground">Your privacy, in plain language.</h1>
           <p className="text-subheadline mb-4 text-muted-foreground">Review how RepFinder Canada handles postal codes and public representative data.</p>
           <div
             ref={termsRef}
@@ -105,7 +104,7 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
           <div className="grid grid-cols-[auto_1fr] gap-3">
             <Button
               variant="ghost"
-              className="min-h-12 rounded-xl px-4 font-semibold text-primary"
+              className="min-h-12 rounded-xl px-4 font-semibold text-primary-text"
               onClick={() => setShowDisagreeAlert(true)}
             >
               Decline

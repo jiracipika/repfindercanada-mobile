@@ -4,7 +4,7 @@ import { Preferences } from "@capacitor/preferences";
 import { Landmark, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { iconSwap } from "./civic/motion";
-import { syncChromeToTheme } from "@/lib/native-shell";
+import { hapticSelectionChanged, syncChromeToTheme } from "@/lib/native-shell";
 
 const THEME_KEY = "theme";
 type Theme = "dark" | "light" | "system";
@@ -48,6 +48,7 @@ export default function AppHeader() {
 
   const onToggle = async () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
+    hapticSelectionChanged();
     setTheme(next);
     applyTheme(next);
     try {
@@ -60,7 +61,7 @@ export default function AppHeader() {
   return (
     <header
       className="civic-glass relative z-30 border-b border-border"
-      style={{ paddingTop: "env(safe-area-inset-top)" }}
+      style={{ paddingTop: "var(--s-top)" }}
     >
       <div className="relative mx-auto flex h-11 max-w-screen-md items-center justify-between px-2">
         <div

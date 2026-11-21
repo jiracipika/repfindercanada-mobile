@@ -10,22 +10,31 @@ interface SafeAreaProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * Applies safe-area insets via inline styles, not utility classes —
+ * `pb-4` + `pb-[env(...)]` in one class list resolve unpredictably
+ * (stylesheet order decides), so the inset must win deterministically.
+ * Reads the --s-* tokens defined on :root (env() fallbacks) so tests
+ * can simulate notch/home-bar insets by overriding the token.
+ * A 0.75rem floor keeps breathing room even where insets are zero.
+ */
 const SafeArea: React.FC<SafeAreaProps> = ({
   children,
   className = '',
-  top = true,
-  bottom = true,
+  top = false,
+  bottom = false,
   left = false,
   right = false,
   style,
 }) => {
-  const paddingClasses: string[] = [];
-  if (top) paddingClasses.push('pt-[env(safe-area-inset-top)]');
-  if (bottom) paddingClasses.push('pb-[env(safe-area-inset-bottom)]');
-  if (left) paddingClasses.push('pl-[env(safe-area-inset-left)]');
-  if (right) paddingClasses.push('pr-[env(safe-area-inset-right)]');
+  const insets: React.CSSProperties = {
+    paddingTop: top ? 'max(0.75rem, var(--s-top))' : undefined,
+    paddingBottom: bottom ? 'max(0.75rem, var(--s-bottom))' : undefined,
+    paddingLeft: left ? 'max(0.75rem, var(--s-left))' : undefined,
+    paddingRight: right ? 'max(0.75rem, var(--s-right))' : undefined,
+  };
 
-  return <div className={`${paddingClasses.join(' ')} ${className}`} style={style}>{children}</div>;
+  return <div className={className} style={{ ...insets, ...style }}>{children}</div>;
 };
 
 export { SafeArea };

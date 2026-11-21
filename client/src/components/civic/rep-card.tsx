@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Heart, Mail, MapPin, Phone, Trash2, User } from "lucide-react";
 import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
+import { hapticLight } from "@/lib/native-shell";
 import { fadeUp } from "./motion";
 import { PartyBadge, hasPartyAffiliation } from "./party-badge";
 import { LevelChip } from "./level-chip";
@@ -83,6 +84,7 @@ export function RepCard({
 
   const handleSave = async () => {
     try {
+      hapticLight();
       if (isSaved) {
         await repRepository.removeRep(representative.id);
         // Don't manually set state - let the subscription handle it

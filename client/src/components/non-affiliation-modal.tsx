@@ -17,8 +17,7 @@ export default function NonAffiliationModal({ onAcknowledge }: NonAffiliationMod
           >
             <ShieldCheck className="h-6 w-6" strokeWidth={1.8} />
           </div>
-          <span className="civic-kicker">Independent by design</span>
-          <DialogTitle className="text-title2 pt-2 text-left">
+          <DialogTitle className="text-title2 text-left">
             Verify important details at the source.
           </DialogTitle>
         </DialogHeader>

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, MapPin, WifiOff } from "lucide-react";
 import { resolveSearchIntent } from "@/lib/searchIntent";
+import { hapticLight } from "@/lib/native-shell";
 import { useSearchState } from "@/hooks/use-search-state";
 
 /** One input over the persistent postal, text and location search state. */
@@ -16,10 +17,17 @@ export function SearchForm() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={(event) => { event.preventDefault(); runSearch(query); }} aria-label="Find representatives">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!inputError) hapticLight();
+          runSearch(query);
+        }}
+        aria-label="Find representatives"
+      >
         <label htmlFor="representative-search" className="mb-2 block text-sm font-semibold text-foreground">Postal code, name or place</label>
         <div className="relative">
-          <Input id="representative-search" type="search" placeholder="Postal code, name, city or riding"
+          <Input id="representative-search" type="search" placeholder="Postal code, name or place"
             value={query} onChange={(event) => setQuery(event.target.value)}
             className="civic-search-input relative pl-11 font-normal text-foreground"
             inputMode="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="search"

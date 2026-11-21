@@ -27,7 +27,7 @@ const NavItem: React.FC<NavItemProps> = ({ path, icon: Icon, label, isActive }) 
     <span
       className={cn(
         "civic-nav-item flex w-full flex-col items-center justify-center gap-[3px] px-2 pt-1 text-muted-foreground transition-colors duration-150",
-        isActive && "text-primary",
+        isActive && "text-primary-text",
       )}
       data-active={isActive}
     >

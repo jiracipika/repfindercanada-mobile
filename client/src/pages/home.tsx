@@ -9,6 +9,7 @@ import { Section } from "@/components/ui/section";
 import { EmptyState, ErrorState } from "@/components/civic";
 import { SectionHeader } from "@/components/civic/section-header";
 import { Skeleton } from "@/components/civic/skeleton";
+import { PullToRefresh } from "@/components/civic/pull-to-refresh";
 import { useSearchState } from "@/hooks/use-search-state";
 import {
   fadeUp,
@@ -78,7 +79,7 @@ export default function Home() {
   })).filter((group) => group.reps.length > 0);
 
   return (
-    <div className="h-full overflow-y-auto touch-pan-y" style={{ WebkitOverflowScrolling: "touch" }}>
+    <PullToRefresh onRefresh={() => retry()} className="h-full">
       <main className="civic-page">
         <motion.header
           className="civic-page-header"
@@ -86,9 +87,6 @@ export default function Home() {
           initial="hidden"
           animate="show"
         >
-          <motion.span variants={fadeUpItem} className="civic-kicker" style={{ display: "inline-flex" }}>
-            Your democracy, mapped
-          </motion.span>
           <motion.h2 variants={fadeUpItem} className="civic-title">
             Know who represents you.
           </motion.h2>
@@ -137,7 +135,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={retry}
-                className="min-h-[44px] shrink-0 rounded-lg px-2 text-footnote font-semibold text-primary active:opacity-70"
+                className="min-h-[44px] shrink-0 rounded-lg px-2 text-footnote font-semibold text-primary-text active:opacity-70"
               >
                 Retry
               </button>
@@ -173,11 +171,8 @@ export default function Home() {
               animate="show"
             >
               <div className="flex items-end justify-between gap-3">
-                <div>
-                  <span className="civic-kicker">Search results</span>
-                  <h3 className="text-title3 mt-2 text-foreground">Representatives found</h3>
-                </div>
-                <span className="text-footnote font-semibold text-muted-foreground">
+                <h3 className="text-title3 text-foreground">Representatives found</h3>
+                <span className="text-footnote font-semibold text-muted-foreground tnum">
                   {searchResults.length} found
                 </span>
               </div>
@@ -229,6 +224,6 @@ export default function Home() {
           />
         )}
       </main>
-    </div>
+    </PullToRefresh>
   );
 }

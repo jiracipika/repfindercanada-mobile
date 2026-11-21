@@ -9,14 +9,13 @@ export function TermsPage({ onAccept }: TermsPageProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 pt-6">
-        <span className="civic-kicker">Before you continue</span>
-        <h1 className="civic-title mt-1">Terms of use.</h1>
+        <h1 className="civic-title">Terms of use.</h1>
         <p className="mt-2 text-footnote text-muted-foreground">
           Effective date: August 14, 2025 · Last updated: September 24, 2025
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="mobile-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
         <ListGroup className="space-y-3 p-4 text-subheadline leading-relaxed text-muted-foreground">
           <p className="text-foreground">These Terms of Use explain the rules for using the RepFinder Canada mobile app and website (together, the “Service”). By using the Service, you agree to these Terms and to our Privacy Policy at https://canadarepfinder.vercel.app/privacy. If you do not agree, please do not use the Service.</p>
 
@@ -37,17 +36,17 @@ export function TermsPage({ onAccept }: TermsPageProps) {
           <h3 className="font-semibold text-foreground">Federal Government</h3>
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <a href="https://www.parl.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              <a href="https://www.parl.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">
                 Parliament of Canada (parl.ca)
               </a>
             </li>
             <li>
-              <a href="https://www.ourcommons.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              <a href="https://www.ourcommons.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">
                 House of Commons (ourcommons.ca)
               </a>
             </li>
             <li>
-              <a href="https://www.elections.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              <a href="https://www.elections.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">
                 Elections Canada (elections.ca)
               </a>
             </li>
@@ -55,19 +54,19 @@ export function TermsPage({ onAccept }: TermsPageProps) {
 
           <h3 className="font-semibold text-foreground">Provincial &amp; Territorial Legislatures</h3>
           <ul className="list-disc space-y-2 pl-5">
-            <li><a href="https://www.assembly.ab.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of Alberta</a></li>
-            <li><a href="https://www.leg.bc.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of British Columbia</a></li>
-            <li><a href="https://www.leg.gov.mb.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of Manitoba</a></li>
-            <li><a href="https://www.legnb.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of New Brunswick</a></li>
-            <li><a href="https://www.assembly.nl.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">House of Assembly of Newfoundland and Labrador</a></li>
-            <li><a href="https://www.ntassembly.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of the Northwest Territories</a></li>
-            <li><a href="https://nslegislature.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Nova Scotia Legislature</a></li>
-            <li><a href="https://www.assembly.nu.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of Nunavut</a></li>
-            <li><a href="https://www.ola.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of Ontario</a></li>
-            <li><a href="https://www.assembly.pe.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of Prince Edward Island</a></li>
-            <li><a href="https://www.assnat.qc.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">National Assembly of Québec</a></li>
-            <li><a href="https://www.legassembly.sk.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Legislative Assembly of Saskatchewan</a></li>
-            <li><a href="https://yukonassembly.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Yukon Legislative Assembly</a></li>
+            <li><a href="https://www.assembly.ab.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of Alberta</a></li>
+            <li><a href="https://www.leg.bc.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of British Columbia</a></li>
+            <li><a href="https://www.leg.gov.mb.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of Manitoba</a></li>
+            <li><a href="https://www.legnb.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of New Brunswick</a></li>
+            <li><a href="https://www.assembly.nl.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">House of Assembly of Newfoundland and Labrador</a></li>
+            <li><a href="https://www.ntassembly.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of the Northwest Territories</a></li>
+            <li><a href="https://nslegislature.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Nova Scotia Legislature</a></li>
+            <li><a href="https://www.assembly.nu.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of Nunavut</a></li>
+            <li><a href="https://www.ola.org" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of Ontario</a></li>
+            <li><a href="https://www.assembly.pe.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of Prince Edward Island</a></li>
+            <li><a href="https://www.assnat.qc.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">National Assembly of Québec</a></li>
+            <li><a href="https://www.legassembly.sk.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Legislative Assembly of Saskatchewan</a></li>
+            <li><a href="https://yukonassembly.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">Yukon Legislative Assembly</a></li>
           </ul>
 
           <h3 className="font-semibold text-foreground">Municipal Governments</h3>
@@ -76,7 +75,7 @@ export function TermsPage({ onAccept }: TermsPageProps) {
           <h3 className="font-semibold text-foreground">Lookup Service</h3>
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <a href="https://represent.opennorth.ca" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              <a href="https://represent.opennorth.ca" target="_blank" rel="noopener noreferrer" className="text-primary-text hover:underline">
                 Represent API (by Open North)
               </a>
             </li>
@@ -119,7 +118,7 @@ export function TermsPage({ onAccept }: TermsPageProps) {
         </ListGroup>
       </div>
 
-      <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+      <div className="px-4 pt-2" style={{ paddingBottom: "max(1rem, var(--s-bottom))" }}>
         <Button onClick={onAccept} className="civic-primary-button w-full">
           Accept &amp; Continue
         </Button>
