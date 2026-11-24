@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Mail, MapPin, Phone, Trash2, User } from "lucide-react";
+import { ChevronRight, Heart, Mail, Phone, Trash2 } from "lucide-react";
 import type { ApiRepresentative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { hapticLight } from "@/lib/native-shell";
@@ -46,10 +46,12 @@ export function getPositionLabel(electedOffice?: string | null): string {
 }
 
 /**
- * Rebuilt representative card (token system 2.0). Behaviour — save/subscribe,
- * toasts, alerts — is byte-identical to the previous card; only the visuals
- * changed. Exported as `RepCard`; `components/representative-card` re-exports
- * it under the old name so pages keep compiling.
+ * Representative card: an identity block (photo, name, office and district,
+ * party and level) that opens the profile, with one quiet action row — call,
+ * email, profile. Save/delete live on the heart and bin at the top right.
+ * Save/subscribe, toasts and alerts behave exactly as the previous card did.
+ * Exported as `RepCard`; `components/representative-card` re-exports it under
+ * the old name so pages keep compiling.
  */
 export function RepCard({
   representative,
@@ -166,134 +168,125 @@ export function RepCard({
 
   void handleOpenSource;
 
+  const place = representative.constituency || representative.riding || "";
+  const party = hasPartyAffiliation(representative.party) ? representative.party : undefined;
+  const showLevel = Boolean(representative.level) && representative.level !== "other";
+
   return (
     <motion.article
       data-civic-card="true"
       initial="hidden"
       animate="show"
       variants={fadeUp}
-      whileTap={{ scale: 0.97 }}
+      whileTap={{ scale: 0.98 }}
       className="overflow-hidden p-4"
     >
-      <div className="flex items-start space-x-4">
-        <Avatar className="h-16 w-16">
-          {!avatarFailed && representative.photo && (
-            <AvatarImage
-              src={representative.photo}
-              alt={`${representative.name} photo`}
-              className="object-cover"
-              onError={() => setAvatarFailed(true)}
-            />
-          )}
-          <AvatarFallback
-            className="text-lg font-semibold text-muted-foreground"
-            style={{ background: "var(--muted)" }}
-          >
-            {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-          </AvatarFallback>
-        </Avatar>
+      <div className="flex items-start gap-3">
+        {/* Identity. Tapping it opens the profile; "Profile" in the action row
+            below is the same destination, reachable by keyboard. */}
+        <div className="flex min-w-0 flex-1 cursor-pointer items-start gap-3" onClick={onViewProfile}>
+          <Avatar className="h-14 w-14 shrink-0">
+            {!avatarFailed && representative.photo && (
+              <AvatarImage
+                src={representative.photo}
+                alt={`${representative.name} photo`}
+                className="object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
+            )}
+            <AvatarFallback
+              className="text-lg font-semibold text-muted-foreground"
+              style={{ background: "var(--muted)" }}
+            >
+              {representative.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
 
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
             <h3 className="text-headline leading-snug text-foreground">
               {representative.name}
             </h3>
-            <div className="flex gap-1">
-              {showSaveButton && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleSave}
-                  aria-label={isSaved ? `Remove ${representative.name} from saved representatives` : `Save ${representative.name}`}
-                  className="h-11 w-11 shrink-0 rounded-full"
-                >
-                  {isSaved ? (
-                    <Heart className="h-5 w-5 text-primary fill-current" />
-                  ) : (
-                    <Heart className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </Button>
-              )}
-              {showDeleteButton && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDelete}
-                  aria-label={`Delete ${representative.name} from saved representatives`}
-                  className="h-11 w-11 shrink-0 rounded-full"
-                >
-                  <Trash2 className="h-5 w-5 text-destructive" />
-                </Button>
-              )}
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {hasPartyAffiliation(representative.party) && representative.party && (
-              <PartyBadge party={representative.party} />
-            )}
-            {representative.level && representative.level !== "other" && (
-              <LevelChip
-                level={representative.level}
-                electedOffice={representative.electedOffice}
-              />
+            <p className="mt-0.5 text-subheadline leading-snug text-muted-foreground">
+              {getPositionLabel(representative.electedOffice)}
+              {place ? ` · ${place}` : ""}
+            </p>
+
+            {(party || showLevel) && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                {party && <PartyBadge party={party} />}
+                {showLevel && (
+                  <LevelChip
+                    level={representative.level}
+                    electedOffice={representative.electedOffice}
+                  />
+                )}
+              </div>
             )}
           </div>
+        </div>
 
-          <div className="text-subheadline mt-2 space-y-1.5">
-            <div className="flex items-center text-muted-foreground">
-              <MapPin className="mr-2 h-4 w-4 shrink-0" />
-              <span className="truncate">
-                {representative.constituency || representative.riding || "No constituency information"}
-              </span>
-            </div>
-
-            <div className="flex items-center text-muted-foreground">
-              <User className="mr-2 h-4 w-4 shrink-0" />
-              <span>{getPositionLabel(representative.electedOffice)}</span>
-            </div>
-          </div>
+        <div className="-mr-2 flex shrink-0">
+          {showSaveButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSave}
+              aria-label={isSaved ? `Remove ${representative.name} from saved representatives` : `Save ${representative.name}`}
+              className="h-11 w-11 shrink-0 rounded-full"
+            >
+              {isSaved ? (
+                <Heart className="h-5 w-5 text-primary fill-current" />
+              ) : (
+                <Heart className="h-5 w-5 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+          {showDeleteButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              aria-label={`Delete ${representative.name} from saved representatives`}
+              className="h-11 w-11 shrink-0 rounded-full"
+            >
+              <Trash2 className="h-5 w-5 text-destructive" />
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Contact Actions */}
-      <div className="mt-5 border-t border-border pt-4">
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="ghost"
-            className={`civic-tinted-button min-h-12 rounded-xl ${!representative.phone ? "opacity-50" : ""}`}
-            onClick={handleCall}
-            disabled={!representative.phone}
-          >
-            <Phone className="mr-2 h-4 w-4" />
-            <span className="text-subheadline font-semibold">
-              {representative.phone ? "Call" : "No Phone"}
-            </span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            className={`civic-tinted-button min-h-12 rounded-xl ${!representative.email ? "opacity-50" : ""}`}
-            onClick={handleEmail}
-            disabled={!representative.email}
-          >
-            <Mail className="mr-2 h-4 w-4" />
-            <span className="text-subheadline font-semibold">
-              {representative.email ? "Email" : "No Email"}
-            </span>
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <Button
-          variant="ghost"
-          className="civic-tinted-button flex min-h-12 w-full items-center justify-center rounded-xl"
-          onClick={onViewProfile}
+      {/* One quiet action row: call, write, read more. Each card used to stack
+          three red-tinted buttons and stand 306px tall, so four results ran
+          to two and a half screens of red. */}
+      <div className="civic-card-actions">
+        <button
+          type="button"
+          className="civic-card-action"
+          onClick={handleCall}
+          disabled={!representative.phone}
         >
-          <User className="mr-2 h-4 w-4" />
-          <span className="text-subheadline font-semibold">View Full Profile</span>
-        </Button>
+          <Phone className="h-4 w-4" aria-hidden="true" />
+          <span>{representative.phone ? "Call" : "No Phone"}</span>
+        </button>
+        <button
+          type="button"
+          className="civic-card-action"
+          onClick={handleEmail}
+          disabled={!representative.email}
+        >
+          <Mail className="h-4 w-4" aria-hidden="true" />
+          <span>{representative.email ? "Email" : "No Email"}</span>
+        </button>
+        <button
+          type="button"
+          className="civic-card-action"
+          onClick={onViewProfile}
+          aria-label="View Full Profile"
+        >
+          <span>Profile</span>
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
     </motion.article>
   );

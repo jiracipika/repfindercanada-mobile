@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Preferences } from "@capacitor/preferences";
-import { Landmark, Moon, Sun } from "lucide-react";
+import { MapPin, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { iconSwap } from "./civic/motion";
 import { hapticSelectionChanged, syncChromeToTheme } from "@/lib/native-shell";
@@ -60,28 +60,26 @@ export default function AppHeader() {
 
   return (
     <header
-      className="civic-glass relative z-30 border-b border-border"
+      className="civic-top-bar relative z-30 border-b border-border"
       style={{ paddingTop: "var(--s-top)" }}
     >
       <div className="relative mx-auto flex h-11 max-w-screen-md items-center justify-between px-2">
-        <div
-          className="civic-maple-mark"
-          style={{ width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem" }}
-          aria-hidden="true"
-        >
-          <Landmark className="h-4 w-4" strokeWidth={2} />
-        </div>
+        {/* The web sibling's mark: white pin on solid civic red, one tight corner. */}
+        <span className="brand-mark brand-mark--bar" aria-hidden="true">
+          <MapPin className="h-[18px] w-[18px]" strokeWidth={2.3} />
+        </span>
 
         <h1 className="text-headline absolute left-1/2 -translate-x-1/2 truncate text-foreground">
           RepFinder Canada
         </h1>
 
+        {/* Neutral on purpose: the red mark is this bar's one accent. */}
         <Button
           variant="ghost"
           size="icon"
           aria-label={isDark ? "Use light appearance" : "Use dark appearance"}
           onClick={onToggle}
-          className="h-11 w-11 shrink-0 rounded-full text-primary"
+          className="h-11 w-11 shrink-0 rounded-full text-muted-foreground"
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.span

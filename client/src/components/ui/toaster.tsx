@@ -12,7 +12,8 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
+    // Toasts enter from the bottom edge, so they are swiped away downwards.
+    <ToastProvider swipeDirection="down" duration={3500}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>

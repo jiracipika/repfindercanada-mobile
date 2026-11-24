@@ -22,8 +22,8 @@ const FLING_VELOCITY = 450;
  * and the whole track follows the finger 1:1 while dragging. Release settles
  * the nearest page with the app's critically damped spring (no bounce, like
  * UIScrollView paging). Tab taps glide the same track, so taps and swipes
- * share one motion. Off-screen pages are aria-hidden; their scroll positions
- * persist because nothing unmounts.
+ * share one motion. Off-screen pages are aria-hidden and, while the track is
+ * at rest, not painted; their scroll positions persist because nothing unmounts.
  */
 export function SwipePager({ pages, currentIndex, onIndexChange, className = "" }: SwipePagerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,8 +31,22 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
   const [pageWidth, setPageWidth] = useState(0);
   const widthRef = useRef(0);
   const indexRef = useRef(currentIndex);
+  /** False only while the track is moving, so every page it sweeps past is painted. */
+  const [settled, setSettled] = useState(true);
+  /** Identifies the latest glide, so an interrupted one cannot report "at rest". */
+  const glideRef = useRef(0);
 
   const maxX = (pages.length - 1) * pageWidth;
+
+  /** Glide to a page and mark the track at rest when the latest glide lands. */
+  const glideTo = (index: number) => {
+    setSettled(false);
+    const glide = ++glideRef.current;
+    const controls = animate(x, -index * widthRef.current, settleSpring);
+    void controls.then(() => {
+      if (glideRef.current === glide) setSettled(true);
+    });
+  };
 
   // Measure the viewport and realign the track instantly (first size,
   // rotation, any resize — never animate a resize).
@@ -58,13 +72,13 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
   useEffect(() => {
     if (currentIndex !== indexRef.current) {
       indexRef.current = currentIndex;
-      if (widthRef.current) animate(x, -currentIndex * widthRef.current, settleSpring);
+      if (widthRef.current) glideTo(currentIndex);
     }
   }, [currentIndex, x]);
 
   const commit = (index: number) => {
     indexRef.current = index;
-    animate(x, -index * widthRef.current, settleSpring);
+    glideTo(index);
     if (index !== currentIndex) onIndexChange(index);
   };
 
@@ -89,6 +103,7 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
         dragElastic={0.08}
         dragMomentum={false}
         dragDirectionLock
+        onDragStart={() => setSettled(false)}
         onDragEnd={handleDragEnd}
       >
         {pages.map((page, i) => (
@@ -96,6 +111,10 @@ export function SwipePager({ pages, currentIndex, onIndexChange, className = "" 
             key={i}
             className="h-full w-full shrink-0 overflow-hidden"
             aria-hidden={i !== currentIndex}
+            // Off-screen pages are hidden while the track is at rest: they are
+            // not painted, and they leave the tab order — aria-hidden alone
+            // kept their links and buttons focusable.
+            style={{ visibility: settled && i !== currentIndex ? "hidden" : undefined }}
           >
             {page}
           </div>

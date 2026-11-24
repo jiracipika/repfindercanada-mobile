@@ -32,3 +32,18 @@ without a grabber. Failure screenshots/traces are saved to ignored test-results/
 These are Chromium touch-emulation tests of the Capacitor web content. They do
 not validate a native iOS/Android build, hardware-back dispatch, or a store upload.
 Install and exercise a fresh native build before claiming those are verified.
+
+## Layout and wiring checks
+
+`design-regressions.spec.mjs` runs with the same command and the same kind of
+synthetic fixture. Each check failed on the build it was written against:
+
+- A bottom sheet that mounts closed opens above its own scrim and closes from
+  its button. Scrim and sheet shared a z-index, so DOM order decided and the
+  scrim covered its own sheet.
+- The search button stays above the tab bar on a 320x568 phone with a notch.
+- Tab labels are at least 12px.
+- An incomplete postal code is explained once, not twice.
+- Off-screen pager pages are not painted and are out of the tab order at rest.
+- The postal index is loaded off the main thread: a postal search succeeds
+  and the page itself never fetched the index.

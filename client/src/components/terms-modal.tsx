@@ -12,6 +12,8 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { BrandLockup } from '@/components/brand-lockup';
 import { useState } from 'react';
 
 interface TermsModalProps {
@@ -64,18 +66,30 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/40"></div>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 safe-pt safe-pb">
-        <div className="civic-modal-card w-full max-w-md p-5 sm:p-6">
+      {/* Brand above the card: the first-run screens have no app header, and
+          until now the first thing a new install saw was legal text on an
+          empty screen. */}
+      <div
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-4"
+        style={{ paddingTop: "max(1rem, var(--s-top))", paddingBottom: "max(1rem, var(--s-bottom))" }}
+      >
+        <BrandLockup />
+        {/* A flex column bounded by the viewport: the policy text takes the
+            room that is left on any screen, instead of a fixed 54vh. */}
+        <div
+          className="civic-modal-card flex w-full max-w-md flex-col p-5 sm:p-6"
+          style={{ maxHeight: "calc(100dvh - var(--s-top) - var(--s-bottom) - 7.5rem)" }}
+        >
           <h1 className="text-title2 mb-2 text-foreground">Your privacy, in plain language.</h1>
           <p className="text-subheadline mb-4 text-muted-foreground">Review how RepFinder Canada handles postal codes and public representative data.</p>
           <div
             ref={termsRef}
             onScroll={handleScroll}
-            className="mb-5 max-h-[54vh] overflow-y-auto rounded-xl bg-muted p-4 text-subheadline text-muted-foreground"
+            className="mobile-scroll mb-5 min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words rounded-xl bg-muted p-4 text-subheadline leading-relaxed text-muted-foreground"
           >
             <p className="mb-2"><b>Last updated: October 22, 2026</b></p>
 
-            <h2 className="text-lg font-semibold mt-4 mb-2">Data Use & Privacy</h2>
+            <h2 className="text-headline mb-2 mt-4">Data Use & Privacy</h2>
             <p className="mb-2">RepFinder Canada works without an account. Your saved representatives, search history and recent results stay on your device. Here is how lookups are handled:</p>
             <ul className="list-disc list-inside mb-2">
               <li><b>Postal code lookups start on your device.</b> The app includes a built-in postal code database, so most postal lookups are completed entirely on your phone.</li>
@@ -86,22 +100,22 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
               <li><b>Local storage:</b> your saved representatives, search history and cached results are stored only on your device and can be cleared by you at any time within the app.</li>
             </ul>
 
-            <h2 className="text-lg font-semibold mt-4 mb-2">Sources of Information</h2>
+            <h2 className="text-headline mb-2 mt-4">Sources of Information</h2>
             <p className="mb-2">RepFinder Canada aggregates publicly available information from official sources to help you find your elected representatives. We rely on the following data sources:</p>
             <ul className="list-disc list-inside mb-2">
-              <li>Represent by Open North: <a href="https://represent.opennorth.ca/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://represent.opennorth.ca/</a></li>
-              <li>geocoder.ca (postal code fallback): <a href="https://geocoder.ca/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://geocoder.ca/</a></li>
-              <li>House of Commons – Members (MPs): <a href="https://www.ourcommons.ca/members/en/search" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://www.ourcommons.ca/members/en/search</a></li>
-              <li>Senate of Canada – Senators: <a href="https://sencanada.ca/en/senators/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://sencanada.ca/en/senators/</a></li>
-              <li>Elections Canada – Electoral District Lookup: <a href="https://www.elections.ca/content.aspx" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://www.elections.ca/content.aspx</a></li>
-              <li>Map imagery © OpenStreetMap contributors: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://www.openstreetmap.org/copyright</a></li>
+              <li>Represent by Open North: <a href="https://represent.opennorth.ca/" target="_blank" rel="noopener noreferrer" className="text-primary-text underline">https://represent.opennorth.ca/</a></li>
+              <li>geocoder.ca (postal code fallback): <a href="https://geocoder.ca/" target="_blank" rel="noopener noreferrer" className="text-primary-text underline">https://geocoder.ca/</a></li>
+              <li>House of Commons – Members (MPs): <a href="https://www.ourcommons.ca/members/en/search" target="_blank" rel="noopener noreferrer" className="text-primary-text underline">https://www.ourcommons.ca/members/en/search</a></li>
+              <li>Senate of Canada – Senators: <a href="https://sencanada.ca/en/senators/" target="_blank" rel="noopener noreferrer" className="text-primary-text underline">https://sencanada.ca/en/senators/</a></li>
+              <li>Elections Canada – Electoral District Lookup: <a href="https://www.elections.ca/content.aspx" target="_blank" rel="noopener noreferrer" className="text-primary-text underline">https://www.elections.ca/content.aspx</a></li>
+              <li>Map imagery © OpenStreetMap contributors: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="text-primary-text underline">https://www.openstreetmap.org/copyright</a></li>
             </ul>
 
-            <h2 className="text-lg font-semibold mt-4 mb-2">Disclaimer</h2>
+            <h2 className="text-headline mb-2 mt-4">Disclaimer</h2>
             <p className="mb-2">RepFinder Canada is an independent application developed for informational and educational purposes only. It is not affiliated with, endorsed by, or officially connected to the Government of Canada, the House of Commons, the Senate of Canada, Elections Canada, or any other government entity. All information is provided "as is" and users are encouraged to verify details with official sources.</p>
           </div>
 
-          <div className="grid grid-cols-[auto_1fr] gap-3">
+          <div className="grid shrink-0 grid-cols-[auto_1fr] gap-3">
             <Button
               variant="ghost"
               className="min-h-12 rounded-xl px-4 font-semibold text-primary-text"
@@ -109,10 +123,16 @@ const TermsModal: FC<TermsModalProps> = ({ onAccept }) => {
             >
               Decline
             </Button>
+            {/* The button keeps one label; the gating is said underneath. "Accept
+                (scroll to bottom)" did not fit beside "Decline" at 320px. */}
             <Button className="civic-primary-button" onClick={handleAccept} disabled={!canAccept}>
-              Accept {!canAccept && '(scroll to bottom)'}
+              Accept
             </Button>
           </div>
+          {/* Invisible rather than removed once enabled, so nothing shifts. */}
+          <p className={cn("mt-2 text-center text-footnote text-muted-foreground", canAccept && "invisible")}>
+            Scroll to the end to enable Accept.
+          </p>
         </div>
       </div>
 

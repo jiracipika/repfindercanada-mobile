@@ -215,6 +215,13 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
     return '';
   };
 
+  // Office types arrive lower-case from the source ("legislature").
+  const officeLabel = (type: string | undefined) =>
+    (type || 'Office')
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
   const iconProps = { className: "h-[22px] w-[22px]", strokeWidth: 1.8 } as const;
 
   const sectionLabel = (text: string) => <ListSectionLabel>{text}</ListSectionLabel>;
@@ -412,7 +419,7 @@ export function RepresentativeModal({ representative, isOpen, onClose }: Represe
                 <div className="flex items-center gap-2 px-4 pb-1 pt-3">
                   <Building2 className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.8} />
                   <h4 className="text-subheadline font-semibold text-foreground">
-                    {office.type || 'Office'}
+                    {officeLabel(office.type)}
                   </h4>
                 </div>
 

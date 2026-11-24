@@ -43,7 +43,7 @@ export function LevelChip({ level, electedOffice, className }: LevelChipProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold leading-tight",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold leading-tight",
         className,
       )}
       style={{

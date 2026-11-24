@@ -32,7 +32,8 @@ const NavItem: React.FC<NavItemProps> = ({ path, icon: Icon, label, isActive }) 
       data-active={isActive}
     >
       <Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
-      <span className="text-[10px] font-semibold leading-none">{label}</span>
+      {/* 12px is the Civic Field Guide's floor for tab labels. */}
+      <span className="nav-label text-caption1 font-semibold leading-none">{label}</span>
     </span>
   </Link>
 );

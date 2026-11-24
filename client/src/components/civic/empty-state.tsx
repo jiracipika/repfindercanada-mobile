@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { fadeUp } from "./motion";
 
 interface EmptyStateProps {
-  icon?: ReactNode;
   title: string;
   description?: ReactNode;
   /** Optional call-to-action (already ≥44px if interactive). */
@@ -12,7 +11,12 @@ interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+/**
+ * Typographic empty state: bold left-aligned headline, one plain sentence,
+ * optional action. No icon tile above the heading — the field guide speaks
+ * in type, and an icon that only decorates says nothing.
+ */
+export function EmptyState({ title, description, action, className }: EmptyStateProps) {
   return (
     <motion.div
       variants={fadeUp}
@@ -20,24 +24,13 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       animate="show"
       className={cn("civic-empty", className)}
     >
-      {icon && (
-        <div
-          aria-hidden="true"
-          className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl text-primary"
-          style={{
-            backgroundColor: "color-mix(in srgb, var(--primary) 12%, transparent)",
-          }}
-        >
-          {icon}
-        </div>
-      )}
-      <h3 className="text-headline mb-2 text-foreground">{title}</h3>
+      <h3 className="text-title3 mb-2 text-foreground">{title}</h3>
       {description && (
-        <p className="mx-auto max-w-sm text-subheadline text-muted-foreground">
+        <p className="max-w-sm text-subheadline leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}
-      {action && <div className="mt-4 flex justify-center">{action}</div>}
+      {action && <div className="mt-5 flex justify-start">{action}</div>}
     </motion.div>
   );
 }

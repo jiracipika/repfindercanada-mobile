@@ -12,7 +12,10 @@ interface ErrorStateProps {
   className?: string;
 }
 
-export function ErrorState({
+/**
+ * Inline failure: headline, what happened, the way back. Same left-aligned
+ * typography as EmptyState, marked by a destructive-coloured left rule.
+ */export function ErrorState({
   title = "Something went wrong",
   description,
   onRetry,
@@ -24,22 +27,12 @@ export function ErrorState({
       variants={fadeUp}
       initial="hidden"
       animate="show"
-      className={cn("civic-empty", className)}
+      className={cn("civic-empty civic-empty--alert", className)}
       role="alert"
     >
-      <div
-        aria-hidden="true"
-        className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl"
-        style={{
-          color: "var(--destructive)",
-          backgroundColor: "color-mix(in srgb, var(--destructive) 12%, transparent)",
-        }}
-      >
-        <RotateCcw className="h-7 w-7" />
-      </div>
-      <h3 className="text-headline mb-2 text-foreground">{title}</h3>
+      <h3 className="text-title3 mb-2 text-foreground">{title}</h3>
       {description && (
-        <p className="mx-auto max-w-sm text-subheadline text-muted-foreground">
+        <p className="max-w-sm text-subheadline leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}

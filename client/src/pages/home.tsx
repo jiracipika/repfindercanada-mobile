@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { SearchForm } from "@/components/search-form";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
-import { Building2, Database, MapPinCheck, ShieldCheck, WifiOff } from "lucide-react";
+import { ArrowUpRight, Database, MapPinCheck, ShieldCheck, WifiOff } from "lucide-react";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { Section } from "@/components/ui/section";
 import { EmptyState, ErrorState } from "@/components/civic";
+import { FieldCard } from "@/components/civic/field-card";
+import { WhoHandlesWhat } from "@/components/civic/who-handles-what";
 import { SectionHeader } from "@/components/civic/section-header";
 import { Skeleton } from "@/components/civic/skeleton";
 import { PullToRefresh } from "@/components/civic/pull-to-refresh";
@@ -56,6 +58,7 @@ const groupOf = (representative: Representative): LevelGroup => {
 
 export default function Home() {
   const [selectedRepresentative, setSelectedRepresentative] = useState<Representative | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   // Search state lives in SearchStateProvider (above the SwipePager) so
   // results survive tab swipes.
@@ -82,7 +85,7 @@ export default function Home() {
     <PullToRefresh onRefresh={() => retry()} className="h-full">
       <main className="civic-page">
         <motion.header
-          className="civic-page-header"
+          className="civic-page-header civic-find-header"
           variants={staggerContainer}
           initial="hidden"
           animate="show"
@@ -147,16 +150,16 @@ export default function Home() {
           <Section className="mt-5 space-y-3" aria-live="polite" aria-busy="true">
             <p className="text-sm font-semibold text-muted-foreground">Searching representatives…</p>
             {[0, 1, 2].map((index) => (
-              <div key={index} className="civic-panel p-4">
-                <div className="flex items-start gap-4">
-                  <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
-                  <div className="flex-1 space-y-2.5">
-                    <Skeleton className="h-5 w-1/2" />
-                    <Skeleton className="h-4 w-3/4" />
+              <div key={index} className="civic-panel overflow-hidden">
+                <div className="flex items-start gap-3 p-4">
+                  <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2.5 pt-1">
                     <Skeleton className="h-4 w-2/5" />
+                    <Skeleton className="h-4 w-3/5" />
+                    <Skeleton className="h-4 w-1/3" />
                   </div>
                 </div>
-                <Skeleton className="mt-4 h-12 w-full rounded-xl" />
+                <Skeleton className="h-12 w-full rounded-none" />
               </div>
             ))}
           </Section>
@@ -199,19 +202,24 @@ export default function Home() {
         )}
 
         {searchResults.length === 0 && !isSearching && !error && (
-          <Section className="mt-5">
+          <Section className="mt-5 px-0">
             {submittedQuery ? (
-              <EmptyState
-                icon={<Building2 className="h-7 w-7" />}
-                title="No representatives found"
-                description={`We couldn't find any representatives for "${submittedQuery}". Try another name, city, riding or postal code. Coverage varies by area.`}
-              />
+              <>
+                <EmptyState
+                  title="No representatives found"
+                  description={`We couldn't find any representatives for "${submittedQuery}". Try another name, city, riding or postal code. Coverage varies by area.`}
+                />
+                <div className="mt-4 px-4">
+                  <button type="button" className="civic-text-link" onClick={() => setGuideOpen(true)}>
+                    Who handles what? <ArrowUpRight className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+                  </button>
+                </div>
+              </>
             ) : (
-              <EmptyState
-                icon={<Building2 className="h-7 w-7" />}
-                title="Ready when you are"
-                description="Your postal code is used for this lookup and is not sent to an advertising or analytics service."
-              />
+              // Before the first search: the guide's editorial image, with the
+              // red note into "Who handles what?", where an empty state used
+              // to repeat the privacy note.
+              <FieldCard onOpenGuide={() => setGuideOpen(true)} />
             )}
           </Section>
         )}
@@ -224,6 +232,8 @@ export default function Home() {
           />
         )}
       </main>
+
+      <WhoHandlesWhat open={guideOpen} onOpenChange={setGuideOpen} />
     </PullToRefresh>
   );
 }

@@ -1,10 +1,9 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Landmark } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 /**
- * iOS-style launch screen: one calm tinted mark that rises in and the
- * whole surface fades out quickly when startup completes. No glow ring,
- * no looping animation.
+ * Launch screen: the brand mark rises in and the whole surface fades out
+ * quickly when startup completes. No glow ring, no looping animation.
  */
 export default function LoadingScreen() {
   const reduceMotion = useReducedMotion();
@@ -17,13 +16,12 @@ export default function LoadingScreen() {
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <motion.div
-        className="civic-maple-mark"
-        style={{ width: "4.5rem", height: "4.5rem", borderRadius: "1.125rem" }}
+        className="brand-mark brand-mark--launch"
         initial={reduceMotion ? undefined : { opacity: 0.1, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
       >
-        <Landmark className="h-8 w-8" strokeWidth={1.8} />
+        <MapPin className="h-8 w-8" strokeWidth={2.3} />
       </motion.div>
       <p className="text-title3 mt-4 text-foreground">RepFinder Canada</p>
       <p className="text-subheadline mt-1 text-muted-foreground">Preparing your civic map…</p>

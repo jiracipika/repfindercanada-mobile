@@ -93,9 +93,11 @@ export function ListRow({
           {icon}
         </span>
       )}
+      {/* Labels wrap rather than truncate: an email address or a source name
+          cut with an ellipsis is information the row exists to show. */}
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-body text-foreground",
+          "min-w-0 flex-1 break-words text-body text-foreground",
           disabled && "text-muted-foreground",
           labelClassName,
         )}

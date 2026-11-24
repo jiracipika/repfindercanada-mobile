@@ -27,7 +27,8 @@ function SourceLink({ url, name, description, icon, divider }: SourceLinkProps) 
       divider={divider}
       label={
         <span className="block min-w-0">
-          <span className="block truncate text-body text-primary-text">{name}</span>
+          {/* Source names wrap: truncating one cut "Parliament of Canada (parl…". */}
+          <span className="block break-words text-body text-primary-text">{name}</span>
           {description && (
             <span className="mt-0.5 block whitespace-normal text-footnote leading-relaxed text-muted-foreground">
               {description}
@@ -70,7 +71,7 @@ export function SourcesDisclaimer() {
         <Section>
           <ListGroup>
             <div className="space-y-2 px-4 py-4">
-              <h3 className="text-headline text-foreground">
+              <h3 className="text-headline text-balance text-foreground">
                 Not Affiliated with the Government of Canada
               </h3>
               <p className="text-subheadline leading-relaxed text-muted-foreground">

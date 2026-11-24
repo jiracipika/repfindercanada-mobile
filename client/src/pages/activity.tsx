@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getRecentActivity, clearActivity, subscribeActivityChanges, type ActivityItem } from "@/lib/storage/activityRepository";
 import { useSearchState } from "@/hooks/use-search-state";
 import { isValidPostalCode } from "@/lib/postal";
-import { ChevronRight, Clock, Trash2, Users } from "lucide-react";
+import { ChevronRight, Clock, Trash2 } from "lucide-react";
 import { EmptyState, ListGroup, Skeleton } from "@/components/civic";
 import { entranceTween } from "@/components/civic/motion";
 import { Section } from "@/components/ui/section";
@@ -114,9 +114,8 @@ export default function Activity() {
             </div>
           ) : items.length === 0 ? (
             <EmptyState
-              icon={<Clock className="h-7 w-7" />}
               title="No search history"
-              description="Start searching to see your history here."
+              description="Postal codes, names and places you search for will be listed here, on this device only."
             />
           ) : (
             <ListGroup>
@@ -148,34 +147,16 @@ export default function Activity() {
                           {new Date(activity.ts).toLocaleDateString()}
                         </span>
 
-                        {/* Show representative previews if available */}
+                        {/* Who came back, as one quiet line (it was a row of red chips). */}
                         {activity.representatives && activity.representatives.length > 0 && (
-                          <span className="mt-1.5 flex items-center gap-1.5">
-                            <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            <span className="flex flex-wrap gap-1.5">
-                              {activity.representatives.slice(0, 3).map((rep) => (
-                                <span
-                                  key={rep.id}
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-caption2 text-primary-text"
-                                  style={{
-                                    backgroundColor:
-                                      "color-mix(in srgb, var(--primary) 12%, transparent)",
-                                  }}
-                                >
-                                  {rep.name}
-                                  {rep.electedOffice && (
-                                    <span className="ml-1 opacity-75">
-                                      ({rep.electedOffice})
-                                    </span>
-                                  )}
-                                </span>
-                              ))}
-                              {activity.representatives.length > 3 && (
-                                <span className="text-caption1 text-muted-foreground">
-                                  +{activity.representatives.length - 3} more
-                                </span>
-                              )}
-                            </span>
+                          <span className="mt-1 block text-footnote leading-snug text-muted-foreground">
+                            {activity.representatives
+                              .slice(0, 3)
+                              .map((rep) => `${rep.name} (${rep.electedOffice})`)
+                              .join(" · ")}
+                            {activity.representatives.length > 3
+                              ? ` · +${activity.representatives.length - 3} more`
+                              : ""}
                           </span>
                         )}
                       </span>

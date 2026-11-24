@@ -105,8 +105,13 @@ export function BottomSheet({
         </AnimatePresence>
 
         {/* Positioner: bottom sheet below 768px, centered card above. No CSS
-            transforms here — framer-motion owns the sheet's transform. */}
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center md:items-center">
+            transforms here — framer-motion owns the sheet's transform.
+            One step above the overlay on purpose: both are fixed children of
+            <body>, so with equal z-indexes the DOM order decides, and a sheet
+            that is mounted closed and opened later gets its overlay appended
+            after this node — the scrim then sits on top of its own sheet and
+            every tap inside dismisses it. */}
+        <div className="pointer-events-none fixed inset-0 z-[51] flex items-end justify-center md:items-center">
           <AnimatePresence>
             {open && (
               <DialogPrimitive.Content

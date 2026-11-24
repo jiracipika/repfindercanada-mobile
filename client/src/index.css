@@ -49,8 +49,9 @@
   --accent: hsl(240 8% 18%);
   --accent-foreground: hsl(210 20% 98%);
   --border: var(--civic-line); /* hairline #393949 */
+  --field-border: #575769; /* the guide's fieldBorder: a control that must read as one */
   --input: hsl(240 6% 20%);
-  --placeholder: rgba(176, 176, 191, 0.45);
+  --placeholder: #a3a9b6; /* 5.6:1 on --input; the old 45% tint was 2.45:1 */
   --primary: var(--civic-red); /* #c62432 — 5.7:1 under white labels */
   --primary-hover: #d92c3c;
   --primary-foreground: #ffffff;
@@ -115,8 +116,9 @@
   --accent: #ededf1;
   --accent-foreground: #17171d;
   --border: #d9d9e2;
+  --field-border: #a9a9b8;
   --input: #e4e4ea;
-  --placeholder: rgba(93, 100, 114, 0.55);
+  --placeholder: #5d6472; /* 4.7:1 on --input; the old 55% tint was 2.12:1 */
   --primary: var(--civic-red); /* 5.7:1 under white labels */
   --primary-hover: #d92c3c;
   --primary-foreground: #ffffff;
@@ -124,15 +126,15 @@
   --primary-text: var(--civic-red);
   --secondary: #ededf1;
   --secondary-foreground: #17171d;
-  --destructive: #dc2626;
+  --destructive: #d0201f; /* 5.0:1 as text on the canvas */
   --destructive-foreground: #ffffff;
   --ring: var(--civic-red);
   --radius: 0.625rem;
 
   /* Government level accents — same hues, darkened for white paper. */
-  --civic-blue: #1d6fb8; /* Federal */
-  --civic-purple: #7a3fb8; /* Provincial */
-  --civic-mint: #0e7d5b; /* Municipal */
+  --civic-blue: #185c9b; /* Federal — 5.5:1 on its 15% tint */
+  --civic-purple: #7a3fb8; /* Provincial — 5.2:1 */
+  --civic-mint: #0b6a4d; /* Municipal — 5.3:1 */
 
   /* Neutral ramp (light: 50 darkest → 900 lightest) */
   --neutral-50: #17171d;
@@ -147,8 +149,8 @@
   --neutral-900: #f6f6f8;
 
   --chart-1: #c62432;
-  --chart-2: #1d6fb8;
-  --chart-3: #0e7d5b;
+  --chart-2: #185c9b;
+  --chart-3: #0b6a4d;
   --chart-4: #b97f16;
   --chart-5: #7a3fb8;
   --sidebar-background: #ffffff;
@@ -263,8 +265,7 @@
   .text-callout { font-size: 1rem; font-weight: 400; line-height: 1.45; } /* 16 */
   .text-subheadline { font-size: 0.9375rem; font-weight: 400; line-height: 1.45; } /* 15 */
   .text-footnote { font-size: 0.8125rem; font-weight: 400; line-height: 1.35; } /* 13 */
-  .text-caption1 { font-size: 0.75rem; font-weight: 400; line-height: 1.3; } /* 12 */
-  .text-caption2 { font-size: 0.6875rem; font-weight: 600; line-height: 1.25; } /* 11 semibold, chips */
+  .text-caption1 { font-size: 0.75rem; font-weight: 400; line-height: 1.3; } /* 12 — the smallest size */
 }
 
 /* ------------------------------------------------------------------ shell */
@@ -293,6 +294,7 @@
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .civic-lede {
@@ -319,8 +321,22 @@
   border-radius: 999px;
   color: var(--muted-foreground);
   background: color-mix(in srgb, var(--foreground) 6%, transparent);
-  font-size: 0.6875rem; /* Caption2 11 */
+  font-size: 0.75rem; /* 12 — the label floor */
   font-weight: 600;
+}
+
+/* Short screens (a 320x568 or 360x640 phone): the title, intro and trust
+   chips pushed "Find representatives" under the tab bar. The intro and chips
+   step aside and the title tightens so the whole search panel fits. */
+@media (max-height: 640px) {
+  .civic-find-header .civic-lede,
+  .civic-find-header .civic-trust-row {
+    display: none;
+  }
+
+  .civic-find-header .civic-title {
+    font-size: 1.875rem; /* 30 */
+  }
 }
 
 /* cards + panels — flat field-guide surfaces. Background contrast separates
@@ -342,18 +358,178 @@
   background: #ffffff;
 }
 
+/* Empty and error states speak in the page's own voice: bold left-aligned
+   type, one sentence, a way forward. */
 .civic-empty {
-  padding: 2rem 1.25rem;
-  text-align: center;
+  padding: 1.75rem 1.25rem;
+  text-align: left;
 }
 
-/* Translucent header material (blur behind the top bar). The hairline
-   edge is drawn by the component's border. */
+.civic-empty--alert {
+  border-left: 3px solid var(--destructive);
+}
 
-.civic-glass {
-  background: color-mix(in srgb, var(--card) 72%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+/* Result card action row: three quiet segments divided by hairlines,
+   bleeding to the card's edges. The list carries no red — the search button
+   above it is the screen's one focal point. */
+.civic-card-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 12px -16px -16px;
+  border-top: 1px solid var(--border);
+}
+
+.civic-card-action {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 4px;
+  border-radius: 0;
+  color: var(--foreground);
+  background: transparent;
+  font-size: 0.9375rem; /* 15 */
+  font-weight: 600;
+  transition: background-color 150ms ease;
+}
+
+.civic-card-action + .civic-card-action {
+  border-left: 1px solid var(--border);
+}
+
+.civic-card-action svg {
+  color: var(--muted-foreground);
+}
+
+.civic-card-action:active:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.civic-card-action:disabled {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
+
+/* Editorial image: the guide's arched frame. The photo settles from 1.05 to
+   1 from first paint, with the web hero's ease, and is never hidden. */
+.civic-arch-frame {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: 160px 160px 18px 18px;
+  background: var(--card);
+}
+
+.civic-arch-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 54% center;
+}
+
+@media (max-width: 360px) {
+  .civic-arch-frame {
+    border-radius: 140px 140px 16px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .civic-arch-frame img {
+    animation: civic-image-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes civic-image-enter {
+  from { transform: scale(1.05); }
+  to { transform: scale(1); }
+}
+
+/* Field-guide note: the guide's one red panel, laid over the foot of the
+   editorial image. It is the second way into "Who handles what?". */
+.civic-field-card {
+  padding-bottom: 6px;
+}
+
+.civic-field-note {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -28px 12px 0;
+  padding: 14px 18px;
+  border-radius: 12px;
+  color: #ffffff;
+  background: var(--civic-red);
+  font-family: var(--font-display);
+  font-size: 1.0625rem; /* 17 */
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease;
+}
+
+.civic-field-note:active {
+  transform: scale(0.98);
+  background: var(--primary-hover);
+}
+
+.civic-field-note svg {
+  flex: 0 0 auto;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.civic-field-note:active svg {
+  transform: translate(2px, -2px);
+}
+
+.civic-field-caption {
+  margin-top: 14px;
+  padding-inline: 2px;
+  color: var(--muted-foreground);
+  font-size: 0.75rem; /* 12 */
+  line-height: 1.5;
+}
+
+/* Inline way into the guide — the web hero's secondary link. */
+.civic-text-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  margin-left: -4px;
+  padding-inline: 4px;
+  border-radius: 8px;
+  color: var(--primary-text);
+  font-size: 0.9375rem; /* 15 */
+  font-weight: 600;
+}
+
+.civic-text-link:active {
+  opacity: 0.7;
+}
+
+/* Government explainer: one stacked card per level, keyed by that level's
+   label colour on its top edge. Colour never carries the meaning alone —
+   every card is titled. */
+.civic-level-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--level-color);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+/* Top bar: a solid surface with a hairline edge (the component's border).
+   The Civic Field Guide has no frosted cards — content scrolling underneath
+   is simply cut by the bar, never blurred behind it. */
+
+.civic-top-bar {
+  background: var(--background);
 }
 
 .civic-nav-shell {
@@ -366,9 +542,7 @@
   padding: 0 var(--s-right) var(--s-bottom) var(--s-left);
   border: 0;
   border-top: 1px solid var(--civic-line);
-  background: color-mix(in srgb, var(--background) 82%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--background);
 }
 
 .civic-nav-item {
@@ -378,21 +552,70 @@
   transition: color 150ms ease;
 }
 
+/* Active destination: colour, weight and aria-current together. */
 .civic-nav-item[data-active="true"] {
   color: var(--primary-text);
 }
 
-/* brand mark — quiet, tint-colored */
+.civic-nav-item[data-active="true"] .nav-label {
+  font-weight: 700;
+}
 
-.civic-maple-mark {
+/* Brand mark — the web sibling's: a white location pin on solid civic red,
+   one corner pulled tight. Civic red belongs to the primary action, this
+   mark and one closing panel, so nothing else wears it as an icon fill. */
+
+.brand-mark {
+  --mark-r: 0.625rem;
   display: grid;
   width: 2.25rem;
   height: 2.25rem;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: 0.5rem;
-  color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: #ffffff;
+  background: var(--civic-red);
+  border-radius: var(--mark-r) var(--mark-r) var(--mark-r) calc(var(--mark-r) * 0.22);
+}
+
+.brand-mark--bar {
+  width: 1.75rem;
+  height: 1.75rem;
+  --mark-r: 0.5625rem;
+}
+
+.brand-mark--launch {
+  width: 4.5rem;
+  height: 4.5rem;
+  --mark-r: 1.4375rem;
+}
+
+.brand-mark--lockup {
+  width: 2.75rem;
+  height: 2.75rem;
+  --mark-r: 0.875rem;
+}
+
+/* Wordmark: the web sibling's brand voice (Manrope 800, close tracking). */
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.3125rem; /* 21 */
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+}
+
+/* On short screens the first-run card needs the room: the lockup tightens
+   and drops its tagline. */
+@media (max-height: 640px) {
+  .brand-lockup .brand-mark--lockup {
+    width: 2.25rem;
+    height: 2.25rem;
+    --mark-r: 0.75rem;
+  }
+
+  .brand-lockup .brand-tagline {
+    display: none;
+  }
 }
 
 /* search */
@@ -421,6 +644,9 @@
   font-size: 1.0625rem; /* Body 17 */
   font-weight: 400;
   letter-spacing: 0;
+  /* On the input itself: a ::placeholder rule alone leaves a truncated
+     placeholder without its ellipsis at 320px. */
+  text-overflow: ellipsis;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
@@ -456,21 +682,20 @@
   color: color-mix(in srgb, #ffffff 82%, transparent);
 }
 
-/* Secondary/tertiary "tinted" button style: 12% tint fill + tint label. */
-.civic-tinted-button.civic-tinted-button {
-  color: var(--civic-link);
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
+/* Secondary action ("Use my location"): a hairline outline, no red. It sits
+   directly under the filled primary, and a red tint here made the panel read
+   as two primary buttons. */
+.civic-secondary-button.civic-secondary-button {
+  color: var(--foreground);
+  border: 1px solid var(--field-border);
+  background: transparent;
   box-shadow: none;
   transition: transform 150ms ease, background-color 150ms ease;
 }
 
-.light .civic-tinted-button.civic-tinted-button {
-  color: var(--civic-red);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-}
-
-.civic-tinted-button.civic-tinted-button:active:not(:disabled) {
+.civic-secondary-button.civic-secondary-button:active:not(:disabled) {
   transform: scale(0.97);
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
 /* Alert-style modal card. The only surface allowed a shadow, and it

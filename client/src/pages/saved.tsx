@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { RepresentativeCard } from "@/components/representative-card";
 import { RepresentativeModal } from "@/components/representative-modal";
 import { EmptyState, Skeleton } from "@/components/civic";
-import { Heart, Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon } from "lucide-react";
 import type { ApiRepresentative as Representative } from "@shared/schema";
 import { repRepository } from "@/lib/storage/repRepository";
 import { Section } from "@/components/ui/section";
@@ -92,9 +92,8 @@ export default function Saved() {
         ) : (
           <Section>
             <EmptyState
-              icon={<Heart className="h-7 w-7" />}
               title="No saved representatives"
-              description="Representatives you save will appear here for quick access."
+              description="Tap the heart on any representative to keep them here."
               action={
                 <Link href="/">
                   <Button className="civic-primary-button gap-2 px-5">
