@@ -4,93 +4,183 @@
  */
 
 import { isValidPostalCode, normalizePostalCode } from './postal';
+import {
+  PostalLookup,
+  fetchPostalStore,
+  supportsPostalWorker,
+  type PostalCodeData,
+} from './postalLookupCore';
 
-export interface PostalCodeData {
-  latitude: number;
-  longitude: number;
-  /**
-   * "exact" = the full code is in the bundled index. "prefix" = the code was
-   * introduced after the data snapshot (Canada Post adds codes continuously);
-   * coordinates come from the longest matching prefix instead. "geocoder-ca"
-   * = the code is unknown locally even by prefix (brand-new FSA) and was
-   * rescued online via geocoder.ca.
-   */
-  matchedOn?: "exact" | "prefix" | "geocoder-ca";
-  /** The prefix that matched, when matchedOn is "prefix" (e.g. "L6E0"). */
-  matchedPrefix?: string;
+/** A worker that has not reported by then is treated as unavailable. */
+const WORKER_READY_TIMEOUT_MS = 15_000;
+/** Same for a single lookup, once loaded. */
+const LOOKUP_TIMEOUT_MS = 5_000;
+
+/**
+ * Where the index lives. The index is a 17 MB JSON document (~850k keys); it
+ * took 345 ms to parse on the main thread of a desktop browser and 1.5 s under
+ * 4x CPU throttling, freezing the first screen, so it is normally parsed in a
+ * worker (postalLookup.worker.ts) that answers lookups by message. The
+ * main-thread store is the fallback for a context without workers.
+ */
+interface Store {
+  /** Resolves when the data is loaded; rejects if it could not be. */
+  ready: Promise<void>;
+  lookup(code: string): Promise<PostalCodeData | null>;
+  /** Indexed postal codes; 0 until ready. */
+  count(): number;
+}
+
+type PendingLookup = {
+  resolve: (value: PostalCodeData | null) => void;
+  reject: (error: unknown) => void;
+};
+
+type WorkerMessage = {
+  type: 'loaded' | 'failed' | 'result';
+  id?: number;
+  total?: number;
+  result?: PostalCodeData | null;
+  message?: string;
+};
+
+/** The index in a worker. Returns null where workers cannot be created. */
+function createWorkerStore(): Store | null {
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./postalLookup.worker.ts', import.meta.url));
+  } catch {
+    return null;
+  }
+
+  let total = 0;
+  let nextId = 0;
+  const pending = new Map<number, PendingLookup>();
+
+  let settleReady!: { ok: () => void; fail: (error: unknown) => void };
+  const ready = new Promise<void>((resolve, reject) => {
+    settleReady = { ok: resolve, fail: reject };
+  });
+
+  const fail = (error: unknown) => {
+    settleReady.fail(error);
+    pending.forEach((entry) => entry.reject(error));
+    pending.clear();
+    worker.terminate();
+  };
+
+  worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
+    const message = event.data;
+    if (message.type === 'loaded') {
+      total = message.total ?? 0;
+      settleReady.ok();
+    } else if (message.type === 'failed') {
+      fail(new Error(message.message || 'Postal worker failed'));
+    } else if (message.type === 'result') {
+      const id = message.id ?? -1;
+      const entry = pending.get(id);
+      if (entry) {
+        pending.delete(id);
+        entry.resolve(message.result ?? null);
+      }
+    }
+  };
+
+  // The script failed to load, or an uncaught error escaped the worker.
+  worker.onerror = (event) => {
+    event.preventDefault();
+    fail(new Error(event.message || 'Postal worker error'));
+  };
+
+  const readyTimer = setTimeout(
+    () => fail(new Error('Postal worker did not start')),
+    WORKER_READY_TIMEOUT_MS,
+  );
+  const clearReadyTimer = () => clearTimeout(readyTimer);
+  ready.then(clearReadyTimer, clearReadyTimer);
+
+  worker.postMessage({ type: 'load' });
+
+  return {
+    ready,
+    count: () => total,
+    lookup: (code) =>
+      new Promise<PostalCodeData | null>((resolve, reject) => {
+        const id = ++nextId;
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error('Postal worker lookup timed out'));
+        }, LOOKUP_TIMEOUT_MS);
+        pending.set(id, {
+          resolve: (value) => {
+            clearTimeout(timer);
+            resolve(value);
+          },
+          reject: (error) => {
+            clearTimeout(timer);
+            reject(error);
+          },
+        });
+        worker.postMessage({ type: 'lookup', id, code });
+      }),
+  };
+}
+
+/** The index on this thread: same files, parsed here. */
+function createMainThreadStore(): Store {
+  let instance: PostalLookup | null = null;
+  const loaded = fetchPostalStore().then((store) => {
+    instance = new PostalLookup(store);
+  });
+  return {
+    ready: loaded,
+    count: () => instance?.size ?? 0,
+    lookup: async (code) => {
+      await loaded;
+      return instance?.get(code) ?? null;
+    },
+  };
 }
 
 class LocalPostalLookup {
-  private index: Record<string, number> | null = null;
-  private coordinates: Float32Array | null = null;
-  private loaded: boolean = false;
-  private loadingPromise: Promise<void> | null = null;
-  /** Memoized prefix fallbacks: prefix -> coords of the first indexed code under it. */
-  private prefixCache: Map<string, { latitude: number; longitude: number } | null> = new Map();
-  /** Lazily sorted key list for O(log n) prefix fallback lookups. */
-  private sortedKeys: string[] | null = null;
-
-  /**
-   * First indexed code under `prefix` via binary search over the sorted key
-   * list, or null. Falls back to a linear scan if the keys aren't sorted.
-   */
-  private firstKeyUnderPrefix(prefix: string): string | null {
-    if (!this.index) return null;
-    if (!this.sortedKeys) {
-      const keys = Object.keys(this.index);
-      let sorted = true;
-      for (let i = 1; i < keys.length; i++) {
-        if (keys[i - 1] > keys[i]) { sorted = false; break; }
-      }
-      this.sortedKeys = sorted ? keys : keys.sort();
-    }
-    const keys = this.sortedKeys;
-    let lo = 0, hi = keys.length - 1, ans = -1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      if (keys[mid] >= prefix) { ans = mid; hi = mid - 1; } else { lo = mid + 1; }
-    }
-    return ans >= 0 && keys[ans].startsWith(prefix) ? keys[ans] : null;
-  }
+  private store: Store | null = null;
+  private loaded = false;
+  private loadingPromise: Promise<void>;
 
   constructor() {
-    // Start loading immediately when created
-    this.loadingPromise = this.loadData();
+    // Start loading immediately when created.
+    this.loadingPromise = this.load(false);
+    // A failed load is reported to whoever waits for it; this handler only
+    // keeps the rejection from surfacing as "unhandled" before then.
+    this.loadingPromise.catch(() => {});
   }
 
-  private async loadData(): Promise<void> {
-    try {
-
-      // Load index JSON
-      const indexResponse = await fetch('/data/postal_index.json');
-      if (!indexResponse.ok) {
-        throw new Error(`Failed to load postal index: ${indexResponse.status}`);
+  private async load(skipWorker: boolean): Promise<void> {
+    if (!skipWorker && supportsPostalWorker(globalThis.location?.protocol ?? "")) {
+      const workerStore = createWorkerStore();
+      if (workerStore) {
+        try {
+          await workerStore.ready;
+          this.store = workerStore;
+          this.loaded = true;
+          return;
+        } catch (error) {
+          console.warn('[LocalPostalLookup] Worker unavailable, loading postal data on the main thread:', error);
+        }
       }
-      this.index = await indexResponse.json();
-
-      // Load binary coordinates
-      const binaryResponse = await fetch('/data/postal_data.bin');
-      if (!binaryResponse.ok) {
-        throw new Error(`Failed to load postal coordinates: ${binaryResponse.status}`);
-      }
-      const arrayBuffer = await binaryResponse.arrayBuffer();
-      this.coordinates = new Float32Array(arrayBuffer);
-
-      this.loaded = true;
-    } catch (error) {
-      console.error('[LocalPostalLookup] Error loading postal data:', error);
-      throw error;
     }
+    const mainStore = createMainThreadStore();
+    await mainStore.ready;
+    this.store = mainStore;
+    this.loaded = true;
   }
 
   /**
    * Wait for postal data to be loaded
    */
   async waitForLoad(): Promise<void> {
-    if (this.loadingPromise) {
-      await this.loadingPromise;
-    }
-    if (!this.loaded) {
+    await this.loadingPromise;
+    if (!this.loaded || !this.store) {
       throw new Error('Postal data failed to load');
     }
   }
@@ -98,71 +188,25 @@ class LocalPostalLookup {
   /**
    * Get coordinates for a specific postal code
    */
-  getCoordinates(postalCode: string): PostalCodeData | null {
-    if (!this.loaded || !this.index || !this.coordinates) {
-      console.warn('[LocalPostalLookup] Data not loaded yet');
-      return null;
+  async getCoordinates(postalCode: string): Promise<PostalCodeData | null> {
+    await this.waitForLoad();
+    const store = this.store as Store | null;
+    if (!store) return null;
+
+    try {
+      return await store.lookup(postalCode);
+    } catch (error) {
+      // The worker answered its ready message but cannot answer lookups
+      // (it died, or stalled). Reload on this thread and ask again.
+      console.warn('[LocalPostalLookup] Worker lookup failed, retrying on the main thread:', error);
+      this.store = null;
+      this.loaded = false;
+      this.loadingPromise = this.load(true);
+      this.loadingPromise.catch(() => {});
+      await this.waitForLoad();
+      const fallback = this.store as Store | null;
+      return fallback ? fallback.lookup(postalCode) : null;
     }
-
-    const cleanCode = postalCode.toUpperCase().replace(/\s+/g, '');
-    const index = this.index[cleanCode];
-
-    if (typeof index === 'number') {
-      return {
-        latitude: this.coordinates[index],
-        longitude: this.coordinates[index + 1],
-        matchedOn: 'exact',
-      };
-    }
-
-    // The code was introduced after the bundled data snapshot (Canada Post
-    // adds delivery points continuously — e.g. Markham's L6E0W3 postdates the
-    // 2021 PCCF). Fall back to the LONGEST matching prefix: neighbouring codes
-    // in the same block (W2), intersection (L6E0) or FSA (L6E) resolve to the
-    // same electoral districts. The scan walks every key once, then memoizes.
-    for (const len of [5, 4, 3]) {
-      const prefix = cleanCode.slice(0, len);
-      if (prefix.length < 3) break;
-      let hit = this.prefixCache.get(prefix);
-      if (hit === undefined) {
-        hit = null;
-        const candidate = this.firstKeyUnderPrefix(prefix);
-        if (candidate) {
-          const i = this.index[candidate];
-          hit = { latitude: this.coordinates[i], longitude: this.coordinates[i + 1] };
-        }
-        this.prefixCache.set(prefix, hit);
-      }
-      if (hit) {
-        return { ...hit, matchedOn: 'prefix', matchedPrefix: prefix };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Get coordinates by FSA (first 3 characters of postal code)
-   * Useful for partial matches or when exact postal code isn't found
-   */
-  getCoordinatesByFSA(fsa: string): PostalCodeData | null {
-    if (!this.loaded || !this.index || !this.coordinates) {
-      console.warn('[LocalPostalLookup] Data not loaded yet');
-      return null;
-    }
-
-    const cleanFSA = fsa.toUpperCase().replace(/\s+/g, '');
-
-    // Find first postal code that matches this FSA
-    for (const postalCode of Object.keys(this.index)) {
-      if (postalCode.startsWith(cleanFSA)) {
-        const index = this.index[postalCode];
-        return {
-          latitude: this.coordinates[index],
-          longitude: this.coordinates[index + 1]
-        };
-      }
-    }
-    return null;
   }
 
   /**
@@ -175,15 +219,8 @@ class LocalPostalLookup {
   /**
    * Get statistics about loaded data
    */
-  getStats(): { totalPostalCodes: number; dataSize: number } {
-    if (!this.loaded) {
-      return { totalPostalCodes: 0, dataSize: 0 };
-    }
-
-    return {
-      totalPostalCodes: Object.keys(this.index!).length,
-      dataSize: this.coordinates ? this.coordinates.length * 4 : 0
-    };
+  getStats(): { totalPostalCodes: number } {
+    return { totalPostalCodes: this.store?.count() ?? 0 };
   }
 
   /**
@@ -205,21 +242,18 @@ class LocalPostalLookup {
 const localPostalLookup = new LocalPostalLookup();
 
 // Export functions
+export type { PostalCodeData } from './postalLookupCore';
+
 export async function getCoordinatesFromPostalCodeLocal(postalCode: string): Promise<PostalCodeData | null> {
   await localPostalLookup.waitForLoad();
   return localPostalLookup.getCoordinates(postalCode);
-}
-
-export async function getCoordinatesByFSALocal(fsa: string): Promise<PostalCodeData | null> {
-  await localPostalLookup.waitForLoad();
-  return localPostalLookup.getCoordinatesByFSA(fsa);
 }
 
 export function isLocalDataLoaded(): boolean {
   return localPostalLookup.isLoaded();
 }
 
-export function getLocalDataStats(): { totalPostalCodes: number; dataSize: number } {
+export function getLocalDataStats(): { totalPostalCodes: number } {
   return localPostalLookup.getStats();
 }
 
